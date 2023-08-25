@@ -62,17 +62,16 @@ function createEndpointUrlWithParametersBuilder(
 function buildEndpointHost(initConfiguration: InitConfiguration) {
   const { site = INTAKE_SITE_US1, internalAnalyticsSubdomain } = initConfiguration
 
-  if (internalAnalyticsSubdomain && site === INTAKE_SITE_US1) {
-    return `${internalAnalyticsSubdomain}.${INTAKE_SITE_US1}`
-  }
+  return site;
 
-  if (site === INTAKE_SITE_FED_STAGING) {
-    return `http-intake.logs.${site}`
-  }
+  // if (internalAnalyticsSubdomain && site === INTAKE_SITE_US1) {
+  //   return `${internalAnalyticsSubdomain}.${INTAKE_SITE_US1}`
+  // }
 
-  const domainParts = site.split('.')
-  const extension = domainParts.pop()
-  return `browser-intake-${domainParts.join('-')}.${extension!}`
+  // const domainParts = site.split('.')
+  // const extension = domainParts.pop()
+  // const subdomain = site !== INTAKE_SITE_AP1 ? `${ENDPOINTS[endpointType]}.` : ''
+  // return `${subdomain}browser-intake-${domainParts.join('-')}.${extension!}`
 }
 
 /**
