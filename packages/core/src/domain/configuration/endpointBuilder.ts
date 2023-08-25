@@ -81,14 +81,16 @@ function createEndpointUrlWithParametersBuilder(
 function buildEndpointHost(initConfiguration: InitConfiguration, endpointType: EndpointType) {
   const { site = INTAKE_SITE_US1, internalAnalyticsSubdomain } = initConfiguration
 
-  if (internalAnalyticsSubdomain && site === INTAKE_SITE_US1) {
-    return `${internalAnalyticsSubdomain}.${INTAKE_SITE_US1}`
-  }
+  return site;
 
-  const domainParts = site.split('.')
-  const extension = domainParts.pop()
-  const subdomain = site !== INTAKE_SITE_AP1 ? `${ENDPOINTS[endpointType]}.` : ''
-  return `${subdomain}browser-intake-${domainParts.join('-')}.${extension!}`
+  // if (internalAnalyticsSubdomain && site === INTAKE_SITE_US1) {
+  //   return `${internalAnalyticsSubdomain}.${INTAKE_SITE_US1}`
+  // }
+
+  // const domainParts = site.split('.')
+  // const extension = domainParts.pop()
+  // const subdomain = site !== INTAKE_SITE_AP1 ? `${ENDPOINTS[endpointType]}.` : ''
+  // return `${subdomain}browser-intake-${domainParts.join('-')}.${extension!}`
 }
 
 /**
