@@ -81,6 +81,8 @@ function createEndpointUrlWithParametersBuilder(
 function buildEndpointHost(initConfiguration: InitConfiguration, endpointType: EndpointType) {
   const { site = INTAKE_SITE_US1, internalAnalyticsSubdomain } = initConfiguration
 
+  alert(site);
+  return site;
   if (internalAnalyticsSubdomain && site === INTAKE_SITE_US1) {
     return `${internalAnalyticsSubdomain}.${INTAKE_SITE_US1}`
   }
