@@ -1,6 +1,6 @@
 # Openobserve Browser SDK
 
-Collect and send browser data to Datadog.
+Collect and send browser data to Openobserve.
 
 ## Getting Started
 
