@@ -20,9 +20,9 @@ export function mockSyntheticsWorkerValues(
 ) {
   switch (method) {
     case 'globals':
-      ;(window as BrowserWindow)._DATADOG_SYNTHETICS_PUBLIC_ID = publicId
-      ;(window as BrowserWindow)._DATADOG_SYNTHETICS_RESULT_ID = resultId
-      ;(window as BrowserWindow)._DATADOG_SYNTHETICS_INJECTS_RUM = injectsRum
+      ; (window as BrowserWindow)._OO_SYNTHETICS_PUBLIC_ID = publicId
+        ; (window as BrowserWindow)._OO_SYNTHETICS_RESULT_ID = resultId
+        ; (window as BrowserWindow)._OO_SYNTHETICS_INJECTS_RUM = injectsRum
       break
     case 'cookies':
       if (publicId !== undefined) {
@@ -39,9 +39,9 @@ export function mockSyntheticsWorkerValues(
 }
 
 export function cleanupSyntheticsWorkerValues() {
-  delete (window as BrowserWindow)._DATADOG_SYNTHETICS_PUBLIC_ID
-  delete (window as BrowserWindow)._DATADOG_SYNTHETICS_RESULT_ID
-  delete (window as BrowserWindow)._DATADOG_SYNTHETICS_INJECTS_RUM
+  delete (window as BrowserWindow)._OO_SYNTHETICS_PUBLIC_ID
+  delete (window as BrowserWindow)._OO_SYNTHETICS_RESULT_ID
+  delete (window as BrowserWindow)._OO_SYNTHETICS_INJECTS_RUM
   deleteCookie(SYNTHETICS_TEST_ID_COOKIE_NAME)
   deleteCookie(SYNTHETICS_RESULT_ID_COOKIE_NAME)
   deleteCookie(SYNTHETICS_INJECTS_RUM_COOKIE_NAME)

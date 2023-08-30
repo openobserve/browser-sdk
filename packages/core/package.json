@@ -1,6 +1,6 @@
 {
-  "name": "@datadog/browser-core",
-  "version": "4.48.1",
+  "name": "@openobserve/browser-core",
+  "version": "0.1.2",
   "license": "Apache-2.0",
   "main": "cjs/index.js",
   "module": "esm/index.js",
@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/DataDog/browser-sdk.git",
+    "url": "https://github.com/openobserve/browser-sdk.git",
     "directory": "packages/core"
   },
   "volta": {
