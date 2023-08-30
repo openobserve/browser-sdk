@@ -6,11 +6,11 @@ Collect and send browser data to Datadog.
 
 ### Log collection
 
-See the dedicated [Openobserve Browser Log Collection documentation][08] to learn how to forward logs from your browser application to Datadog.
+See the dedicated Openobserve Browser Log Collection documentation to learn how to forward logs from your browser application to Openobserve.
 
 ### Real User Monitoring
 
-See the dedicated [Openobserve Browser RUM Collection documentation][18] to learn how to send RUM data from your browser application to Datadog.
+See the dedicated Openobserve Browser RUM Collection documentation to learn how to send RUM data from your browser application to Openobserve.
 
 ## npm packages
 
