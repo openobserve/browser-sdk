@@ -274,7 +274,7 @@ module.exports = {
     {
       files: ['test/e2e/**/*.ts'],
       rules: {
-        // E2E codebase is importing @datadog/browser-* packages referenced by tsconfig.
+        // E2E codebase is importing @openobserve/browser-* packages referenced by tsconfig.
         'import/no-extraneous-dependencies': 'off',
       },
     },
