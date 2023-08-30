@@ -1,4 +1,4 @@
-import type { Subscription, TimeoutId, TimeStamp } from '@datadog/browser-core'
+import type { Subscription, TimeoutId, TimeStamp } from '@openobserve/browser-core'
 import {
   instrumentMethodAndCallOriginal,
   matchList,
@@ -7,7 +7,7 @@ import {
   timeStampNow,
   setTimeout,
   clearTimeout,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { RumConfiguration } from './configuration'
 import type { LifeCycle } from './lifeCycle'
 import { LifeCycleEventType } from './lifeCycle'
@@ -79,9 +79,9 @@ export function doWaitPageActivityEnd(
   const maxDurationTimeoutId =
     maxDuration !== undefined
       ? setTimeout(
-          monitor(() => complete({ hadActivity: true, end: timeStampNow() })),
-          maxDuration
-        )
+        monitor(() => complete({ hadActivity: true, end: timeStampNow() })),
+        maxDuration
+      )
       : undefined
 
   const pageActivitySubscription = pageActivityObservable.subscribe(({ isBusy }) => {

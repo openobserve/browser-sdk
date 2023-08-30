@@ -1,4 +1,4 @@
-import { INTAKE_SITE_STAGING, INTAKE_SITE_US1, INTAKE_SITE_EU1 } from '@datadog/browser-core'
+import { INTAKE_SITE_STAGING, INTAKE_SITE_US1, INTAKE_SITE_EU1 } from '@openobserve/browser-core'
 import type { RumConfiguration } from './configuration'
 import type { ViewContext } from './contexts/viewContexts'
 import type { RumSession } from './rumSessionManager'

@@ -1,5 +1,5 @@
-import type { RelativeTime } from '@datadog/browser-core'
-import { Observable, performDraw, startSessionManager } from '@datadog/browser-core'
+import type { RelativeTime } from '@openobserve/browser-core'
+import { Observable, performDraw, startSessionManager } from '@openobserve/browser-core'
 import type { LogsConfiguration } from './configuration'
 
 export const LOGS_SESSION_KEY = 'logs'
@@ -27,8 +27,8 @@ export function startLogsSessionManager(configuration: LogsConfiguration): LogsS
       const session = sessionManager.findActiveSession(startTime)
       return session && session.trackingType === LoggerTrackingType.TRACKED
         ? {
-            id: session.id,
-          }
+          id: session.id,
+        }
         : undefined
     },
     expireObservable: sessionManager.expireObservable,

@@ -1,4 +1,4 @@
-import type { Context } from '@datadog/browser-core'
+import type { Context } from '@openobserve/browser-core'
 import {
   clocksNow,
   computeRawError,
@@ -12,7 +12,7 @@ import {
   monitored,
   sanitize,
   NonErrorPrefix,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 
 import type { LogsEvent } from '../logsEvent.types'
 

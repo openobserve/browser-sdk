@@ -5,18 +5,18 @@ const PROBLEMATIC_IDENTIFIERS = {
 
   // Using the patched `setTimeout` from Zone.js triggers a rendering loop in some Angular
   // component, see issue PR #2030
-  setTimeout: 'Use `setTimeout` from @datadog/browser-core instead',
-  clearTimeout: 'Use `clearTimeout` from @datadog/browser-core instead',
+  setTimeout: 'Use `setTimeout` from @openobserve/browser-core instead',
+  clearTimeout: 'Use `clearTimeout` from @openobserve/browser-core instead',
 
   // We didn't stumble on cases where using the patched `setInterval` from Zone.js is problematic
   // yet, but still consider it problematic in prevention and to unify its usages with `setTimeout`.
-  setInterval: 'Use `setInterval` from @datadog/browser-core instead',
-  clearInterval: 'Use `clearInterval` from @datadog/browser-core instead',
+  setInterval: 'Use `setInterval` from @openobserve/browser-core instead',
+  clearInterval: 'Use `clearInterval` from @openobserve/browser-core instead',
 
   // Using the patched `addEventListener` from Zone.js might trigger a memory leak in Firefox, see
   // PR #1860
-  addEventListener: 'Use `addEventListener` from @datadog/browser-core instead',
-  removeEventListener: 'Use `addEventListener().stop` from @datadog/browser-core instead',
+  addEventListener: 'Use `addEventListener` from @openobserve/browser-core instead',
+  removeEventListener: 'Use `addEventListener().stop` from @openobserve/browser-core instead',
 }
 
 module.exports = {

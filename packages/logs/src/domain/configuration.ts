@@ -1,4 +1,4 @@
-import type { Configuration, InitConfiguration, RawTelemetryConfiguration } from '@datadog/browser-core'
+import type { Configuration, InitConfiguration, RawTelemetryConfiguration } from '@openobserve/browser-core'
 import {
   serializeConfiguration,
   assign,
@@ -10,7 +10,7 @@ import {
   RawReportType,
   includes,
   objectValues,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { LogsEvent } from '../logsEvent.types'
 
 export interface LogsInitConfiguration extends InitConfiguration {

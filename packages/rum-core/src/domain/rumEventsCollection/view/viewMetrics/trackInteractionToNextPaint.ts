@@ -1,5 +1,5 @@
-import { noop, isExperimentalFeatureEnabled, ExperimentalFeature } from '@datadog/browser-core'
-import type { Duration } from '@datadog/browser-core'
+import { noop, isExperimentalFeatureEnabled, ExperimentalFeature } from '@openobserve/browser-core'
+import type { Duration } from '@openobserve/browser-core'
 import { supportPerformanceTimingEvent } from '../../../../browser/performanceCollection'
 import type { RumFirstInputTiming, RumPerformanceEventTiming } from '../../../../browser/performanceCollection'
 import { LifeCycleEventType, type LifeCycle } from '../../../lifeCycle'

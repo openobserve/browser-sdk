@@ -1,5 +1,5 @@
-import type { Context, TelemetryEvent, Observable, RawError, PageExitEvent } from '@datadog/browser-core'
-import { combine, isTelemetryReplicationAllowed, startBatchWithReplica } from '@datadog/browser-core'
+import type { Context, TelemetryEvent, Observable, RawError, PageExitEvent } from '@openobserve/browser-core'
+import { combine, isTelemetryReplicationAllowed, startBatchWithReplica } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../domain/configuration'
 import type { LifeCycle } from '../domain/lifeCycle'
 import { LifeCycleEventType } from '../domain/lifeCycle'

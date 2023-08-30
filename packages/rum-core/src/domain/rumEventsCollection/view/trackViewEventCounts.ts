@@ -1,4 +1,4 @@
-import { ONE_MINUTE, setTimeout } from '@datadog/browser-core'
+import { ONE_MINUTE, setTimeout } from '@openobserve/browser-core'
 import type { LifeCycle } from '../../lifeCycle'
 import { trackEventCounts } from '../../trackEventCounts'
 

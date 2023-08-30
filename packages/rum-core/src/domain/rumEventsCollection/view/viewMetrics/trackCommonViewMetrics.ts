@@ -1,5 +1,5 @@
-import type { ClocksState, Duration, Observable } from '@datadog/browser-core'
-import { noop } from '@datadog/browser-core'
+import type { ClocksState, Duration, Observable } from '@openobserve/browser-core'
+import { noop } from '@openobserve/browser-core'
 import type { ViewLoadingType } from '../../../../rawRumEvent.types'
 import type { RumConfiguration } from '../../../configuration'
 import type { LifeCycle } from '../../../lifeCycle'
@@ -64,18 +64,18 @@ export function trackCommonViewMetrics(
   let clsAttributionCollected = false
   if (isLayoutShiftSupported()) {
     commonViewMetrics.cumulativeLayoutShift = 0
-    ;({ stop: stopCLSTracking } = trackCumulativeLayoutShift(
-      lifeCycle,
-      (cumulativeLayoutShift, largestLayoutShiftNode, largestLayoutShiftTime) => {
-        commonViewMetrics.cumulativeLayoutShift = cumulativeLayoutShift
+      ; ({ stop: stopCLSTracking } = trackCumulativeLayoutShift(
+        lifeCycle,
+        (cumulativeLayoutShift, largestLayoutShiftNode, largestLayoutShiftTime) => {
+          commonViewMetrics.cumulativeLayoutShift = cumulativeLayoutShift
 
-        if (!clsAttributionCollected) {
-          clsAttributionCollected = true
-          webVitalTelemetryDebug.addWebVitalTelemetryDebug('CLS', largestLayoutShiftNode, largestLayoutShiftTime)
+          if (!clsAttributionCollected) {
+            clsAttributionCollected = true
+            webVitalTelemetryDebug.addWebVitalTelemetryDebug('CLS', largestLayoutShiftNode, largestLayoutShiftTime)
+          }
+          scheduleViewUpdate()
         }
-        scheduleViewUpdate()
-      }
-    ))
+      ))
   } else {
     stopCLSTracking = noop
   }

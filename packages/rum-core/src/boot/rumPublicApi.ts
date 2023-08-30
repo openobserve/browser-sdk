@@ -1,4 +1,4 @@
-import type { Context, InitConfiguration, TimeStamp, RelativeTime, User, Observable } from '@datadog/browser-core'
+import type { Context, InitConfiguration, TimeStamp, RelativeTime, User, Observable } from '@openobserve/browser-core'
 import {
   noop,
   CustomerDataType,
@@ -18,7 +18,7 @@ import {
   checkUser,
   sanitizeUser,
   sanitize,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { LifeCycle } from '../domain/lifeCycle'
 import type { ViewContexts } from '../domain/contexts/viewContexts'
 import type { RumSessionManager } from '../domain/rumSessionManager'
@@ -162,15 +162,15 @@ export function makeRumPublicApi(
     )
     getSessionReplayLinkStrategy = () =>
       recorderApi.getSessionReplayLink(configuration, startRumResults.session, startRumResults.viewContexts)
-    ;({
-      startView: startViewStrategy,
-      addAction: addActionStrategy,
-      addError: addErrorStrategy,
-      addTiming: addTimingStrategy,
-      addFeatureFlagEvaluation: addFeatureFlagEvaluationStrategy,
-      getInternalContext: getInternalContextStrategy,
-      stopSession: stopSessionStrategy,
-    } = startRumResults)
+      ; ({
+        startView: startViewStrategy,
+        addAction: addActionStrategy,
+        addError: addErrorStrategy,
+        addTiming: addTimingStrategy,
+        addFeatureFlagEvaluation: addFeatureFlagEvaluationStrategy,
+        getInternalContext: getInternalContextStrategy,
+        stopSession: stopSessionStrategy,
+      } = startRumResults)
     bufferApiCalls.drain()
 
     recorderApi.onRumStart(

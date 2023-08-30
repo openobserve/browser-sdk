@@ -1,5 +1,5 @@
-import type { Context, ContextManager, FlushEvent, Observable, Telemetry } from '@datadog/browser-core'
-import { isEmptyObject, includes, performDraw, ONE_SECOND, addTelemetryDebug, setInterval } from '@datadog/browser-core'
+import type { Context, ContextManager, FlushEvent, Observable, Telemetry } from '@openobserve/browser-core'
+import { isEmptyObject, includes, performDraw, ONE_SECOND, addTelemetryDebug, setInterval } from '@openobserve/browser-core'
 import { RumEventType } from '../rawRumEvent.types'
 import type { RumEvent } from '../rumEvent.types'
 import type { RumConfiguration } from './configuration'

@@ -1,3 +1,3 @@
-import { noop } from '@datadog/browser-core'
+import { noop } from '@openobserve/browser-core'
 
 export const noopWebVitalTelemetryDebug = { addWebVitalTelemetryDebug: noop }

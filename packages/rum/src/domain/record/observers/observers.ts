@@ -1,4 +1,4 @@
-import type { ListenerHandler } from '@datadog/browser-core'
+import type { ListenerHandler } from '@openobserve/browser-core'
 import type { LifeCycle, RumConfiguration } from '@datadog/browser-rum-core'
 import type { ElementsScrollPositions } from '../elementsScrollPositions'
 import type { ShadowRootsController } from '../shadowRootsController'

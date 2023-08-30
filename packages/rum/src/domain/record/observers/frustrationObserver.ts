@@ -1,4 +1,4 @@
-import type { ListenerHandler } from '@datadog/browser-core'
+import type { ListenerHandler } from '@openobserve/browser-core'
 import type { LifeCycle } from '@datadog/browser-rum-core'
 import { ActionType, RumEventType, LifeCycleEventType } from '@datadog/browser-rum-core'
 import type { FrustrationRecord } from '../../../types'

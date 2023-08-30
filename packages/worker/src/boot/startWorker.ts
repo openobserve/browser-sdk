@@ -1,6 +1,6 @@
 /* eslint-disable local-rules/disallow-zone-js-patched-values */
-import type { DeflateWorkerAction, DeflateWorkerResponse } from '@datadog/browser-core'
-import { concatBuffers } from '@datadog/browser-core'
+import type { DeflateWorkerAction, DeflateWorkerResponse } from '@openobserve/browser-core'
+import { concatBuffers } from '@openobserve/browser-core'
 import { Deflate, constants, string2buf } from '../domain/deflate'
 
 declare const __BUILD_ENV__SDK_VERSION__: string

@@ -12,8 +12,8 @@
     "build:esm": "rm -rf esm && tsc -p tsconfig.esm.json"
   },
   "dependencies": {
-    "@datadog/browser-core": "4.47.0",
-    "@datadog/browser-rum-core": "4.47.0"
+    "@datadog/browser-rum-core": "4.47.0",
+    "@openobserve/browser-core": "0.1.0"
   },
   "peerDependencies": {
     "@datadog/browser-logs": "4.47.0"

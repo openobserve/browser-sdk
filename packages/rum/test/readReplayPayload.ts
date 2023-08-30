@@ -1,6 +1,6 @@
 import pako from 'pako'
 
-import type { Payload } from '@datadog/browser-core'
+import type { Payload } from '@openobserve/browser-core'
 import type { BrowserSegment } from '../src/types'
 import type { BrowserSegmentMetadataAndSegmentSizes } from '../src/domain/segmentCollection'
 

@@ -1,5 +1,5 @@
-import type { Payload } from '@datadog/browser-core'
-import { assign } from '@datadog/browser-core'
+import type { Payload } from '@openobserve/browser-core'
+import { assign } from '@openobserve/browser-core'
 import type { BrowserSegmentMetadata } from '../../types'
 
 export type BrowserSegmentMetadataAndSegmentSizes = BrowserSegmentMetadata & {

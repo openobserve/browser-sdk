@@ -1,5 +1,5 @@
-import type { RelativeTime } from '@datadog/browser-core'
-import { Observable, noop, performDraw, startSessionManager } from '@datadog/browser-core'
+import type { RelativeTime } from '@openobserve/browser-core'
+import { Observable, noop, performDraw, startSessionManager } from '@openobserve/browser-core'
 import type { RumConfiguration } from './configuration'
 import type { LifeCycle } from './lifeCycle'
 import { LifeCycleEventType } from './lifeCycle'

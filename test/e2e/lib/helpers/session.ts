@@ -1,4 +1,4 @@
-import { SESSION_STORE_KEY } from '@datadog/browser-core'
+import { SESSION_STORE_KEY } from '@openobserve/browser-core'
 import { deleteAllCookies } from './browser'
 
 export async function renewSession() {

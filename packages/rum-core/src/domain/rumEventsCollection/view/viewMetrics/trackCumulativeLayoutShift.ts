@@ -1,4 +1,4 @@
-import { round, type RelativeTime, find, ONE_SECOND } from '@datadog/browser-core'
+import { round, type RelativeTime, find, ONE_SECOND } from '@openobserve/browser-core'
 import type { LifeCycle } from '../../../lifeCycle'
 import { LifeCycleEventType } from '../../../lifeCycle'
 import { supportPerformanceTimingEvent, type RumLayoutShiftTiming } from '../../../../browser/performanceCollection'

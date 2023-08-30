@@ -1,4 +1,4 @@
-import { SESSION_STORE_KEY } from '@datadog/browser-core'
+import { SESSION_STORE_KEY } from '@openobserve/browser-core'
 import { createTest } from '../lib/framework'
 
 describe('Session Stores', () => {

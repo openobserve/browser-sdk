@@ -1,4 +1,4 @@
-import type { RelativeTime } from '@datadog/browser-core'
+import type { RelativeTime } from '@openobserve/browser-core'
 import type { ActionContexts } from '../rumEventsCollection/action/actionCollection'
 import type { RumSessionManager } from '../rumSessionManager'
 import type { ViewContexts } from './viewContexts'

@@ -7,7 +7,7 @@
     "build": "rm -rf bundle && webpack --mode=production"
   },
   "dependencies": {
-    "@datadog/browser-core": "4.47.0"
+    "@openobserve/browser-core": "0.1.0"
   },
   "repository": {
     "type": "git",

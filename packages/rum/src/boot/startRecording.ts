@@ -1,5 +1,5 @@
-import type { RawError, HttpRequest } from '@datadog/browser-core'
-import { timeStampNow, createHttpRequest, addTelemetryDebug } from '@datadog/browser-core'
+import type { RawError, HttpRequest } from '@openobserve/browser-core'
+import { timeStampNow, createHttpRequest, addTelemetryDebug } from '@openobserve/browser-core'
 import type {
   LifeCycle,
   ViewContexts,

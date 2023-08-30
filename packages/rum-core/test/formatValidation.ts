@@ -1,4 +1,4 @@
-import type { Context } from '@datadog/browser-core'
+import type { Context } from '@openobserve/browser-core'
 import ajv from 'ajv'
 import rumEventsSchemaJson from '../../../rum-events-format/schemas/rum-events-schema.json'
 import _commonSchemaJson from '../../../rum-events-format/schemas/rum/_common-schema.json'
