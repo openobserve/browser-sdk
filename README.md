@@ -16,11 +16,10 @@ See the dedicated [Openobserve Browser RUM Collection documentation][18] to lear
 
 This repository contains several packages:
 
-| Package          | npm                      | size                     |
-| ---------------- | ------------------------ | ------------------------ |
-| browser-logs     | [![npm version][01]][02] | [![bundle size][03]][04] |
-| browser-rum      | [![npm version][11]][12] | [![bundle size][13]][14] |
-| browser-rum-slim | [![npm version][21]][22] | [![bundle size][23]][24] |
-| browser-rum-core | [![npm version][51]][52] | [![bundle size][53]][54] |
-| browser-core     | [![npm version][41]][42] | [![bundle size][43]][44] |
-
+| Package          
+| ---------------- 
+| browser-logs     
+| browser-rum      
+| browser-rum-slim 
+| browser-rum-core 
+| browser-core     
