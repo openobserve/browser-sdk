@@ -1,4 +1,4 @@
-import type { Configuration } from '@datadog/browser-core'
+import type { Configuration } from '@openobserve/browser-core'
 import { createNewEvent, stubZoneJs } from '../../test'
 import { noop } from '../tools/utils/functionUtils'
 import { addEventListener, DOM_EVENT } from './addEventListener'

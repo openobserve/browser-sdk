@@ -180,7 +180,7 @@ export type TelemetryConfigurationEvent = CommonTelemetryProperties & {
       /**
        * A list of selected tracing propagators
        */
-      selected_tracing_propagators?: ('datadog' | 'b3' | 'b3multi' | 'tracecontext')[]
+      selected_tracing_propagators?: ('openobserve' | 'datadog' | 'b3' | 'b3multi' | 'tracecontext')[]
       /**
        * Session replay default privacy level
        */
@@ -229,10 +229,10 @@ export type TelemetryConfigurationEvent = CommonTelemetryProperties & {
        * View tracking strategy
        */
       view_tracking_strategy?:
-        | 'ActivityViewTrackingStrategy'
-        | 'FragmentViewTrackingStrategy'
-        | 'MixedViewTrackingStrategy'
-        | 'NavigationViewTrackingStrategy'
+      | 'ActivityViewTrackingStrategy'
+      | 'FragmentViewTrackingStrategy'
+      | 'MixedViewTrackingStrategy'
+      | 'NavigationViewTrackingStrategy'
       /**
        * Whether RUM events are tracked when the application is in Background
        */

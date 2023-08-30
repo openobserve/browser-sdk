@@ -24,10 +24,6 @@ import { StatusType, TelemetryType } from './rawTelemetryEvent.types'
 declare const __BUILD_ENV__SDK_VERSION__: string
 
 const ALLOWED_FRAME_URLS = [
-  'https://www.datadoghq-browser-agent.com',
-  'https://www.datad0g-browser-agent.com',
-  'https://d3uc069fcn7uxw.cloudfront.net',
-  'https://d20xtzwzcl0ceb.cloudfront.net',
   'http://localhost',
   '<anonymous>',
 ]
