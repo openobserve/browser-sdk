@@ -54,7 +54,6 @@ export {
   HttpRequest,
   Payload,
   createHttpRequest,
-  Batch,
   canUseEventBridge,
   getEventBridge,
   startBatchWithReplica,
@@ -126,3 +125,4 @@ export { ErrorSource } from './domain/error/error.types'
 export { RawError } from './domain/error/error.types'
 export { RawErrorCause } from './domain/error/error.types'
 export { ErrorWithCause } from './domain/error/error.types'
+export * from './domain/deflate'
