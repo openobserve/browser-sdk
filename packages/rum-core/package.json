@@ -12,14 +12,14 @@
     "replace-build-env": "node ../../scripts/build/replace-build-env.js"
   },
   "dependencies": {
-    "@datadog/browser-core": "4.48.1"
+    "@openobserve/browser-core": "0.1.2"
   },
   "devDependencies": {
     "ajv": "6.12.6"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/DataDog/browser-sdk.git",
+    "url": "https://github.com/openobserve/browser-sdk.git",
     "directory": "packages/rum-core"
   },
   "volta": {

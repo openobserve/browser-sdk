@@ -1,5 +1,5 @@
-import type { ListenerHandler } from '@datadog/browser-core'
-import { assign, addEventListeners, DOM_EVENT } from '@datadog/browser-core'
+import type { ListenerHandler } from '@openobserve/browser-core'
+import { assign, addEventListeners, DOM_EVENT } from '@openobserve/browser-core'
 import type { RumConfiguration } from '@datadog/browser-rum-core'
 import { NodePrivacyLevel } from '../../../constants'
 import type { MouseInteraction, MouseInteractionData, BrowserIncrementalSnapshotRecord } from '../../../types'

@@ -10,7 +10,7 @@ import { makeRumPublicApi, startRum } from '@datadog/browser-rum-core'
 import { startRecording } from '../boot/startRecording'
 import { makeRecorderApi } from '../boot/recorderApi'
 
-export { DefaultPrivacyLevel } from '@datadog/browser-core'
+export { DefaultPrivacyLevel } from '@openobserve/browser-core'
 
 // Disable the rule that forbids potential side effects, because we know that those functions don't
 // have side effects.

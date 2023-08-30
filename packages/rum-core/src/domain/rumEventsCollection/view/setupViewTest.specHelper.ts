@@ -1,4 +1,4 @@
-import type { Duration, RelativeTime } from '@datadog/browser-core'
+import type { Duration, RelativeTime } from '@openobserve/browser-core'
 import { noopWebVitalTelemetryDebug } from '../../../../test'
 import type { BuildContext } from '../../../../test'
 import { LifeCycleEventType } from '../../lifeCycle'

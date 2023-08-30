@@ -1,5 +1,5 @@
-import type { ClocksState, Duration } from '@datadog/browser-core'
-import { ONE_SECOND, elapsed, relativeNow, throttle, addEventListener, DOM_EVENT } from '@datadog/browser-core'
+import type { ClocksState, Duration } from '@openobserve/browser-core'
+import { ONE_SECOND, elapsed, relativeNow, throttle, addEventListener, DOM_EVENT } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../../../configuration'
 import { getScrollY } from '../../../../browser/scroll'
 import { getViewportDimension } from '../../../../browser/viewportObservable'

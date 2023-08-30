@@ -8,7 +8,7 @@ import {
   getType,
   isMatchOption,
   matchList,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { RumConfiguration } from '../configuration'
 import type {
   RumFetchResolveContext,
@@ -71,7 +71,7 @@ export function startTracer(configuration: RumConfiguration, sessionManager: Rum
         if (context.input instanceof Request && !context.init?.headers) {
           context.input = new Request(context.input)
           Object.keys(tracingHeaders).forEach((key) => {
-            ;(context.input as Request).headers.append(key, tracingHeaders[key])
+            ; (context.input as Request).headers.append(key, tracingHeaders[key])
           })
         } else {
           context.init = shallowClone(context.init)
@@ -158,18 +158,16 @@ function makeTracingHeaders(
       // https://www.w3.org/TR/trace-context/
       case 'tracecontext': {
         assign(tracingHeaders, {
-          traceparent: `00-0000000000000000${traceId.toPaddedHexadecimalString()}-${spanId.toPaddedHexadecimalString()}-0${
-            traceSampled ? '1' : '0'
-          }`,
+          traceparent: `00-0000000000000000${traceId.toPaddedHexadecimalString()}-${spanId.toPaddedHexadecimalString()}-0${traceSampled ? '1' : '0'
+            }`,
         })
         break
       }
       // https://github.com/openzipkin/b3-propagation
       case 'b3': {
         assign(tracingHeaders, {
-          b3: `${traceId.toPaddedHexadecimalString()}-${spanId.toPaddedHexadecimalString()}-${
-            traceSampled ? '1' : '0'
-          }`,
+          b3: `${traceId.toPaddedHexadecimalString()}-${spanId.toPaddedHexadecimalString()}-${traceSampled ? '1' : '0'
+            }`,
         })
         break
       }

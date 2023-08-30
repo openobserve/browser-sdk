@@ -1,4 +1,4 @@
-import type { Context, InitConfiguration, User } from '@datadog/browser-core'
+import type { Context, InitConfiguration, User } from '@openobserve/browser-core'
 import {
   CustomerDataType,
   assign,
@@ -13,7 +13,7 @@ import {
   checkUser,
   sanitizeUser,
   sanitize,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { LogsInitConfiguration } from '../domain/configuration'
 import { validateAndBuildLogsConfiguration } from '../domain/configuration'
 import type { HandlerType, StatusType, LogsMessage } from '../domain/logger'
@@ -87,7 +87,7 @@ export function makeLogsPublicApi(startLogsImpl: StartLogs) {
         return
       }
 
-      ;({ handleLog: handleLogStrategy, getInternalContext: getInternalContextStrategy } = startLogsImpl(
+      ; ({ handleLog: handleLogStrategy, getInternalContext: getInternalContextStrategy } = startLogsImpl(
         initConfiguration,
         configuration,
         buildCommonContext,

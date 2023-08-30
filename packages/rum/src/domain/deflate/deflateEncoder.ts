@@ -1,6 +1,6 @@
-import type { DeflateWorkerResponse } from '@datadog/browser-core'
+import type { DeflateWorkerResponse } from '@openobserve/browser-core'
 import type { RumConfiguration } from '@datadog/browser-rum-core'
-import { addEventListener, addTelemetryDebug, concatBuffers } from '@datadog/browser-core'
+import { addEventListener, addTelemetryDebug, concatBuffers } from '@openobserve/browser-core'
 import type { DeflateWorker } from './deflateWorker'
 
 export interface DeflateEncoder {

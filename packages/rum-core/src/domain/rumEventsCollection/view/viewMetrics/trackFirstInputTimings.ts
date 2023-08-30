@@ -1,5 +1,5 @@
-import type { Duration, RelativeTime } from '@datadog/browser-core'
-import { elapsed, find } from '@datadog/browser-core'
+import type { Duration, RelativeTime } from '@openobserve/browser-core'
+import { elapsed, find } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../../../configuration'
 import type { LifeCycle } from '../../../lifeCycle'
 import { LifeCycleEventType } from '../../../lifeCycle'

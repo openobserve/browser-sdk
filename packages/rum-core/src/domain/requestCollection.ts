@@ -5,7 +5,7 @@ import type {
   ClocksState,
   FetchStartContext,
   FetchResolveContext,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import {
   RequestType,
   initFetchObservable,
@@ -14,7 +14,7 @@ import {
   elapsed,
   timeStampNow,
   tryToClone,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { RumSessionManager } from '..'
 import type { RumConfiguration } from './configuration'
 import type { LifeCycle } from './lifeCycle'
@@ -29,10 +29,10 @@ export interface CustomContext {
   traceId?: TraceIdentifier
   traceSampled?: boolean
 }
-export interface RumFetchStartContext extends FetchStartContext, CustomContext {}
-export interface RumFetchResolveContext extends FetchResolveContext, CustomContext {}
-export interface RumXhrStartContext extends XhrStartContext, CustomContext {}
-export interface RumXhrCompleteContext extends XhrCompleteContext, CustomContext {}
+export interface RumFetchStartContext extends FetchStartContext, CustomContext { }
+export interface RumFetchResolveContext extends FetchResolveContext, CustomContext { }
+export interface RumXhrStartContext extends XhrStartContext, CustomContext { }
+export interface RumXhrCompleteContext extends XhrCompleteContext, CustomContext { }
 
 export interface RequestStartEvent {
   requestIndex: number

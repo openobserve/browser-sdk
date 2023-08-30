@@ -1,5 +1,5 @@
-import type { Duration } from '@datadog/browser-core'
-import { setTimeout, assign, ONE_MINUTE } from '@datadog/browser-core'
+import type { Duration } from '@openobserve/browser-core'
+import { setTimeout, assign, ONE_MINUTE } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../../../configuration'
 import type { LifeCycle } from '../../../lifeCycle'
 import type { WebVitalTelemetryDebug } from '../startWebVitalTelemetryDebug'

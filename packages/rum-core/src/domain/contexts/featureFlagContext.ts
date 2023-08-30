@@ -1,4 +1,4 @@
-import type { RelativeTime, ContextValue, Context } from '@datadog/browser-core'
+import type { RelativeTime, ContextValue, Context } from '@openobserve/browser-core'
 import {
   CustomerDataType,
   warnIfCustomerDataLimitReached,
@@ -10,7 +10,7 @@ import {
   SESSION_TIME_OUT_DELAY,
   ValueHistory,
   ExperimentalFeature,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { LifeCycle } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'
 

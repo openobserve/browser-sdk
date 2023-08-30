@@ -1,4 +1,4 @@
-import type { Duration, ServerDuration, Observable } from '@datadog/browser-core'
+import type { Duration, ServerDuration, Observable } from '@openobserve/browser-core'
 import {
   isExperimentalFeatureEnabled,
   ExperimentalFeature,
@@ -6,7 +6,7 @@ import {
   mapValues,
   toServerDuration,
   isNumber,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { RecorderApi } from '../../../boot/rumPublicApi'
 import type { RawRumViewEvent } from '../../../rawRumEvent.types'
 import { RumEventType } from '../../../rawRumEvent.types'
@@ -110,13 +110,13 @@ function processViewUpdate(
     feature_flags: featureFlagContext && !isEmptyObject(featureFlagContext) ? featureFlagContext : undefined,
     display: view.commonViewMetrics.scroll
       ? {
-          scroll: {
-            max_depth: view.commonViewMetrics.scroll.maxDepth,
-            max_depth_scroll_height: view.commonViewMetrics.scroll.maxDepthScrollHeight,
-            max_depth_scroll_top: view.commonViewMetrics.scroll.maxDepthScrollTop,
-            max_depth_time: toServerDuration(view.commonViewMetrics.scroll.maxDepthTime),
-          },
-        }
+        scroll: {
+          max_depth: view.commonViewMetrics.scroll.maxDepth,
+          max_depth_scroll_height: view.commonViewMetrics.scroll.maxDepthScrollHeight,
+          max_depth_scroll_top: view.commonViewMetrics.scroll.maxDepthScrollTop,
+          max_depth_time: toServerDuration(view.commonViewMetrics.scroll.maxDepthTime),
+        },
+      }
       : undefined,
     session: {
       has_replay: replayStats ? true : undefined,

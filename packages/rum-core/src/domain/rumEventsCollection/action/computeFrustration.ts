@@ -1,4 +1,4 @@
-import { elementMatches, ONE_SECOND } from '@datadog/browser-core'
+import { elementMatches, ONE_SECOND } from '@openobserve/browser-core'
 import { FrustrationType } from '../../../rawRumEvent.types'
 import type { Click } from './trackClickActions'
 

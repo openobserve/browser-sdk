@@ -1,5 +1,5 @@
-import type { ListenerHandler } from '@datadog/browser-core'
-import { instrumentMethodAndCallOriginal } from '@datadog/browser-core'
+import type { ListenerHandler } from '@openobserve/browser-core'
+import { instrumentMethodAndCallOriginal } from '@openobserve/browser-core'
 import type { StyleSheetRule } from '../../../types'
 import { getSerializedNodeId, hasSerializedNode } from '../serialization'
 

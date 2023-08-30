@@ -1,4 +1,4 @@
-import type { Duration, RelativeTime, TimeStamp } from '@datadog/browser-core'
+import type { Duration, RelativeTime, TimeStamp } from '@openobserve/browser-core'
 import {
   dateNow,
   assign,
@@ -11,7 +11,7 @@ import {
   relativeNow,
   runOnReadyState,
   addEventListener,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 
 import type { RumConfiguration } from '../domain/configuration'
 import type { LifeCycle } from '../domain/lifeCycle'
