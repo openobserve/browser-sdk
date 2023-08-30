@@ -1,4 +1,4 @@
-import type { Duration, ClocksState, RelativeTime, TimeStamp } from '@datadog/browser-core'
+import type { Duration, ClocksState, RelativeTime, TimeStamp } from '@openobserve/browser-core'
 import {
   includes,
   timeStampNow,
@@ -11,7 +11,7 @@ import {
   clocksNow,
   ONE_SECOND,
   elapsed,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { FrustrationType } from '../../../rawRumEvent.types'
 import { ActionType } from '../../../rawRumEvent.types'
 import type { RumConfiguration } from '../../configuration'

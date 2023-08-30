@@ -1,5 +1,5 @@
-import { addTelemetryDebug, elapsed, noop, performDraw, relativeNow, toServerDuration } from '@datadog/browser-core'
-import type { Telemetry, RelativeTime } from '@datadog/browser-core'
+import { addTelemetryDebug, elapsed, noop, performDraw, relativeNow, toServerDuration } from '@openobserve/browser-core'
+import type { Telemetry, RelativeTime } from '@openobserve/browser-core'
 import type { RecorderApi } from '../../../boot/rumPublicApi'
 import type { RumSessionManager } from '../../rumSessionManager'
 import type { RumConfiguration } from '../../configuration'

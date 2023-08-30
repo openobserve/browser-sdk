@@ -1,4 +1,4 @@
-import type { Context, RawError, ClocksState } from '@datadog/browser-core'
+import type { Context, RawError, ClocksState } from '@openobserve/browser-core'
 import {
   isEmptyObject,
   assign,
@@ -10,7 +10,7 @@ import {
   Observable,
   trackRuntimeError,
   NonErrorPrefix,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { RumConfiguration } from '../../configuration'
 import type { RawRumErrorEvent } from '../../../rawRumEvent.types'
 import { RumEventType } from '../../../rawRumEvent.types'

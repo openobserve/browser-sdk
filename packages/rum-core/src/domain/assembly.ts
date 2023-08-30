@@ -1,4 +1,4 @@
-import type { Context, RawError, EventRateLimiter, User } from '@datadog/browser-core'
+import type { Context, RawError, EventRateLimiter, User } from '@openobserve/browser-core'
 import {
   combine,
   isEmptyObject,
@@ -9,7 +9,7 @@ import {
   canUseEventBridge,
   assign,
   round,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { RumEventDomainContext } from '../domainContext.types'
 import type {
   RawRumErrorEvent,
@@ -160,11 +160,11 @@ export function startRumAssembly(
         serverRumEvent.context = combine(commonContext.context, customerContext)
 
         if (!('has_replay' in serverRumEvent.session)) {
-          ;(serverRumEvent.session as Mutable<RumEvent['session']>).has_replay = commonContext.hasReplay
+          ; (serverRumEvent.session as Mutable<RumEvent['session']>).has_replay = commonContext.hasReplay
         }
 
         if (!isEmptyObject(commonContext.user)) {
-          ;(serverRumEvent.usr as Mutable<RumEvent['usr']>) = commonContext.user as User & Context
+          ; (serverRumEvent.usr as Mutable<RumEvent['usr']>) = commonContext.user as User & Context
         }
 
         if (shouldSend(serverRumEvent, configuration.beforeSend, domainContext, eventRateLimiters)) {

@@ -1,5 +1,5 @@
 import { isNodeShadowRoot, isNodeShadowHost } from '@datadog/browser-rum-core'
-import { assign } from '@datadog/browser-core'
+import { assign } from '@openobserve/browser-core'
 import type {
   DocumentFragmentNode,
   DocumentNode,

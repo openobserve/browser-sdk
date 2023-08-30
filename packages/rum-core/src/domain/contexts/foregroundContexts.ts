@@ -1,5 +1,5 @@
-import type { RelativeTime, Duration, ServerDuration } from '@datadog/browser-core'
-import { toServerDuration } from '@datadog/browser-core'
+import type { RelativeTime, Duration, ServerDuration } from '@openobserve/browser-core'
+import { toServerDuration } from '@openobserve/browser-core'
 import type { InForegroundPeriod, PageStateServerEntry } from '../../rawRumEvent.types'
 import { PageState } from './pageStateHistory'
 

@@ -1,5 +1,5 @@
-import type { Context, ClocksState, ConsoleLog } from '@datadog/browser-core'
-import { timeStampNow, ConsoleApiName, ErrorSource, initConsoleObservable } from '@datadog/browser-core'
+import type { Context, ClocksState, ConsoleLog } from '@openobserve/browser-core'
+import { timeStampNow, ConsoleApiName, ErrorSource, initConsoleObservable } from '@openobserve/browser-core'
 import type { LogsConfiguration } from '../../configuration'
 import type { LifeCycle } from '../../lifeCycle'
 import { LifeCycleEventType } from '../../lifeCycle'
@@ -29,10 +29,10 @@ export function startConsoleCollection(configuration: LogsConfiguration, lifeCyc
         error:
           log.api === ConsoleApiName.error
             ? {
-                origin: ErrorSource.CONSOLE, // Todo: Remove in the next major release
-                stack: log.stack,
-                fingerprint: log.fingerprint,
-              }
+              origin: ErrorSource.CONSOLE, // Todo: Remove in the next major release
+              stack: log.stack,
+              fingerprint: log.fingerprint,
+            }
             : undefined,
         status: LogStatusForApi[log.api],
       },

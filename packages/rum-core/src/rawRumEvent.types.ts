@@ -8,7 +8,7 @@ import type {
   TimeStamp,
   RawErrorCause,
   DefaultPrivacyLevel,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { PageState } from './domain/contexts/pageStateHistory'
 import type { RumSessionPlan } from './domain/rumSessionManager'
 

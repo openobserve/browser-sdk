@@ -1,5 +1,5 @@
-import type { RelativeTime } from '@datadog/browser-core'
-import { Observable, canUseEventBridge, noop, runOnReadyState, relativeNow } from '@datadog/browser-core'
+import type { RelativeTime } from '@openobserve/browser-core'
+import { Observable, canUseEventBridge, noop, runOnReadyState, relativeNow } from '@openobserve/browser-core'
 import type {
   LifeCycle,
   ViewContexts,
@@ -38,18 +38,18 @@ const enum RecorderStatus {
 }
 type RecorderState =
   | {
-      status: RecorderStatus.Stopped
-    }
+    status: RecorderStatus.Stopped
+  }
   | {
-      status: RecorderStatus.IntentToStart
-    }
+    status: RecorderStatus.IntentToStart
+  }
   | {
-      status: RecorderStatus.Starting
-    }
+    status: RecorderStatus.Starting
+  }
   | {
-      status: RecorderStatus.Started
-      stopRecording: () => void
-    }
+    status: RecorderStatus.Started
+    stopRecording: () => void
+  }
 
 export function makeRecorderApi(
   startRecordingImpl: StartRecording,

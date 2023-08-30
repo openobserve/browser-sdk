@@ -1,5 +1,5 @@
-import type { Observable, RawError } from '@datadog/browser-core'
-import { clocksNow, ErrorHandling, initConsoleObservable, ErrorSource, ConsoleApiName } from '@datadog/browser-core'
+import type { Observable, RawError } from '@openobserve/browser-core'
+import { clocksNow, ErrorHandling, initConsoleObservable, ErrorSource, ConsoleApiName } from '@openobserve/browser-core'
 
 export function trackConsoleError(errorObservable: Observable<RawError>) {
   const subscription = initConsoleObservable([ConsoleApiName.error]).subscribe((consoleError) =>

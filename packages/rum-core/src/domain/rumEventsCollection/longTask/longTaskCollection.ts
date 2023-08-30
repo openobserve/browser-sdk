@@ -1,4 +1,4 @@
-import { toServerDuration, relativeToClocks, generateUUID } from '@datadog/browser-core'
+import { toServerDuration, relativeToClocks, generateUUID } from '@openobserve/browser-core'
 import type { RawRumLongTaskEvent } from '../../../rawRumEvent.types'
 import { RumEventType } from '../../../rawRumEvent.types'
 import type { LifeCycle } from '../../lifeCycle'

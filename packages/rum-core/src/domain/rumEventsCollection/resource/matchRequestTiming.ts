@@ -1,5 +1,5 @@
-import type { Duration, RelativeTime } from '@datadog/browser-core'
-import { addDuration } from '@datadog/browser-core'
+import type { Duration, RelativeTime } from '@openobserve/browser-core'
+import { addDuration } from '@openobserve/browser-core'
 import type { RumPerformanceResourceTiming } from '../../../browser/performanceCollection'
 import type { RequestCompleteEvent } from '../../requestCollection'
 import { toValidEntry } from './resourceUtils'

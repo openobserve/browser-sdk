@@ -1,5 +1,5 @@
-import type { ListenerHandler } from '@datadog/browser-core'
-import { throttle, DOM_EVENT, addEventListeners, noop } from '@datadog/browser-core'
+import type { ListenerHandler } from '@openobserve/browser-core'
+import { throttle, DOM_EVENT, addEventListeners, noop } from '@openobserve/browser-core'
 import type { RumConfiguration } from '@datadog/browser-rum-core'
 import { initViewportObservable } from '@datadog/browser-rum-core'
 import type { ViewportResizeDimension, VisualViewportRecord } from '../../../types'

@@ -1,4 +1,4 @@
-import { ExperimentalFeature, isExperimentalFeatureEnabled } from '@datadog/browser-core'
+import { ExperimentalFeature, isExperimentalFeatureEnabled } from '@openobserve/browser-core'
 
 import { NodePrivacyLevel } from '../../../constants'
 import { shouldMaskNode } from '../privacy'
@@ -112,7 +112,7 @@ export function serializeAttributes(
       break
     case SerializationContextStatus.SUBSEQUENT_FULL_SNAPSHOT:
       if (serializationContext.elementsScrollPositions.has(element)) {
-        ;({ scrollTop, scrollLeft } = serializationContext.elementsScrollPositions.get(element)!)
+        ; ({ scrollTop, scrollLeft } = serializationContext.elementsScrollPositions.get(element)!)
       }
       break
   }

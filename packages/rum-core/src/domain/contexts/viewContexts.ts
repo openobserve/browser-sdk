@@ -1,5 +1,5 @@
-import type { RelativeTime, ClocksState } from '@datadog/browser-core'
-import { SESSION_TIME_OUT_DELAY, ValueHistory } from '@datadog/browser-core'
+import type { RelativeTime, ClocksState } from '@openobserve/browser-core'
+import { SESSION_TIME_OUT_DELAY, ValueHistory } from '@openobserve/browser-core'
 import type { LifeCycle } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'
 import type { ViewCreatedEvent } from '../rumEventsCollection/view/trackViews'

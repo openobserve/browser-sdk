@@ -1,4 +1,4 @@
-import type { TelemetryErrorEvent, TelemetryEvent, TelemetryConfigurationEvent } from '@datadog/browser-core'
+import type { TelemetryErrorEvent, TelemetryEvent, TelemetryConfigurationEvent } from '@openobserve/browser-core'
 import type { RumActionEvent, RumErrorEvent, RumEvent, RumResourceEvent, RumViewEvent } from '@datadog/browser-rum'
 import type { BrowserSegmentMetadataAndSegmentSizes } from '@datadog/browser-rum/src/domain/segmentCollection'
 import type { BrowserSegment } from '@datadog/browser-rum/src/types'

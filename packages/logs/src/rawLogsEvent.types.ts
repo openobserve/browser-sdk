@@ -1,4 +1,4 @@
-import type { Context, ErrorSource, TimeStamp, User } from '@datadog/browser-core'
+import type { Context, ErrorSource, TimeStamp, User } from '@openobserve/browser-core'
 import type { StatusType } from './domain/logger'
 
 export type RawLogsEvent =

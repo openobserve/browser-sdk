@@ -1,5 +1,5 @@
-import type { DeflateWorkerAction, DeflateWorkerResponse } from '@datadog/browser-core'
-import { addTelemetryError, display, includes, addEventListener, setTimeout, ONE_SECOND } from '@datadog/browser-core'
+import type { DeflateWorkerAction, DeflateWorkerResponse } from '@openobserve/browser-core'
+import { addTelemetryError, display, includes, addEventListener, setTimeout, ONE_SECOND } from '@openobserve/browser-core'
 import type { RumConfiguration } from '@datadog/browser-rum-core'
 
 export const INITIALIZATION_TIME_OUT_DELAY = 10 * ONE_SECOND
@@ -20,21 +20,21 @@ export const enum DeflateWorkerStatus {
 
 type DeflateWorkerState =
   | {
-      status: DeflateWorkerStatus.Nil
-    }
+    status: DeflateWorkerStatus.Nil
+  }
   | {
-      status: DeflateWorkerStatus.Loading
-      worker: DeflateWorker
-      initializationFailureCallbacks: Array<() => void>
-    }
+    status: DeflateWorkerStatus.Loading
+    worker: DeflateWorker
+    initializationFailureCallbacks: Array<() => void>
+  }
   | {
-      status: DeflateWorkerStatus.Error
-    }
+    status: DeflateWorkerStatus.Error
+  }
   | {
-      status: DeflateWorkerStatus.Initialized
-      worker: DeflateWorker
-      version: string
-    }
+    status: DeflateWorkerStatus.Initialized
+    worker: DeflateWorker
+    version: string
+  }
 
 export interface DeflateWorker extends Worker {
   postMessage(message: DeflateWorkerAction): void

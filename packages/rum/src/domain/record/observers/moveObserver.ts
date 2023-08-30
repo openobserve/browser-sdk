@@ -1,5 +1,5 @@
-import type { ListenerHandler } from '@datadog/browser-core'
-import { addEventListeners, addTelemetryDebug, DOM_EVENT, throttle } from '@datadog/browser-core'
+import type { ListenerHandler } from '@openobserve/browser-core'
+import { addEventListeners, addTelemetryDebug, DOM_EVENT, throttle } from '@openobserve/browser-core'
 import type { RumConfiguration } from '@datadog/browser-rum-core'
 import { getSerializedNodeId, hasSerializedNode } from '../serialization'
 import type { MousePosition } from '../../../types'

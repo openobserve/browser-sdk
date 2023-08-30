@@ -1,5 +1,5 @@
-import type { Context, Observable, PageExitEvent, RawError } from '@datadog/browser-core'
-import { startBatchWithReplica } from '@datadog/browser-core'
+import type { Context, Observable, PageExitEvent, RawError } from '@openobserve/browser-core'
+import { startBatchWithReplica } from '@openobserve/browser-core'
 import type { LogsConfiguration } from '../domain/configuration'
 import type { LifeCycle } from '../domain/lifeCycle'
 import { LifeCycleEventType } from '../domain/lifeCycle'

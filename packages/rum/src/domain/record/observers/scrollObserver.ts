@@ -1,5 +1,5 @@
-import type { DefaultPrivacyLevel, ListenerHandler } from '@datadog/browser-core'
-import { DOM_EVENT, throttle, addEventListener } from '@datadog/browser-core'
+import type { DefaultPrivacyLevel, ListenerHandler } from '@openobserve/browser-core'
+import { DOM_EVENT, throttle, addEventListener } from '@openobserve/browser-core'
 import type { RumConfiguration } from '@datadog/browser-rum-core'
 import { getScrollX, getScrollY } from '@datadog/browser-rum-core'
 import type { ElementsScrollPositions } from '../elementsScrollPositions'
@@ -32,13 +32,13 @@ export function initScrollObserver(
     const scrollPositions =
       target === document
         ? {
-            scrollTop: getScrollY(),
-            scrollLeft: getScrollX(),
-          }
+          scrollTop: getScrollY(),
+          scrollLeft: getScrollX(),
+        }
         : {
-            scrollTop: Math.round((target as HTMLElement).scrollTop),
-            scrollLeft: Math.round((target as HTMLElement).scrollLeft),
-          }
+          scrollTop: Math.round((target as HTMLElement).scrollTop),
+          scrollLeft: Math.round((target as HTMLElement).scrollLeft),
+        }
     elementsScrollPositions.set(target, scrollPositions)
     cb({
       id,

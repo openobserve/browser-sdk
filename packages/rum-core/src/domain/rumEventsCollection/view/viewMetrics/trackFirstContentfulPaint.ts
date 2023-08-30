@@ -1,5 +1,5 @@
-import type { RelativeTime } from '@datadog/browser-core'
-import { ONE_MINUTE, find } from '@datadog/browser-core'
+import type { RelativeTime } from '@openobserve/browser-core'
+import { ONE_MINUTE, find } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../../../configuration'
 import type { LifeCycle } from '../../../lifeCycle'
 import { LifeCycleEventType } from '../../../lifeCycle'
