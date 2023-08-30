@@ -1,4 +1,4 @@
-import { cssEscape } from '@datadog/browser-core'
+import { cssEscape } from '@openobserve/browser-core'
 import { DEFAULT_PROGRAMMATIC_ACTION_NAME_ATTRIBUTE } from './action/getActionNameFromElement'
 
 /**

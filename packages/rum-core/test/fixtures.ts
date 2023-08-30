@@ -1,4 +1,4 @@
-import type { Context, Duration, RelativeTime, ServerDuration, TimeStamp } from '@datadog/browser-core'
+import type { Context, Duration, RelativeTime, ServerDuration, TimeStamp } from '@openobserve/browser-core'
 import {
   assign,
   combine,
@@ -7,7 +7,7 @@ import {
   generateUUID,
   relativeNow,
   ResourceType,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import { RumPerformanceEntryType } from '../src/browser/performanceCollection'
 import type {
   RumFirstInputTiming,

@@ -9,12 +9,14 @@ import {
   isNumber,
   isExperimentalFeatureEnabled,
   ExperimentalFeature,
-} from '@datadog/browser-core'
-import type { ClocksState, Duration } from '@datadog/browser-core'
+} from '@openobserve/browser-core'
+import type { ClocksState, Duration } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../configuration'
-import type { RumPerformanceResourceTiming } from '../../browser/performanceCollection'
-import { RumPerformanceEntryType } from '../../browser/performanceCollection'
-import type { RumXhrResourceEventDomainContext, RumFetchResourceEventDomainContext } from '../../domainContext.types'
+import type { RumPerformanceEntry, RumPerformanceResourceTiming } from '../../browser/performanceCollection'
+import type {
+  RumXhrResourceEventDomainContext,
+  RumFetchResourceEventDomainContext,
+} from '../../domainContext.types'
 import type { RawRumResourceEvent } from '../../rawRumEvent.types'
 import { RumEventType } from '../../rawRumEvent.types'
 import type { LifeCycle, RawRumEventCollectedData } from '../lifeCycle'

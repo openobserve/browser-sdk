@@ -1,4 +1,4 @@
-import type { Context } from '@datadog/browser-core'
+import type { Context } from '@openobserve/browser-core'
 import ajv from 'ajv'
 import { allJsonSchemas } from './allJsonSchemas'
 

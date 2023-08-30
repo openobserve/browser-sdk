@@ -1,11 +1,4 @@
-import type {
-  Observable,
-  TelemetryEvent,
-  RawError,
-  DeflateEncoderStreamId,
-  Encoder,
-  CustomerDataTrackerManager,
-} from '@datadog/browser-core'
+import type { Observable, TelemetryEvent, RawError, DeflateEncoderStreamId, Encoder, CustomerDataTrackerManager, ContextManager } from '@openobserve/browser-core'
 import {
   sendToExtension,
   createPageExitObservable,
@@ -16,7 +9,7 @@ import {
   getEventBridge,
   addTelemetryDebug,
   CustomerDataType,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import { createDOMMutationObservable } from '../browser/domMutationObservable'
 import { startPerformanceCollection } from '../browser/performanceCollection'
 import { startRumAssembly } from '../domain/assembly'

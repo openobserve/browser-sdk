@@ -1,4 +1,4 @@
-import { monitor, noop } from '@datadog/browser-core'
+import { monitor, noop } from '@openobserve/browser-core'
 import type { RumConfiguration } from '@datadog/browser-rum-core'
 import {
   isNodeShadowHost,

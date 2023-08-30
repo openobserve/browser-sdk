@@ -1,4 +1,4 @@
-import type { Context, ContextManager, CustomerDataTrackerManager, TimeStamp } from '@datadog/browser-core'
+import type { Context, ContextManager, CustomerDataTrackerManager, TimeStamp } from '@openobserve/browser-core'
 import {
   assign,
   combine,
@@ -7,9 +7,9 @@ import {
   CustomerDataType,
   noop,
   Observable,
-} from '@datadog/browser-core'
-import type { Clock } from '@datadog/browser-core/test'
-import { mockClock, buildLocation, SPEC_ENDPOINTS } from '@datadog/browser-core/test'
+} from '@openobserve/browser-core'
+import type { Clock } from '@openobserve/browser-core/test'
+import { mockClock, buildLocation, SPEC_ENDPOINTS } from '@openobserve/browser-core/test'
 import type { LocationChange } from '../src/browser/locationChangeObservable'
 import type { RumConfiguration } from '../src/domain/configuration'
 import { validateAndBuildRumConfiguration } from '../src/domain/configuration'

@@ -1,5 +1,5 @@
 {
-  "name": "@datadog/browser-rum-core",
+  "name": "@openobserve/browser-rum-core",
   "version": "5.7.0",
   "license": "Apache-2.0",
   "main": "cjs/index.js",
@@ -12,7 +12,7 @@
     "replace-build-env": "node ../../scripts/build/replace-build-env.js"
   },
   "dependencies": {
-    "@datadog/browser-core": "5.7.0"
+    "@openobserve/browser-core": "0.1.1"
   },
   "devDependencies": {
     "ajv": "6.12.6"

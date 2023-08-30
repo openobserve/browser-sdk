@@ -1,12 +1,11 @@
-import type { Context, CustomerDataTrackerManager, FlushEvent, Observable, Telemetry } from '@datadog/browser-core'
-import {
-  includes,
+import type { Context, CustomerDataTrackerManager, FlushEvent, Observable, Telemetry } from '@openobserve/browser-core'
+import { includes,
   performDraw,
   ONE_SECOND,
   addTelemetryDebug,
   setInterval,
   CustomerDataType,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import { RumEventType } from '../rawRumEvent.types'
 import type { RumEvent } from '../rumEvent.types'
 import type { RumConfiguration } from './configuration'

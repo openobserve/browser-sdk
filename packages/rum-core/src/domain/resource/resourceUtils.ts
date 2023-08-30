@@ -1,4 +1,4 @@
-import type { RelativeTime, ServerDuration } from '@datadog/browser-core'
+import type { RelativeTime, ServerDuration } from '@openobserve/browser-core'
 import {
   assign,
   addTelemetryDebug,
@@ -8,7 +8,7 @@ import {
   isValidUrl,
   ResourceType,
   toServerDuration,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 
 import type { RumPerformanceResourceTiming } from '../../browser/performanceCollection'
 

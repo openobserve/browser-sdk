@@ -1,5 +1,5 @@
-import { round, find, ONE_SECOND, noop } from '@datadog/browser-core'
-import type { RelativeTime } from '@datadog/browser-core'
+import { round, find, ONE_SECOND, noop } from '@openobserve/browser-core'
+import type { RelativeTime } from '@openobserve/browser-core'
 import { isElementNode } from '../../../browser/htmlDomUtils'
 import type { LifeCycle } from '../../lifeCycle'
 import { LifeCycleEventType } from '../../lifeCycle'

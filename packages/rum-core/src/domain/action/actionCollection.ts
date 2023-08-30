@@ -1,5 +1,5 @@
-import type { ClocksState, Context, Observable } from '@datadog/browser-core'
-import { noop, assign, combine, toServerDuration, generateUUID } from '@datadog/browser-core'
+import type { ClocksState, Context, Observable } from '@openobserve/browser-core'
+import { noop, assign, combine, toServerDuration, generateUUID } from '@openobserve/browser-core'
 
 import type { RawRumActionEvent } from '../../rawRumEvent.types'
 import { ActionType, RumEventType } from '../../rawRumEvent.types'
@@ -59,29 +59,29 @@ function processAction(
 ): RawRumEventCollectedData<RawRumActionEvent> {
   const autoActionProperties = isAutoAction(action)
     ? {
+      action: {
+        id: action.id,
+        loading_time: toServerDuration(action.duration),
+        frustration: {
+          type: action.frustrationTypes,
+        },
+        error: {
+          count: action.counts.errorCount,
+        },
+        long_task: {
+          count: action.counts.longTaskCount,
+        },
+        resource: {
+          count: action.counts.resourceCount,
+        },
+      },
+      _dd: {
         action: {
-          id: action.id,
-          loading_time: toServerDuration(action.duration),
-          frustration: {
-            type: action.frustrationTypes,
-          },
-          error: {
-            count: action.counts.errorCount,
-          },
-          long_task: {
-            count: action.counts.longTaskCount,
-          },
-          resource: {
-            count: action.counts.resourceCount,
-          },
+          target: action.target,
+          position: action.position,
         },
-        _dd: {
-          action: {
-            target: action.target,
-            position: action.position,
-          },
-        },
-      }
+      },
+    }
     : undefined
   const customerContext = !isAutoAction(action) ? action.context : undefined
   const actionEvent: RawRumActionEvent = combine(

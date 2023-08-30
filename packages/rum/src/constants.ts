@@ -1,4 +1,4 @@
-import { DefaultPrivacyLevel } from '@datadog/browser-core'
+import { DefaultPrivacyLevel } from '@openobserve/browser-core'
 
 export const NodePrivacyLevel = {
   IGNORE: 'ignore',

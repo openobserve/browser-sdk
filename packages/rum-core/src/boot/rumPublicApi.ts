@@ -1,13 +1,4 @@
-import type {
-  Context,
-  InitConfiguration,
-  TimeStamp,
-  RelativeTime,
-  User,
-  DeflateWorker,
-  DeflateEncoderStreamId,
-  DeflateEncoder,
-} from '@datadog/browser-core'
+import type { Context, InitConfiguration, TimeStamp, RelativeTime, User, Observable, DeflateWorker, DeflateEncoderStreamId, DeflateEncoder, } from '@openobserve/browser-core'
 import {
   noop,
   CustomerDataType,
@@ -31,7 +22,7 @@ import {
   CustomerDataCompressionStatus,
   createCustomerDataTrackerManager,
   storeContextManager,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { LifeCycle } from '../domain/lifeCycle'
 import type { ViewContexts } from '../domain/contexts/viewContexts'
 import type { RumSessionManager } from '../domain/rumSessionManager'

@@ -1,6 +1,6 @@
-import type { DeflateWorker, DeflateWorkerResponse } from '@datadog/browser-core'
-import { addTelemetryError, display, includes, addEventListener, setTimeout, ONE_SECOND } from '@datadog/browser-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import type { DeflateWorker, DeflateWorkerResponse } from '@openobserve/browser-core'
+import { addTelemetryError, display, includes, addEventListener, setTimeout, ONE_SECOND } from '@openobserve/browser-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 
 export const INITIALIZATION_TIME_OUT_DELAY = 10 * ONE_SECOND
 
@@ -20,8 +20,8 @@ export const enum DeflateWorkerStatus {
 
 type DeflateWorkerState =
   | {
-      status: DeflateWorkerStatus.Nil
-    }
+    status: DeflateWorkerStatus.Nil
+  }
   | {
       status: DeflateWorkerStatus.Loading
       worker: DeflateWorker
@@ -29,8 +29,8 @@ type DeflateWorkerState =
       initializationFailureCallbacks: Array<() => void>
     }
   | {
-      status: DeflateWorkerStatus.Error
-    }
+    status: DeflateWorkerStatus.Error
+  }
   | {
       status: DeflateWorkerStatus.Initialized
       worker: DeflateWorker

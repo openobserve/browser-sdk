@@ -1,4 +1,4 @@
-import { Observable } from '@datadog/browser-core'
+import { Observable } from '@openobserve/browser-core'
 import type { RumSessionManager } from '../src/domain/rumSessionManager'
 
 export interface RumSessionManagerMock extends RumSessionManager {

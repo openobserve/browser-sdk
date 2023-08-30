@@ -1,5 +1,5 @@
-import type { TimeStamp } from '@datadog/browser-core'
-import { timeStampNow } from '@datadog/browser-core'
+import type { TimeStamp } from '@openobserve/browser-core'
+import { timeStampNow } from '@openobserve/browser-core'
 import type { LifeCycle, RumConfiguration } from '@datadog/browser-rum-core'
 import { getViewportDimension, getScrollX, getScrollY } from '@datadog/browser-rum-core'
 import type {

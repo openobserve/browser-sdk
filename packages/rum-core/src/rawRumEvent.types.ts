@@ -9,7 +9,7 @@ import type {
   RawErrorCause,
   DefaultPrivacyLevel,
   Connectivity,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { PageState } from './domain/contexts/pageStateHistory'
 
 export const enum RumEventType {

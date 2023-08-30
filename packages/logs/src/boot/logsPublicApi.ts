@@ -1,4 +1,4 @@
-import type { Context, InitConfiguration, User } from '@datadog/browser-core'
+import type { Context, InitConfiguration, User } from '@openobserve/browser-core'
 import {
   CustomerDataType,
   assign,
@@ -15,7 +15,7 @@ import {
   sanitize,
   createCustomerDataTrackerManager,
   storeContextManager,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { LogsInitConfiguration } from '../domain/configuration'
 import { validateAndBuildLogsConfiguration } from '../domain/configuration'
 import type { HandlerType, StatusType, LogsMessage } from '../domain/logger'

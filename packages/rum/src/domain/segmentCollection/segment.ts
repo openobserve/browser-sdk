@@ -1,5 +1,5 @@
-import type { Encoder, EncoderResult } from '@datadog/browser-core'
-import { assign, sendToExtension } from '@datadog/browser-core'
+import type { Encoder, EncoderResult } from '@openobserve/browser-core'
+import { assign, sendToExtension } from '@openobserve/browser-core'
 import type { BrowserRecord, BrowserSegmentMetadata, CreationReason, SegmentContext } from '../../types'
 import { RecordType } from '../../types'
 import * as replayStats from '../replayStats'

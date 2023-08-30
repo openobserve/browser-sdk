@@ -1,4 +1,4 @@
-import type { DeflateWorker, DeflateWorkerAction, DeflateWorkerResponse } from '@datadog/browser-core'
+import type { DeflateWorker, DeflateWorkerAction, DeflateWorkerResponse } from '@openobserve/browser-core'
 import { string2buf } from '../../worker/src/domain/deflate'
 import { createNewEvent } from '../../core/test'
 

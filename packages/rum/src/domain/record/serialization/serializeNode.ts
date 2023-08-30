@@ -1,5 +1,5 @@
-import { isNodeShadowRoot, hasChildNodes, forEachChildNodes } from '@datadog/browser-rum-core'
-import { assign } from '@datadog/browser-core'
+import { isNodeShadowRoot, hasChildNodes, forEachChildNodes } from '@openobserve/browser-rum-core'
+import { assign } from '@openobserve/browser-core'
 import type {
   DocumentFragmentNode,
   DocumentNode,

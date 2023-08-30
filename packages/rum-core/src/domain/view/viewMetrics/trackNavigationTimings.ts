@@ -1,5 +1,5 @@
-import type { Duration } from '@datadog/browser-core'
-import { relativeNow } from '@datadog/browser-core'
+import type { Duration } from '@openobserve/browser-core'
+import { relativeNow } from '@openobserve/browser-core'
 import { RumPerformanceEntryType } from '../../../browser/performanceCollection'
 import type { LifeCycle } from '../../lifeCycle'
 import { LifeCycleEventType } from '../../lifeCycle'

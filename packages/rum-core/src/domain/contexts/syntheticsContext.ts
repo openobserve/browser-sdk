@@ -1,4 +1,4 @@
-import { getSyntheticsResultId, getSyntheticsTestId, willSyntheticsInjectRum } from '@datadog/browser-core'
+import { getSyntheticsResultId, getSyntheticsTestId, willSyntheticsInjectRum } from '@openobserve/browser-core'
 
 export function getSyntheticsContext() {
   const testId = getSyntheticsTestId()

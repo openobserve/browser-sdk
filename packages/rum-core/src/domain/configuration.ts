@@ -1,4 +1,4 @@
-import type { Configuration, InitConfiguration, MatchOption, RawTelemetryConfiguration } from '@datadog/browser-core'
+import type { Configuration, InitConfiguration, MatchOption, RawTelemetryConfiguration } from '@openobserve/browser-core'
 import {
   getType,
   arrayFrom,
@@ -10,7 +10,7 @@ import {
   isPercentage,
   objectHasValue,
   validateAndBuildConfiguration,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { RumEventDomainContext } from '../domainContext.types'
 import type { RumEvent } from '../rumEvent.types'
 import { isTracingOption } from './tracing/tracer'

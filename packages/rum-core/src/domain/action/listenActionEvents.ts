@@ -1,4 +1,4 @@
-import { addEventListener, DOM_EVENT } from '@datadog/browser-core'
+import { addEventListener, DOM_EVENT } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../configuration'
 
 export type MouseEventOnElement = PointerEvent & { target: Element }

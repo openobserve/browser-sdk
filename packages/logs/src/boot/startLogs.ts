@@ -1,9 +1,17 @@
+import type { Context, TelemetryEvent, RawError, Observable, PageExitEvent } from '@openobserve/browser-core'
 import {
   sendToExtension,
   createPageExitObservable,
   willSyntheticsInjectRum,
   canUseEventBridge,
-} from '@datadog/browser-core'
+  getEventBridge,
+  startTelemetry,
+  startBatchWithReplica,
+  isTelemetryReplicationAllowed,
+  ErrorSource,
+  addTelemetryConfiguration,
+  addTelemetryDebug,
+} from '@openobserve/browser-core'
 import { startLogsSessionManager, startLogsSessionManagerStub } from '../domain/logsSessionManager'
 import type { LogsConfiguration, LogsInitConfiguration } from '../domain/configuration'
 import { startLogsAssembly } from '../domain/assembly'
