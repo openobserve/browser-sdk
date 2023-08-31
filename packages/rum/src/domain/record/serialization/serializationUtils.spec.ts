@@ -1,4 +1,4 @@
-import { isIE } from '@datadog/browser-core'
+import { isIE } from '@openobserve/browser-core'
 import { NodePrivacyLevel } from '../../../constants'
 import {
   getSerializedNodeId,

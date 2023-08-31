@@ -1,4 +1,4 @@
-import { collectAsyncCalls } from '@datadog/browser-core/test'
+import { collectAsyncCalls } from '@openobserve/browser-core/test'
 import { createMutationBatch } from './mutationBatch'
 import type { RumMutationRecord } from './observers'
 

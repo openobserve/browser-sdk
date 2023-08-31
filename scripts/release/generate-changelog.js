@@ -87,7 +87,7 @@ function getChangesList() {
   // changes with pull request links
   return allowedChanges.replace(
     /\(#(\d+)\)/gm,
-    (_, id) => `([#${id}](https://github.com/DataDog/browser-sdk/pull/${id}))`
+    (_, id) => `([#${id}](https://github.com/openobserve/browser-sdk/pull/${id}))`
   )
 }
 

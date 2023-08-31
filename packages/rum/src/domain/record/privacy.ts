@@ -1,4 +1,4 @@
-import { isElementNode, getParentNode, isTextNode } from '@datadog/browser-rum-core'
+import { isElementNode, getParentNode, isTextNode } from '@openobserve/browser-rum-core'
 import {
   NodePrivacyLevel,
   PRIVACY_ATTR_NAME,

@@ -1,4 +1,4 @@
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import type { NodePrivacyLevel } from '../../../constants'
 import type { ElementsScrollPositions } from '../elementsScrollPositions'
 import type { ShadowRootsController } from '../shadowRootsController'
@@ -19,19 +19,19 @@ export const enum SerializationContextStatus {
 
 export type SerializationContext =
   | {
-      status: SerializationContextStatus.MUTATION
-      shadowRootsController: ShadowRootsController
-    }
+    status: SerializationContextStatus.MUTATION
+    shadowRootsController: ShadowRootsController
+  }
   | {
-      status: SerializationContextStatus.INITIAL_FULL_SNAPSHOT
-      elementsScrollPositions: ElementsScrollPositions
-      shadowRootsController: ShadowRootsController
-    }
+    status: SerializationContextStatus.INITIAL_FULL_SNAPSHOT
+    elementsScrollPositions: ElementsScrollPositions
+    shadowRootsController: ShadowRootsController
+  }
   | {
-      status: SerializationContextStatus.SUBSEQUENT_FULL_SNAPSHOT
-      elementsScrollPositions: ElementsScrollPositions
-      shadowRootsController: ShadowRootsController
-    }
+    status: SerializationContextStatus.SUBSEQUENT_FULL_SNAPSHOT
+    elementsScrollPositions: ElementsScrollPositions
+    shadowRootsController: ShadowRootsController
+  }
 
 export interface SerializeOptions {
   serializedNodeIds?: Set<number>

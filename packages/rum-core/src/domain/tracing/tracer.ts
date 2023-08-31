@@ -146,12 +146,12 @@ function makeTracingHeaders(
 
   propagatorTypes.forEach((propagatorType) => {
     switch (propagatorType) {
-      case 'datadog': {
+      case 'openobserve': {
         assign(tracingHeaders, {
-          'x-datadog-origin': 'rum',
-          'x-datadog-parent-id': spanId.toDecimalString(),
-          'x-datadog-sampling-priority': traceSampled ? '1' : '0',
-          'x-datadog-trace-id': traceId.toDecimalString(),
+          'x-openobserve-origin': 'rum',
+          'x-openobserve-parent-id': spanId.toDecimalString(),
+          'x-openobserve-sampling-priority': traceSampled ? '1' : '0',
+          'x-openobserve-trace-id': traceId.toDecimalString(),
         })
         break
       }

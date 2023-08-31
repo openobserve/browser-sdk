@@ -1,7 +1,7 @@
 const PROBLEMATIC_IDENTIFIERS = {
   // Using the patched `MutationObserver` from Zone.js triggers an infinite callback loop on some
   // occasion, see PRs #376 #866 #1530
-  MutationObserver: 'Use `getMutationObserverConstructor` from @datadog/browser-rum-core instead',
+  MutationObserver: 'Use `getMutationObserverConstructor` from @openobserve/browser-rum-core instead',
 
   // Using the patched `setTimeout` from Zone.js triggers a rendering loop in some Angular
   // component, see issue PR #2030

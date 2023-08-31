@@ -1,7 +1,7 @@
 import type { TimeStamp } from '@openobserve/browser-core'
 import { timeStampNow } from '@openobserve/browser-core'
-import type { LifeCycle, RumConfiguration } from '@datadog/browser-rum-core'
-import { getViewportDimension, getScrollX, getScrollY } from '@datadog/browser-rum-core'
+import type { LifeCycle, RumConfiguration } from '@openobserve/browser-rum-core'
+import { getViewportDimension, getScrollX, getScrollY } from '@openobserve/browser-rum-core'
 import type {
   BrowserMutationData,
   BrowserMutationPayload,

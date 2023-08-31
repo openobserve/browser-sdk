@@ -1,4 +1,4 @@
-import type { RecorderApi } from '@datadog/browser-rum-core'
+import type { RecorderApi } from '@openobserve/browser-rum-core'
 import type { RelativeTime } from '@openobserve/browser-core'
 import { Observable, noop } from '@openobserve/browser-core'
 

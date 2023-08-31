@@ -1,8 +1,8 @@
-import { DefaultPrivacyLevel, findLast, isIE } from '@datadog/browser-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
-import { LifeCycle } from '@datadog/browser-rum-core'
-import type { Clock } from '@datadog/browser-core/test'
-import { createNewEvent, collectAsyncCalls } from '@datadog/browser-core/test'
+import { DefaultPrivacyLevel, findLast, isIE } from '@openobserve/browser-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
+import { LifeCycle } from '@openobserve/browser-rum-core'
+import type { Clock } from '@openobserve/browser-core/test'
+import { createNewEvent, collectAsyncCalls } from '@openobserve/browser-core/test'
 import { findFullSnapshot, findNode, recordsPerFullSnapshot } from '../../../test'
 import type {
   BrowserIncrementalSnapshotRecord,

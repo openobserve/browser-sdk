@@ -1,4 +1,4 @@
-import { createNewEvent } from '@datadog/browser-core/test'
+import { createNewEvent } from '@openobserve/browser-core/test'
 import type { RumConfiguration } from '../../configuration'
 import type { ActionEventsHooks } from './listenActionEvents'
 import { listenActionEvents } from './listenActionEvents'
@@ -17,7 +17,7 @@ describe('listenActionEvents', () => {
       onPointerUp: jasmine.createSpy(),
       onPointerDown: jasmine.createSpy().and.returnValue({}),
     }
-    ;({ stop: stopListenEvents } = listenActionEvents(configuration, actionEventsHooks))
+      ; ({ stop: stopListenEvents } = listenActionEvents(configuration, actionEventsHooks))
   })
 
   afterEach(() => {

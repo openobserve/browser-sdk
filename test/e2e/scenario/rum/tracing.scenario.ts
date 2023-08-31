@@ -58,8 +58,8 @@ describe('tracing', () => {
 
   function checkRequestHeaders(rawHeaders: string) {
     const headers: { [key: string]: string } = JSON.parse(rawHeaders)
-    expect(headers['x-datadog-trace-id']).toMatch(/\d+/)
-    expect(headers['x-datadog-origin']).toBe('rum')
+    expect(headers['x-openobserve-trace-id']).toMatch(/\d+/)
+    expect(headers['x-openobserve-origin']).toBe('rum')
     expect(headers['x-foo']).toBe('bar, baz')
   }
 

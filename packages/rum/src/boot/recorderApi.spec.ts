@@ -1,7 +1,7 @@
-import { display, isIE } from '@datadog/browser-core'
-import type { RecorderApi, ViewContexts, LifeCycle, RumConfiguration } from '@datadog/browser-rum-core'
-import { LifeCycleEventType } from '@datadog/browser-rum-core'
-import { deleteEventBridgeStub, initEventBridgeStub, createNewEvent } from '@datadog/browser-core/test'
+import { display, isIE } from '@openobserve/browser-core'
+import type { RecorderApi, ViewContexts, LifeCycle, RumConfiguration } from '@openobserve/browser-rum-core'
+import { LifeCycleEventType } from '@openobserve/browser-rum-core'
+import { deleteEventBridgeStub, initEventBridgeStub, createNewEvent } from '@openobserve/browser-core/test'
 import type { RumSessionManagerMock, TestSetupBuilder } from '../../../rum-core/test'
 import { createRumSessionManagerMock, setup } from '../../../rum-core/test'
 import type { CreateDeflateWorker } from '../domain/deflate'
@@ -200,7 +200,7 @@ describe('makeRecorderApi', () => {
     beforeEach(() => {
       sessionManager = createRumSessionManagerMock()
       setupBuilder.withSessionManager(sessionManager)
-      ;({ lifeCycle } = setupBuilder.build())
+        ; ({ lifeCycle } = setupBuilder.build())
       rumInit()
     })
 

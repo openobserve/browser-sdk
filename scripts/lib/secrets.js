@@ -9,7 +9,7 @@ function getGithubAccessToken() {
 }
 
 function getOrg2ApiKey() {
-  return getSecretKey('ci.browser-sdk.datadog_ci_api_key')
+  return getSecretKey('ci.browser-sdk.openobserve_ci_api_key')
 }
 
 function getTelemetryOrgApiKey(site) {

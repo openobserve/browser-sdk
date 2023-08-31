@@ -4,10 +4,10 @@ import {
   isIE,
   noop,
   resetExperimentalFeatures,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 
-import type { RumConfiguration } from '@datadog/browser-rum-core'
-import { isAdoptedStyleSheetsSupported } from '@datadog/browser-core/test'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
+import { isAdoptedStyleSheetsSupported } from '@openobserve/browser-core/test'
 import {
   NodePrivacyLevel,
   PRIVACY_ATTR_NAME,

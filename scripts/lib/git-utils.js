@@ -14,7 +14,7 @@ function initGitConfig(repository) {
   command`chmod 700 ${homedir}/.ssh`.run()
   const sshHost = command`ssh-keyscan -H github.com`.run()
   fs.appendFileSync(`${homedir}/.ssh/known_hosts`, sshHost)
-  command`git config user.email ci.browser-sdk@datadoghq.com`.run()
+  command`git config user.email ci.browser-sdk@openobserve.ai`.run()
   command`git config user.name ci.browser-sdk`.run()
   command`git remote set-url origin ${repository}`.run()
 }

@@ -1,6 +1,6 @@
-import type { Observable, Subscription } from '@datadog/browser-core'
-import { mockLocation } from '@datadog/browser-core/test'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import type { Observable, Subscription } from '@openobserve/browser-core'
+import { mockLocation } from '@openobserve/browser-core/test'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import type { LocationChange } from './locationChangeObservable'
 import { createLocationChangeObservable } from './locationChangeObservable'
 
@@ -13,7 +13,7 @@ describe('locationChangeObservable', () => {
   let configuration: RumConfiguration
 
   beforeEach(() => {
-    ;({ location: fakeLocation, cleanup: cleanupLocation } = mockLocation('/foo'))
+    ; ({ location: fakeLocation, cleanup: cleanupLocation } = mockLocation('/foo'))
     configuration = {} as RumConfiguration
     observable = createLocationChangeObservable(configuration, fakeLocation as Location)
     observer = jasmine.createSpy('obs')

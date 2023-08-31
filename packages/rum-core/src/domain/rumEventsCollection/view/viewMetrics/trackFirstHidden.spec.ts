@@ -1,6 +1,6 @@
-import type { RelativeTime } from '@datadog/browser-core'
-import { DOM_EVENT } from '@datadog/browser-core'
-import { createNewEvent, restorePageVisibility, setPageVisibility } from '@datadog/browser-core/test'
+import type { RelativeTime } from '@openobserve/browser-core'
+import { DOM_EVENT } from '@openobserve/browser-core'
+import { createNewEvent, restorePageVisibility, setPageVisibility } from '@openobserve/browser-core/test'
 import type { RumConfiguration } from '../../../configuration'
 import { resetFirstHidden, trackFirstHidden } from './trackFirstHidden'
 

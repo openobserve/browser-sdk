@@ -1,9 +1,9 @@
-import type { ClocksState, HttpRequest, TimeStamp } from '@datadog/browser-core'
-import { PageExitReason, isIE } from '@datadog/browser-core'
-import type { ViewContexts, ViewContext, RumConfiguration } from '@datadog/browser-rum-core'
-import { LifeCycle, LifeCycleEventType } from '@datadog/browser-rum-core'
-import type { Clock } from '@datadog/browser-core/test'
-import { mockClock, restorePageVisibility } from '@datadog/browser-core/test'
+import type { ClocksState, HttpRequest, TimeStamp } from '@openobserve/browser-core'
+import { PageExitReason, isIE } from '@openobserve/browser-core'
+import type { ViewContexts, ViewContext, RumConfiguration } from '@openobserve/browser-rum-core'
+import { LifeCycle, LifeCycleEventType } from '@openobserve/browser-rum-core'
+import type { Clock } from '@openobserve/browser-core/test'
+import { mockClock, restorePageVisibility } from '@openobserve/browser-core/test'
 import { createRumSessionManagerMock } from '../../../../rum-core/test'
 import type { BrowserRecord, SegmentContext } from '../../types'
 import { RecordType } from '../../types'
@@ -69,12 +69,12 @@ describe('startSegmentCollection', () => {
       send: jasmine.createSpy(),
     }
     context = CONTEXT
-    ;({ stop: stopSegmentCollection, addRecord } = doStartSegmentCollection(
-      lifeCycle,
-      () => context,
-      httpRequestSpy,
-      createDeflateEncoder(configuration, worker, DeflateEncoderStreamId.REPLAY)
-    ))
+      ; ({ stop: stopSegmentCollection, addRecord } = doStartSegmentCollection(
+        lifeCycle,
+        () => context,
+        httpRequestSpy,
+        createDeflateEncoder(configuration, worker, DeflateEncoderStreamId.REPLAY)
+      ))
   })
 
   afterEach(() => {

@@ -1,5 +1,5 @@
-import { isIE } from '@datadog/browser-core'
-import { stubZoneJs } from '@datadog/browser-core/test'
+import { isIE } from '@openobserve/browser-core'
+import { stubZoneJs } from '@openobserve/browser-core/test'
 import { createDOMMutationObservable, getMutationObserverConstructor } from './domMutationObservable'
 
 // The MutationObserver invokes its callback in an event loop microtask, making this asynchronous.
@@ -101,7 +101,7 @@ describe('domMutationObservable', () => {
     'collects DOM mutation when text node content changes',
     domMutationSpec(
       (root) => {
-        ;(root.childNodes[1] as Text).data = 'bar'
+        ; (root.childNodes[1] as Text).data = 'bar'
       },
       { expectedMutations: 1 }
     )

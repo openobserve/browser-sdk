@@ -6,8 +6,8 @@ import type {
   RumConfiguration,
   RumSessionManager,
   ViewCreatedEvent,
-} from '@datadog/browser-rum-core'
-import { LifeCycleEventType } from '@datadog/browser-rum-core'
+} from '@openobserve/browser-rum-core'
+import { LifeCycleEventType } from '@openobserve/browser-rum-core'
 
 import { record } from '../domain/record'
 import type { DeflateEncoder } from '../domain/deflate'

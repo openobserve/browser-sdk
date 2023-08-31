@@ -1,5 +1,5 @@
-import { ErrorSource, noop } from '@datadog/browser-core'
-import { stubReportingObserver } from '@datadog/browser-core/test'
+import { ErrorSource, noop } from '@openobserve/browser-core'
+import { stubReportingObserver } from '@openobserve/browser-core/test'
 import type { RawReportLogsEvent } from '../../../rawLogsEvent.types'
 import { validateAndBuildLogsConfiguration } from '../../configuration'
 import type { RawLogsEventCollectedData } from '../../lifeCycle'
@@ -30,7 +30,7 @@ describe('reports', () => {
   })
 
   it('should send reports', () => {
-    ;({ stop: stopReportCollection } = startReportCollection(
+    ; ({ stop: stopReportCollection } = startReportCollection(
       validateAndBuildLogsConfiguration({ ...initConfiguration, forwardReports: ['intervention'] })!,
       lifeCycle
     ))
@@ -50,7 +50,7 @@ describe('reports', () => {
   })
 
   it('should not send reports when forwardReports init option not specified', () => {
-    ;({ stop: stopReportCollection } = startReportCollection(
+    ; ({ stop: stopReportCollection } = startReportCollection(
       validateAndBuildLogsConfiguration({ ...initConfiguration })!,
       lifeCycle
     ))
@@ -60,7 +60,7 @@ describe('reports', () => {
   })
 
   it('should add the source file information to the message for non error reports', () => {
-    ;({ stop: stopReportCollection } = startReportCollection(
+    ; ({ stop: stopReportCollection } = startReportCollection(
       validateAndBuildLogsConfiguration({ ...initConfiguration, forwardReports: ['deprecation'] })!,
       lifeCycle
     ))

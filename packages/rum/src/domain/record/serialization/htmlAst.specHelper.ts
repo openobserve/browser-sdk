@@ -1,4 +1,4 @@
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import { display, noop, objectValues } from '@openobserve/browser-core'
 import type { SerializedNodeWithId } from '../../../types'
 import { serializeNodeWithId, SerializationContextStatus, createElementsScrollPositions } from '..'

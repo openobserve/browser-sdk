@@ -1,6 +1,6 @@
 import type { ListenerHandler } from '@openobserve/browser-core'
 import { instrumentSetter, assign, DOM_EVENT, addEventListeners, forEach, noop, cssEscape } from '@openobserve/browser-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import { NodePrivacyLevel } from '../../../constants'
 import type { InputState } from '../../../types'
 import { getEventTarget } from '../eventsUtils'

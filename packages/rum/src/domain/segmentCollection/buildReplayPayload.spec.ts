@@ -1,5 +1,5 @@
 import pako from 'pako'
-import { isIE } from '@datadog/browser-core'
+import { isIE } from '@openobserve/browser-core'
 import type { BrowserSegment, BrowserSegmentMetadata } from '../../types'
 import { readReplayPayload } from '../../../test'
 import { buildReplayPayload } from './buildReplayPayload'

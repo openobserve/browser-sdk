@@ -14,7 +14,7 @@ const BUILD_MODES = [
   // Used for public releases.
   'release',
 
-  // Used on staging and production Datadog web app.
+  // Used on staging and production openobserve web app.
   'canary',
 ]
 

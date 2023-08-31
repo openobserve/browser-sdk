@@ -1,11 +1,11 @@
 import { monitor, noop } from '@openobserve/browser-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import {
   getChildNodes,
   isNodeShadowHost,
   getMutationObserverConstructor,
   getParentNode,
-} from '@datadog/browser-rum-core'
+} from '@openobserve/browser-rum-core'
 import { NodePrivacyLevel } from '../../../constants'
 import type {
   AddedNodeMutation,

@@ -1,11 +1,11 @@
-import type { RelativeTime, TimeStamp, Context } from '@datadog/browser-core'
-import { ONE_SECOND, getTimeStamp, display, DefaultPrivacyLevel } from '@datadog/browser-core'
+import type { RelativeTime, TimeStamp, Context } from '@openobserve/browser-core'
+import { ONE_SECOND, getTimeStamp, display, DefaultPrivacyLevel } from '@openobserve/browser-core'
 import {
   initEventBridgeStub,
   deleteEventBridgeStub,
   cleanupSyntheticsWorkerValues,
   mockSyntheticsWorkerValues,
-} from '@datadog/browser-core/test'
+} from '@openobserve/browser-core/test'
 import type { TestSetupBuilder } from '../../test'
 import { setup, noopRecorderApi } from '../../test'
 import type { HybridInitConfiguration, RumInitConfiguration } from '../domain/configuration'
