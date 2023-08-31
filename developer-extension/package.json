@@ -1,5 +1,5 @@
 {
-  "name": "@datadog/browser-sdk-developer-extension",
+  "name": "@openobserve/browser-sdk-developer-extension",
   "version": "5.7.0",
   "private": true,
   "scripts": {
@@ -19,9 +19,9 @@
     "webpack": "5.89.0"
   },
   "dependencies": {
-    "@datadog/browser-core": "workspace:*",
-    "@datadog/browser-logs": "workspace:*",
-    "@datadog/browser-rum": "workspace:*",
+    "@openobserve/browser-core": "workspace:*",
+    "@openobserve/browser-logs": "workspace:*",
+    "@openobserve/browser-rum": "workspace:*",
     "@mantine/core": "7.4.0",
     "@mantine/hooks": "7.4.0",
     "clsx": "2.1.0",

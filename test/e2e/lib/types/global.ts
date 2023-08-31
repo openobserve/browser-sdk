@@ -1,4 +1,4 @@
-import type { LogsGlobal } from '@datadog/browser-logs'
+import type { LogsGlobal } from '@openobserve/browser-logs'
 import type { RumGlobal } from '@datadog/browser-rum'
 
 declare global {

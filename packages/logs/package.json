@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-logs",
-  "version": "5.7.0",
+  "version": "0.1.1",
   "license": "Apache-2.0",
   "main": "cjs/entries/main.js",
   "module": "esm/entries/main.js",
@@ -16,16 +16,16 @@
     "@openobserve/browser-core": "0.1.1"
   },
   "peerDependencies": {
-    "@datadog/browser-rum": "5.7.0"
+    "@openobserve/browser-rum": "0.1.1"
   },
   "peerDependenciesMeta": {
-    "@datadog/browser-rum": {
+    "@openobserve/browser-rum": {
       "optional": true
     }
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/DataDog/browser-sdk.git",
+    "url": "https://github.com/openobserve/browser-sdk.git",
     "directory": "packages/logs"
   },
   "volta": {
