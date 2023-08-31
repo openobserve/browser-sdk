@@ -4,15 +4,15 @@ const packages = [
   { packageName: 'rum-slim', service: 'browser-rum-sdk' },
 ]
 
-// ex: datadog-rum-v4.js
-const buildRootUploadPath = (packageName, version, extension = 'js') => `datadog-${packageName}-${version}.${extension}`
+// ex: openobserve-rum-v4.js
+const buildRootUploadPath = (packageName, version, extension = 'js') => `openobserve-${packageName}-${version}.${extension}`
 
-// ex: us1/v4/datadog-rum.js
+// ex: us1/v4/openobserve-rum.js
 const buildDatacenterUploadPath = (datacenter, packageName, version, extension = 'js') =>
-  `${datacenter}/${version}/datadog-${packageName}.${extension}`
+  `${datacenter}/${version}/openobserve-${packageName}.${extension}`
 
-// ex: datadog-rum.js
-const buildBundleFileName = (packageName, extension = 'js') => `datadog-${packageName}.${extension}`
+// ex: openobserve-rum.js
+const buildBundleFileName = (packageName, extension = 'js') => `openobserve-${packageName}.${extension}`
 
 // ex: packages/rum/bundle
 const buildBundleFolder = (packageName) => `packages/${packageName}/bundle`

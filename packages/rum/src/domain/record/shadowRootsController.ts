@@ -1,4 +1,4 @@
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import type { InputCallback, MutationCallBack } from './observers'
 import { initInputObserver, initMutationObserver } from './observers'
 

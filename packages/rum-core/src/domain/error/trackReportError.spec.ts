@@ -1,7 +1,7 @@
-import type { RawError, Subscription } from '@datadog/browser-core'
-import { ErrorHandling, ErrorSource, Observable, clocksNow } from '@datadog/browser-core'
-import type { Clock } from '@datadog/browser-core/test'
-import { FAKE_REPORT, mockClock, stubReportingObserver } from '@datadog/browser-core/test'
+import type { RawError, Subscription } from '@openobserve/browser-core'
+import { ErrorHandling, ErrorSource, Observable, clocksNow } from '@openobserve/browser-core'
+import type { Clock } from '@openobserve/browser-core/test'
+import { FAKE_REPORT, mockClock, stubReportingObserver } from '@openobserve/browser-core/test'
 import type { RumConfiguration } from '../configuration'
 import { trackReportError } from './trackReportError'
 

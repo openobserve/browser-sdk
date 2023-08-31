@@ -1,7 +1,7 @@
-import type { ViewportResizeData, ScrollData } from '@datadog/browser-rum/cjs/types'
-import { IncrementalSource } from '@datadog/browser-rum/cjs/types'
+import type { ViewportResizeData, ScrollData } from '@openobserve/browser-rum/cjs/types'
+import { IncrementalSource } from '@openobserve/browser-rum/cjs/types'
 
-import { findAllIncrementalSnapshots, findAllVisualViewports } from '@datadog/browser-rum/test'
+import { findAllIncrementalSnapshots, findAllVisualViewports } from '@openobserve/browser-rum/test'
 import type { IntakeRegistry } from '../../lib/framework'
 import { flushEvents, createTest, bundleSetup, html } from '../../lib/framework'
 import { browserExecute, getBrowserName, getPlatformName } from '../../lib/helpers/browser'
@@ -262,7 +262,7 @@ function getScrollbarThickness(): Promise<number> {
     const outer = document.createElement('div')
     outer.style.visibility = 'hidden'
     outer.style.overflow = 'scroll' // forcing scrollbar to appear
-    ;(outer.style as any).msOverflowStyle = 'scrollbar' // needed for WinJS apps
+      ; (outer.style as any).msOverflowStyle = 'scrollbar' // needed for WinJS apps
     document.body.appendChild(outer)
     // Creating inner element and placing it in the container
     const inner = document.createElement('div')

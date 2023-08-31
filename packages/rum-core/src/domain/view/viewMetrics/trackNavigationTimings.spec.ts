@@ -1,4 +1,4 @@
-import type { Duration } from '@datadog/browser-core'
+import type { Duration } from '@openobserve/browser-core'
 import { RumPerformanceEntryType } from '../../../browser/performanceCollection'
 import type { TestSetupBuilder } from '../../../../test'
 import { createPerformanceEntry, setup } from '../../../../test'

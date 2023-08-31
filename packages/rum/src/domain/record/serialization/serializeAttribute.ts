@@ -1,6 +1,6 @@
 import { startsWith } from '@openobserve/browser-core'
-import { STABLE_ATTRIBUTES } from '@datadog/browser-rum-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import { STABLE_ATTRIBUTES } from '@openobserve/browser-rum-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import { NodePrivacyLevel, PRIVACY_ATTR_NAME, CENSORED_STRING_MARK, CENSORED_IMG_MARK } from '../../../constants'
 import { MAX_ATTRIBUTE_VALUE_CHAR_LENGTH } from '../privacy'
 import { censoredImageForSize } from './serializationUtils'

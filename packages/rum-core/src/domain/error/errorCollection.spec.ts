@@ -1,5 +1,5 @@
-import type { RelativeTime, TimeStamp, ErrorWithCause } from '@datadog/browser-core'
-import { ErrorHandling, ErrorSource, NO_ERROR_STACK_PRESENT_MESSAGE } from '@datadog/browser-core'
+import type { RelativeTime, TimeStamp, ErrorWithCause } from '@openobserve/browser-core'
+import { ErrorHandling, ErrorSource, NO_ERROR_STACK_PRESENT_MESSAGE } from '@openobserve/browser-core'
 import type { TestSetupBuilder } from '../../../test'
 import { setup } from '../../../test'
 import type { RawRumErrorEvent } from '../../rawRumEvent.types'
@@ -24,7 +24,7 @@ describe('error collection', () => {
         isInActivePageStateAt: () => true,
       })
       .beforeBuild(({ lifeCycle, pageStateHistory, featureFlagContexts }) => {
-        ;({ addError } = doStartErrorCollection(lifeCycle, pageStateHistory, featureFlagContexts))
+        ; ({ addError } = doStartErrorCollection(lifeCycle, pageStateHistory, featureFlagContexts))
       })
   })
 
@@ -126,7 +126,7 @@ describe('error collection', () => {
         dd_fingerprint?: string
       }
       const error = new Error('foo')
-      ;(error as DatadogError).dd_fingerprint = 'my-fingerprint'
+        ; (error as DatadogError).dd_fingerprint = 'my-fingerprint'
 
       addError({
         error,
@@ -141,7 +141,7 @@ describe('error collection', () => {
       const { rawRumEvents } = setupBuilder.build()
 
       const error = new Error('foo')
-      ;(error as any).dd_fingerprint = 2
+        ; (error as any).dd_fingerprint = 2
 
       addError({
         error,

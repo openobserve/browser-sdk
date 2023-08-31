@@ -24,7 +24,7 @@ export {
   RumXhrResourceEventDomainContext,
   RumOtherResourceEventDomainContext,
   RumLongTaskEventDomainContext,
-} from '@datadog/browser-rum-core'
+} from '@openobserve/browser-rum-core'
 export { DefaultPrivacyLevel } from '@openobserve/browser-core'
 
 export const datadogRum = makeRumPublicApi(startRum, makeStubRecorderApi())

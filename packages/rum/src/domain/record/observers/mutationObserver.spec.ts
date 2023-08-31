@@ -1,6 +1,6 @@
-import { DefaultPrivacyLevel, isIE } from '@datadog/browser-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
-import { collectAsyncCalls } from '@datadog/browser-core/test'
+import { DefaultPrivacyLevel, isIE } from '@openobserve/browser-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
+import { collectAsyncCalls } from '@openobserve/browser-core/test'
 import { createMutationPayloadValidator } from '../../../../test'
 import {
   NodePrivacyLevel,
@@ -35,14 +35,14 @@ describe('startMutationCollection', () => {
   function startMutationCollection(defaultPrivacyLevel: DefaultPrivacyLevel = DefaultPrivacyLevel.ALLOW) {
     const mutationCallbackSpy = jasmine.createSpy<MutationCallBack>()
 
-    ;({ stop: stopMutationCollection, flush: flushMutations } = initMutationObserver(
-      mutationCallbackSpy,
-      {
-        defaultPrivacyLevel,
-      } as RumConfiguration,
-      { ...DEFAULT_SHADOW_ROOT_CONTROLLER, addShadowRoot: addShadowRootSpy, removeShadowRoot: removeShadowRootSpy },
-      document
-    ))
+      ; ({ stop: stopMutationCollection, flush: flushMutations } = initMutationObserver(
+        mutationCallbackSpy,
+        {
+          defaultPrivacyLevel,
+        } as RumConfiguration,
+        { ...DEFAULT_SHADOW_ROOT_CONTROLLER, addShadowRoot: addShadowRootSpy, removeShadowRoot: removeShadowRootSpy },
+        document
+      ))
 
     return {
       mutationCallbackSpy,
@@ -929,52 +929,52 @@ describe('startMutationCollection', () => {
       expectedSerializedAttributes: Attributes
       expectedAttributesMutation: AttributeMutation['attributes'] | null
     }> = [
-      {
-        privacyAttributeValue: PRIVACY_ATTR_VALUE_MASK,
-        privacyAttributeOn: 'input',
-        expectedSerializedAttributes: {
-          [PRIVACY_ATTR_NAME]: PRIVACY_ATTR_VALUE_MASK,
-          value: '***',
+        {
+          privacyAttributeValue: PRIVACY_ATTR_VALUE_MASK,
+          privacyAttributeOn: 'input',
+          expectedSerializedAttributes: {
+            [PRIVACY_ATTR_NAME]: PRIVACY_ATTR_VALUE_MASK,
+            value: '***',
+          },
+          expectedAttributesMutation: { value: '***' },
         },
-        expectedAttributesMutation: { value: '***' },
-      },
-      {
-        privacyAttributeValue: PRIVACY_ATTR_VALUE_MASK_USER_INPUT,
-        privacyAttributeOn: 'input',
-        expectedSerializedAttributes: {
-          [PRIVACY_ATTR_NAME]: PRIVACY_ATTR_VALUE_MASK_USER_INPUT,
-          value: '***',
+        {
+          privacyAttributeValue: PRIVACY_ATTR_VALUE_MASK_USER_INPUT,
+          privacyAttributeOn: 'input',
+          expectedSerializedAttributes: {
+            [PRIVACY_ATTR_NAME]: PRIVACY_ATTR_VALUE_MASK_USER_INPUT,
+            value: '***',
+          },
+          expectedAttributesMutation: { value: '***' },
         },
-        expectedAttributesMutation: { value: '***' },
-      },
-      {
-        privacyAttributeValue: PRIVACY_ATTR_VALUE_ALLOW,
-        privacyAttributeOn: 'input',
-        expectedSerializedAttributes: {
-          [PRIVACY_ATTR_NAME]: PRIVACY_ATTR_VALUE_ALLOW,
-          value: 'foo',
+        {
+          privacyAttributeValue: PRIVACY_ATTR_VALUE_ALLOW,
+          privacyAttributeOn: 'input',
+          expectedSerializedAttributes: {
+            [PRIVACY_ATTR_NAME]: PRIVACY_ATTR_VALUE_ALLOW,
+            value: 'foo',
+          },
+          expectedAttributesMutation: { value: 'foo' },
         },
-        expectedAttributesMutation: { value: 'foo' },
-      },
-      {
-        privacyAttributeValue: PRIVACY_ATTR_VALUE_MASK,
-        privacyAttributeOn: 'ancestor',
-        expectedSerializedAttributes: { value: '***' },
-        expectedAttributesMutation: { value: '***' },
-      },
-      {
-        privacyAttributeValue: PRIVACY_ATTR_VALUE_MASK_USER_INPUT,
-        privacyAttributeOn: 'ancestor',
-        expectedSerializedAttributes: { value: '***' },
-        expectedAttributesMutation: { value: '***' },
-      },
-      {
-        privacyAttributeValue: PRIVACY_ATTR_VALUE_ALLOW,
-        privacyAttributeOn: 'ancestor',
-        expectedSerializedAttributes: { value: 'foo' },
-        expectedAttributesMutation: { value: 'foo' },
-      },
-    ]
+        {
+          privacyAttributeValue: PRIVACY_ATTR_VALUE_MASK,
+          privacyAttributeOn: 'ancestor',
+          expectedSerializedAttributes: { value: '***' },
+          expectedAttributesMutation: { value: '***' },
+        },
+        {
+          privacyAttributeValue: PRIVACY_ATTR_VALUE_MASK_USER_INPUT,
+          privacyAttributeOn: 'ancestor',
+          expectedSerializedAttributes: { value: '***' },
+          expectedAttributesMutation: { value: '***' },
+        },
+        {
+          privacyAttributeValue: PRIVACY_ATTR_VALUE_ALLOW,
+          privacyAttributeOn: 'ancestor',
+          expectedSerializedAttributes: { value: 'foo' },
+          expectedAttributesMutation: { value: 'foo' },
+        },
+      ]
 
     for (const {
       privacyAttributeValue,

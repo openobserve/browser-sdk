@@ -1,4 +1,4 @@
-import type { RumErrorEvent } from '@datadog/browser-rum-core'
+import type { RumErrorEvent } from '@openobserve/browser-rum-core'
 import { createTest, flushEvents, html } from '../../lib/framework'
 import { withBrowserLogs } from '../../lib/helpers/browser'
 

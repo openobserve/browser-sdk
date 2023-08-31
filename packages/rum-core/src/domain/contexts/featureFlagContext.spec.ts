@@ -1,4 +1,4 @@
-import type { CustomerDataTracker, RelativeTime } from '@datadog/browser-core'
+import type { CustomerDataTracker, RelativeTime } from '@openobserve/browser-core'
 import {
   ExperimentalFeature,
   resetExperimentalFeatures,
@@ -6,7 +6,7 @@ import {
   relativeToClocks,
   createCustomerDataTracker,
   noop,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { TestSetupBuilder } from '../../../test'
 import { setup } from '../../../test'
 import { LifeCycleEventType } from '../lifeCycle'

@@ -1,4 +1,4 @@
-import { addEventListener, DOM_EVENT, isIE } from '@datadog/browser-core'
+import { addEventListener, DOM_EVENT, isIE } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../domain/configuration'
 import { getScrollX, getScrollY } from './scroll'
 

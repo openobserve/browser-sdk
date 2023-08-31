@@ -1,6 +1,6 @@
-import { isIE, ErrorSource } from '@datadog/browser-core'
-import type { FetchStub, FetchStubManager } from '@datadog/browser-core/test'
-import { SPEC_ENDPOINTS, ResponseStub, stubFetch } from '@datadog/browser-core/test'
+import { isIE, ErrorSource } from '@openobserve/browser-core'
+import type { FetchStub, FetchStubManager } from '@openobserve/browser-core/test'
+import { SPEC_ENDPOINTS, ResponseStub, stubFetch } from '@openobserve/browser-core/test'
 import type { RawNetworkLogsEvent } from '../../rawLogsEvent.types'
 import type { LogsConfiguration } from '../configuration'
 import type { RawLogsEventCollectedData } from '../lifeCycle'
@@ -38,10 +38,10 @@ describe('network error collection', () => {
 
   function startCollection(forwardErrorsToLogs = true) {
     fetchStubManager = stubFetch()
-    ;({ stop: stopNetworkErrorCollection } = startNetworkErrorCollection(
-      { ...CONFIGURATION, forwardErrorsToLogs },
-      lifeCycle
-    ))
+      ; ({ stop: stopNetworkErrorCollection } = startNetworkErrorCollection(
+        { ...CONFIGURATION, forwardErrorsToLogs },
+        lifeCycle
+      ))
     fetchStub = window.fetch as FetchStub
   }
 

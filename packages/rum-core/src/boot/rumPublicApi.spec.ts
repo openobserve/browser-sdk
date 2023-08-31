@@ -6,7 +6,7 @@ import type {
   CustomerDataTrackerManager,
   DeflateEncoderStreamId,
   Encoder,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import {
   ONE_SECOND,
   getTimeStamp,
@@ -17,13 +17,13 @@ import {
   resetExperimentalFeatures,
   createIdentityEncoder,
   CustomerDataCompressionStatus,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import {
   initEventBridgeStub,
   deleteEventBridgeStub,
   cleanupSyntheticsWorkerValues,
   mockSyntheticsWorkerValues,
-} from '@datadog/browser-core/test'
+} from '@openobserve/browser-core/test'
 import type { TestSetupBuilder } from '../../test'
 import { setup, noopRecorderApi } from '../../test'
 import type { HybridInitConfiguration, RumInitConfiguration } from '../domain/configuration'

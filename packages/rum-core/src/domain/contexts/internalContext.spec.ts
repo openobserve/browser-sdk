@@ -1,4 +1,4 @@
-import type { RelativeTime } from '@datadog/browser-core'
+import type { RelativeTime } from '@openobserve/browser-core'
 import { createRumSessionManagerMock, setup } from '../../../test'
 import type { TestSetupBuilder } from '../../../test'
 import type { ActionContexts } from '../action/actionCollection'

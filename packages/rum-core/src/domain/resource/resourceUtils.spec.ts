@@ -1,5 +1,5 @@
-import type { Duration, RelativeTime, ServerDuration } from '@datadog/browser-core'
-import { SPEC_ENDPOINTS } from '@datadog/browser-core/test'
+import type { Duration, RelativeTime, ServerDuration } from '@openobserve/browser-core'
+import { SPEC_ENDPOINTS } from '@openobserve/browser-core/test'
 import { RumPerformanceEntryType, type RumPerformanceResourceTiming } from '../../browser/performanceCollection'
 import type { RumConfiguration } from '../configuration'
 import { validateAndBuildRumConfiguration } from '../configuration'
@@ -194,48 +194,48 @@ describe('computePerformanceResourceDetails', () => {
       redirect: { start: 0 as ServerDuration, duration: 1e6 as ServerDuration },
     })
   })
-  ;[
-    {
-      connectEnd: 10 as RelativeTime,
-      connectStart: 20 as RelativeTime,
-      reason: 'connectStart > connectEnd',
-    },
-    {
-      domainLookupEnd: 10 as RelativeTime,
-      domainLookupStart: 20 as RelativeTime,
-      reason: 'domainLookupStart > domainLookupEnd',
-    },
-    {
-      reason: 'responseStart > responseEnd',
-      responseEnd: 10 as RelativeTime,
-      responseStart: 20 as RelativeTime,
-    },
-    {
-      reason: 'requestStart > responseStart',
-      requestStart: 20 as RelativeTime,
-      responseStart: 10 as RelativeTime,
-    },
-    {
-      reason: 'redirectStart > redirectEnd',
-      redirectEnd: 10 as RelativeTime,
-      redirectStart: 20 as RelativeTime,
-    },
-    {
-      connectEnd: 10 as RelativeTime,
-      reason: 'secureConnectionStart > connectEnd',
-      secureConnectionStart: 20 as RelativeTime,
-    },
-    {
-      connectEnd: 10 as RelativeTime,
-      connectStart: -3 as RelativeTime,
-      fetchStart: 10 as RelativeTime,
-      reason: 'negative timing start',
-    },
-  ].forEach(({ reason, ...overrides }) => {
-    it(`should not compute entry when ${reason}`, () => {
-      expect(computePerformanceResourceDetails(generateResourceWith(overrides))).toBeUndefined()
+    ;[
+      {
+        connectEnd: 10 as RelativeTime,
+        connectStart: 20 as RelativeTime,
+        reason: 'connectStart > connectEnd',
+      },
+      {
+        domainLookupEnd: 10 as RelativeTime,
+        domainLookupStart: 20 as RelativeTime,
+        reason: 'domainLookupStart > domainLookupEnd',
+      },
+      {
+        reason: 'responseStart > responseEnd',
+        responseEnd: 10 as RelativeTime,
+        responseStart: 20 as RelativeTime,
+      },
+      {
+        reason: 'requestStart > responseStart',
+        requestStart: 20 as RelativeTime,
+        responseStart: 10 as RelativeTime,
+      },
+      {
+        reason: 'redirectStart > redirectEnd',
+        redirectEnd: 10 as RelativeTime,
+        redirectStart: 20 as RelativeTime,
+      },
+      {
+        connectEnd: 10 as RelativeTime,
+        reason: 'secureConnectionStart > connectEnd',
+        secureConnectionStart: 20 as RelativeTime,
+      },
+      {
+        connectEnd: 10 as RelativeTime,
+        connectStart: -3 as RelativeTime,
+        fetchStart: 10 as RelativeTime,
+        reason: 'negative timing start',
+      },
+    ].forEach(({ reason, ...overrides }) => {
+      it(`should not compute entry when ${reason}`, () => {
+        expect(computePerformanceResourceDetails(generateResourceWith(overrides))).toBeUndefined()
+      })
     })
-  })
 
   it('should allow really fast document resource', () => {
     expect(

@@ -1,5 +1,5 @@
-import type { ClocksState, RelativeTime } from '@datadog/browser-core'
-import { ErrorSource, ExperimentalFeature, ONE_MINUTE, display } from '@datadog/browser-core'
+import type { ClocksState, RelativeTime } from '@openobserve/browser-core'
+import { ErrorSource, ExperimentalFeature, ONE_MINUTE, display } from '@openobserve/browser-core'
 import {
   initEventBridgeStub,
   deleteEventBridgeStub,
@@ -8,7 +8,7 @@ import {
   mockExperimentalFeatures,
   setNavigatorOnLine,
   setNavigatorConnection,
-} from '@datadog/browser-core/test'
+} from '@openobserve/browser-core/test'
 import type { TestSetupBuilder } from '../../test'
 import {
   createRumSessionManagerMock,
@@ -545,13 +545,13 @@ describe('rum assembly', () => {
   describe('action context', () => {
     it('should be added on some event categories', () => {
       const { lifeCycle } = setupBuilder.build()
-      ;[RumEventType.RESOURCE, RumEventType.LONG_TASK, RumEventType.ERROR].forEach((category) => {
-        notifyRawRumEvent(lifeCycle, {
-          rawRumEvent: createRawRumEvent(category),
+        ;[RumEventType.RESOURCE, RumEventType.LONG_TASK, RumEventType.ERROR].forEach((category) => {
+          notifyRawRumEvent(lifeCycle, {
+            rawRumEvent: createRawRumEvent(category),
+          })
+          expect(serverRumEvents[0].action).toEqual({ id: '7890' })
+          serverRumEvents = []
         })
-        expect(serverRumEvents[0].action).toEqual({ id: '7890' })
-        serverRumEvents = []
-      })
 
       notifyRawRumEvent(lifeCycle, {
         rawRumEvent: createRawRumEvent(RumEventType.VIEW),

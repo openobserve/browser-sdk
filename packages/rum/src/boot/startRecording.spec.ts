@@ -1,4 +1,4 @@
-import type { TimeStamp, HttpRequest, ClocksState } from '@datadog/browser-core'
+import type { TimeStamp, HttpRequest, ClocksState } from '@openobserve/browser-core'
 import {
   PageExitReason,
   DefaultPrivacyLevel,
@@ -6,11 +6,11 @@ import {
   isIE,
   timeStampNow,
   DeflateEncoderStreamId,
-} from '@datadog/browser-core'
-import type { LifeCycle, ViewCreatedEvent, RumConfiguration } from '@datadog/browser-rum-core'
-import { LifeCycleEventType } from '@datadog/browser-rum-core'
-import type { Clock } from '@datadog/browser-core/test'
-import { collectAsyncCalls, createNewEvent, mockClock } from '@datadog/browser-core/test'
+} from '@openobserve/browser-core'
+import type { LifeCycle, ViewCreatedEvent, RumConfiguration } from '@openobserve/browser-rum-core'
+import { LifeCycleEventType } from '@openobserve/browser-rum-core'
+import type { Clock } from '@openobserve/browser-core/test'
+import { collectAsyncCalls, createNewEvent, mockClock } from '@openobserve/browser-core/test'
 import type { RumSessionManagerMock, TestSetupBuilder } from '../../../rum-core/test'
 import { appendElement, createRumSessionManagerMock, setup } from '../../../rum-core/test'
 

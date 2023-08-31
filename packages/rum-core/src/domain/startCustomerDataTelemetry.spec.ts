@@ -1,5 +1,5 @@
-import type { FlushEvent, Context, TelemetryEvent, CustomerDataTracker } from '@datadog/browser-core'
-import { resetExperimentalFeatures, TelemetryService, startTelemetry, Observable } from '@datadog/browser-core'
+import type { FlushEvent, Context, TelemetryEvent, CustomerDataTracker } from '@openobserve/browser-core'
+import { resetExperimentalFeatures, TelemetryService, startTelemetry, Observable } from '@openobserve/browser-core'
 import type { TestSetupBuilder } from '../../test'
 import { setup } from '../../test'
 import { RumEventType } from '../rawRumEvent.types'

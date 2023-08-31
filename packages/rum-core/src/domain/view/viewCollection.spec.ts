@@ -1,5 +1,5 @@
-import type { Duration, RelativeTime, ServerDuration, TimeStamp } from '@datadog/browser-core'
-import { resetExperimentalFeatures } from '@datadog/browser-core'
+import type { Duration, RelativeTime, ServerDuration, TimeStamp } from '@openobserve/browser-core'
+import { resetExperimentalFeatures } from '@openobserve/browser-core'
 import type { RecorderApi } from '../../boot/rumPublicApi'
 import type { TestSetupBuilder } from '../../../test'
 import { setup, noopRecorderApi } from '../../../test'

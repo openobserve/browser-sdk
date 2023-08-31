@@ -1,11 +1,11 @@
-import { isIE } from '@datadog/browser-core'
-import type { RumConfiguration, ViewContexts } from '@datadog/browser-rum-core'
+import { isIE } from '@openobserve/browser-core'
+import type { RumConfiguration, ViewContexts } from '@openobserve/browser-rum-core'
 import { createRumSessionManagerMock } from '../../../rum-core/test'
 import { getSessionReplayLink } from './getSessionReplayLink'
 import { addRecord, resetReplayStats } from './replayStats'
 
 const DEFAULT_CONFIGURATION = {
-  site: 'datad0g.com',
+  site: 'api.openobserve.ai',
 } as RumConfiguration
 
 describe('getReplayLink', () => {
@@ -20,8 +20,8 @@ describe('getReplayLink', () => {
 
     expect(link).toBe(
       isIE()
-        ? 'https://dd.datad0g.com/rum/replay/sessions/session-id-1?error-type=browser-not-supported'
-        : 'https://dd.datad0g.com/rum/replay/sessions/session-id-1?'
+        ? 'https://api.openobserve.ai/rum/replay/sessions/session-id-1?error-type=browser-not-supported'
+        : 'https://api.openobserve.ai/rum/replay/sessions/session-id-1?'
     )
   })
 

@@ -118,8 +118,8 @@ function AppLink({
   params: { [key: string]: string }
   children: ReactNode
 }) {
-  const site = config?.site ?? 'datadoghq.com'
-  const hostname = site === 'datadoghq.com' ? 'app.datadoghq.com' : site === 'datad0g.com' ? 'dd.datad0g.com' : site
+  const site = config?.site ?? 'api.openobserve.ai'
+  const hostname = site;
   return (
     <Anchor href={`https://${hostname}/${path}?${new URLSearchParams(params).toString()}`} target="_blank">
       {children}

@@ -48,7 +48,7 @@ export const enum LifeCycleEventType {
 // JavaScript).
 //
 // See issues:
-// * https://github.com/DataDog/browser-sdk/issues/2208
+// * https://github.com/openobserve/browser-sdk/issues/2208
 // * https://github.com/microsoft/TypeScript/issues/54152
 declare const LifeCycleEventTypeAsConst: {
   PERFORMANCE_ENTRIES_COLLECTED: LifeCycleEventType.PERFORMANCE_ENTRIES_COLLECTED

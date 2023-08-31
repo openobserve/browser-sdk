@@ -38,7 +38,7 @@ runMain(async () => {
 function retrievePackageDependencies(packageJsonFile) {
   return Object.keys(packageJsonFile.content.dependencies || {})
     .concat(Object.keys(packageJsonFile.content.devDependencies || {}))
-    .filter((dependency) => !dependency.includes('@datadog'))
+    .filter((dependency) => !dependency.includes('@openobserve'))
 }
 
 function withoutDuplicates(a) {

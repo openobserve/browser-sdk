@@ -1,5 +1,5 @@
-import type { Duration, RelativeTime, ServerDuration, TimeStamp } from '@datadog/browser-core'
-import { createNewEvent } from '@datadog/browser-core/test'
+import type { Duration, RelativeTime, ServerDuration, TimeStamp } from '@openobserve/browser-core'
+import { createNewEvent } from '@openobserve/browser-core/test'
 import type { TestSetupBuilder } from '../../../test'
 import { setup } from '../../../test'
 import { RumEventType, ActionType } from '../../rawRumEvent.types'
@@ -16,7 +16,7 @@ describe('actionCollection', () => {
         isInActivePageStateAt: () => true,
       })
       .beforeBuild(({ lifeCycle, configuration, domMutationObservable, pageStateHistory }) => {
-        ;({ addAction } = startActionCollection(lifeCycle, domMutationObservable, configuration, pageStateHistory))
+        ; ({ addAction } = startActionCollection(lifeCycle, domMutationObservable, configuration, pageStateHistory))
       })
   })
 

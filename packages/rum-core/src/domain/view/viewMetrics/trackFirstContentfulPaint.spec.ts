@@ -1,5 +1,5 @@
-import type { RelativeTime } from '@datadog/browser-core'
-import { restorePageVisibility, setPageVisibility } from '@datadog/browser-core/test'
+import type { RelativeTime } from '@openobserve/browser-core'
+import { restorePageVisibility, setPageVisibility } from '@openobserve/browser-core/test'
 import { RumPerformanceEntryType } from '../../../browser/performanceCollection'
 import type { TestSetupBuilder } from '../../../../test'
 import { createPerformanceEntry, setup } from '../../../../test'

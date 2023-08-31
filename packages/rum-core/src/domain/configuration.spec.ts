@@ -1,4 +1,4 @@
-import { DefaultPrivacyLevel, display } from '@datadog/browser-core'
+import { DefaultPrivacyLevel, display } from '@openobserve/browser-core'
 import type { RumInitConfiguration } from './configuration'
 import { DEFAULT_PROPAGATOR_TYPES, serializeRumConfiguration, validateAndBuildRumConfiguration } from './configuration'
 
@@ -133,7 +133,7 @@ describe('validateAndBuildRumConfiguration', () => {
           allowedTracingUrls: [
             42 as any,
             undefined,
-            { match: 42 as any, propagatorTypes: ['datadog'] },
+            { match: 42 as any, propagatorTypes: ['openobserve'] },
             { match: 'toto' },
           ],
         })!.allowedTracingUrls
@@ -356,14 +356,14 @@ describe('validateAndBuildRumConfiguration', () => {
           ...DEFAULT_INIT_CONFIGURATION,
           allowedTracingUrls: [
             'foo',
-            { match: 'first', propagatorTypes: ['datadog'] },
+            { match: 'first', propagatorTypes: ['openobserve'] },
             { match: 'test', propagatorTypes: ['tracecontext'] },
             { match: 'other', propagatorTypes: ['b3'] },
             { match: 'final', propagatorTypes: ['b3multi'] },
           ],
         }
         expect(serializeRumConfiguration(complexTracingConfig).selected_tracing_propagators).toEqual(
-          jasmine.arrayWithExactContents(['datadog', 'b3', 'b3multi', 'tracecontext'])
+          jasmine.arrayWithExactContents(['openobserve', 'datadog', 'b3', 'b3multi', 'tracecontext'])
         )
       })
 

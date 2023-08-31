@@ -1,4 +1,4 @@
-import type { TimeStamp } from '@datadog/browser-core'
+import type { TimeStamp } from '@openobserve/browser-core'
 import {
   createDocumentTraceData,
   findTraceComment,
@@ -15,7 +15,7 @@ describe('getDocumentTraceId', () => {
     expect(
       getDocumentTraceId(
         createDocument(
-          `<!-- DATADOG;trace-id=foo;trace-time=${Date.now()} -->
+          `<!-- OPENOBSERVE;trace-id=foo;trace-time=${Date.now()} -->
           ${HTML_DOCTYPE}
           <html>
             <head>
@@ -50,7 +50,7 @@ describe('getDocumentTraceId', () => {
     expect(
       getDocumentTraceId(
         createDocument(
-          `<!-- DATADOG;trace-id=comment;trace-time=${Date.now()} -->
+          `<!-- OPENOBSERVE;trace-id=comment;trace-time=${Date.now()} -->
           ${HTML_DOCTYPE}
           <html>
             <head>
@@ -72,9 +72,8 @@ describe('getDocumentTraceId', () => {
   it('ignores the trace id if it has been created too long ago', () => {
     expect(
       getDocumentTraceId(
-        createDocument(`<!-- DATADOG;trace-id=foo;trace-time=${
-          Date.now() - INITIAL_DOCUMENT_OUTDATED_TRACE_ID_THRESHOLD
-        } -->
+        createDocument(`<!-- OPENOBSERVE;trace-id=foo;trace-time=${Date.now() - INITIAL_DOCUMENT_OUTDATED_TRACE_ID_THRESHOLD
+          } -->
           ${HTML_DOCTYPE}
           <html>
             <head>
@@ -125,7 +124,7 @@ describe('getDocumentTraceDataFromMeta', () => {
 })
 
 describe('findTraceComment', () => {
-  const DATADOG_COMMENT = '\n<!-- DATADOG;foo=bar -->\n'
+  const OPENOBSERVE_COMMENT = '\n<!-- OPENOBSERVE;foo=bar -->\n'
 
   it('returns undefined if no comment is present', () => {
     expect(findTraceComment(createDocument(HTML_DOCTYPE + HTML_CONTENT))).toBe(undefined)
@@ -136,35 +135,35 @@ describe('findTraceComment', () => {
   })
 
   it('finds a comment before the doctype', () => {
-    expect(findTraceComment(createDocument(DATADOG_COMMENT + HTML_DOCTYPE + HTML_CONTENT))).toBe('foo=bar')
+    expect(findTraceComment(createDocument(OPENOBSERVE_COMMENT + HTML_DOCTYPE + HTML_CONTENT))).toBe('foo=bar')
   })
 
   it('finds a comment before the HTML content', () => {
-    expect(findTraceComment(createDocument(HTML_DOCTYPE + DATADOG_COMMENT + HTML_CONTENT))).toBe('foo=bar')
+    expect(findTraceComment(createDocument(HTML_DOCTYPE + OPENOBSERVE_COMMENT + HTML_CONTENT))).toBe('foo=bar')
   })
 
   it('finds a comment after the HTML content', () => {
-    expect(findTraceComment(createDocument(HTML_DOCTYPE + HTML_CONTENT + DATADOG_COMMENT))).toBe('foo=bar')
+    expect(findTraceComment(createDocument(HTML_DOCTYPE + HTML_CONTENT + OPENOBSERVE_COMMENT))).toBe('foo=bar')
   })
 
   it('finds a comment at the end of the body', () => {
-    expect(findTraceComment(createDocument(`${HTML_DOCTYPE}<html><body>${DATADOG_COMMENT}</body></html>`))).toBe(
+    expect(findTraceComment(createDocument(`${HTML_DOCTYPE}<html><body>${OPENOBSERVE_COMMENT}</body></html>`))).toBe(
       'foo=bar'
     )
   })
 
-  it("doesn't match comments without the DATADOG; prefix", () => {
+  it("doesn't match comments without the OPENOBSERVE; prefix", () => {
     expect(findTraceComment(createDocument(`${HTML_DOCTYPE}${HTML_CONTENT}<!-- foo=bar -->`))).toBe(undefined)
   })
 
   it("doesn't look for comments nested below the body", () => {
     expect(
-      findTraceComment(createDocument(`${HTML_DOCTYPE}<html><body><div>${DATADOG_COMMENT}</div></body></html>`))
+      findTraceComment(createDocument(`${HTML_DOCTYPE}<html><body><div>${OPENOBSERVE_COMMENT}</div></body></html>`))
     ).toBe(undefined)
   })
 
   it('finds a comment surrounded by newlines', () => {
-    expect(findTraceComment(createDocument(`<!--\nDATADOG;foo=bar\n-->${HTML_DOCTYPE}${HTML_CONTENT}`))).toBe('foo=bar')
+    expect(findTraceComment(createDocument(`<!--\nOPENOBSERVE;foo=bar\n-->${HTML_DOCTYPE}${HTML_CONTENT}`))).toBe('foo=bar')
   })
 })
 

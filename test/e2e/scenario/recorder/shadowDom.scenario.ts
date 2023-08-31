@@ -1,5 +1,5 @@
-import type { DocumentFragmentNode, MouseInteractionData, SerializedNodeWithId } from '@datadog/browser-rum/src/types'
-import { MouseInteractionType, NodeType } from '@datadog/browser-rum/src/types'
+import type { DocumentFragmentNode, MouseInteractionData, SerializedNodeWithId } from '@openobserve/browser-rum/src/types'
+import { MouseInteractionType, NodeType } from '@openobserve/browser-rum/src/types'
 
 import {
   createMutationPayloadValidatorFromSegment,
@@ -10,7 +10,7 @@ import {
   findNode,
   findTextContent,
   findTextNode,
-} from '@datadog/browser-rum/test'
+} from '@openobserve/browser-rum/test'
 
 import { flushEvents, createTest, bundleSetup, html } from '../../lib/framework'
 import { browserExecute } from '../../lib/helpers/browser'

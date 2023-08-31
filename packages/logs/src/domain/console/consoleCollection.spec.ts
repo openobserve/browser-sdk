@@ -1,4 +1,4 @@
-import { ErrorSource, noop, objectEntries } from '@datadog/browser-core'
+import { ErrorSource, noop, objectEntries } from '@openobserve/browser-core'
 import type { RawConsoleLogsEvent } from '../../rawLogsEvent.types'
 import { validateAndBuildLogsConfiguration } from '../configuration'
 import type { RawLogsEventCollectedData } from '../lifeCycle'
@@ -55,7 +55,7 @@ describe('console collection', () => {
   })
 
   it('console error should have an error object defined', () => {
-    ;({ stop: stopConsoleCollection } = startConsoleCollection(
+    ; ({ stop: stopConsoleCollection } = startConsoleCollection(
       validateAndBuildLogsConfiguration({ ...initConfiguration, forwardErrorsToLogs: true })!,
       lifeCycle
     ))
@@ -70,7 +70,7 @@ describe('console collection', () => {
   })
 
   it('should retrieve fingerprint from console error', () => {
-    ;({ stop: stopConsoleCollection } = startConsoleCollection(
+    ; ({ stop: stopConsoleCollection } = startConsoleCollection(
       validateAndBuildLogsConfiguration({ ...initConfiguration, forwardErrorsToLogs: true })!,
       lifeCycle
     ))
@@ -78,7 +78,7 @@ describe('console collection', () => {
       dd_fingerprint?: string
     }
     const error = new Error('foo')
-    ;(error as DatadogError).dd_fingerprint = 'my-fingerprint'
+      ; (error as DatadogError).dd_fingerprint = 'my-fingerprint'
 
     // eslint-disable-next-line no-console
     console.error(error)

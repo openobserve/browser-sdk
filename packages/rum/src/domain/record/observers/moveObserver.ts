@@ -1,6 +1,6 @@
 import type { ListenerHandler } from '@openobserve/browser-core'
 import { addEventListeners, addTelemetryDebug, DOM_EVENT, throttle } from '@openobserve/browser-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import { getSerializedNodeId, hasSerializedNode } from '../serialization'
 import type { MousePosition } from '../../../types'
 import { IncrementalSource } from '../../../types'

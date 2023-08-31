@@ -1,4 +1,4 @@
-import type { Payload } from '@datadog/browser-core'
+import type { Payload } from '@openobserve/browser-core'
 import {
   ErrorSource,
   display,
@@ -7,8 +7,8 @@ import {
   SESSION_STORE_KEY,
   createCustomerDataTracker,
   noop,
-} from '@datadog/browser-core'
-import type { Request } from '@datadog/browser-core/test'
+} from '@openobserve/browser-core'
+import type { Request } from '@openobserve/browser-core/test'
 import {
   interceptRequests,
   stubEndpointBuilder,
@@ -17,7 +17,7 @@ import {
   cleanupSyntheticsWorkerValues,
   mockSyntheticsWorkerValues,
   registerCleanupTask,
-} from '@datadog/browser-core/test'
+} from '@openobserve/browser-core/test'
 
 import type { LogsConfiguration } from '../domain/configuration'
 import { validateAndBuildLogsConfiguration } from '../domain/configuration'

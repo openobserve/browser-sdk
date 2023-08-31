@@ -1,4 +1,4 @@
-import { isIE } from '@datadog/browser-core'
+import { isIE } from '@openobserve/browser-core'
 import { appendElement, appendText } from '../../test'
 import {
   isTextNode,

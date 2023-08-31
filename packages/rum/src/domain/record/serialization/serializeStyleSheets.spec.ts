@@ -1,4 +1,4 @@
-import { isAdoptedStyleSheetsSupported } from '@datadog/browser-core/test'
+import { isAdoptedStyleSheetsSupported } from '@openobserve/browser-core/test'
 import { serializeStyleSheets } from './serializeStyleSheets'
 
 describe('serializeStyleSheets', () => {

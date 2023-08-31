@@ -1,5 +1,5 @@
-import type { Context } from '@datadog/browser-core'
-import { objectEntries } from '@datadog/browser-core'
+import type { Context } from '@openobserve/browser-core'
+import { objectEntries } from '@openobserve/browser-core'
 import type { ModifiableFieldPaths } from './limitModification'
 import { limitModification } from './limitModification'
 

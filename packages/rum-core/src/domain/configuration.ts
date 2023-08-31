@@ -16,7 +16,7 @@ import type { RumEvent } from '../rumEvent.types'
 import { isTracingOption } from './tracing/tracer'
 import type { PropagatorType, TracingOption } from './tracing/tracer.types'
 
-export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext', 'datadog']
+export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext', 'openobserve']
 
 export interface RumInitConfiguration extends InitConfiguration {
   // global options
@@ -149,7 +149,7 @@ function validateAndBuildTracingOptions(initConfiguration: RumInitConfiguration)
     const tracingOptions: TracingOption[] = []
     initConfiguration.allowedTracingUrls.forEach((option) => {
       if (isMatchOption(option)) {
-        tracingOptions.push({ match: option, propagatorTypes: DEFAULT_PROPAGATOR_TYPES })
+        tracingOptions.push({ match: option, propagatorTypes: ['openobserve'] })
       } else if (isTracingOption(option)) {
         tracingOptions.push(option)
       } else {

@@ -1,4 +1,4 @@
-import type { RelativeTime } from '@datadog/browser-core'
+import type { RelativeTime } from '@openobserve/browser-core'
 import {
   STORAGE_POLL_DELAY,
   SESSION_STORE_KEY,
@@ -8,9 +8,9 @@ import {
   stopSessionManager,
   ONE_SECOND,
   DOM_EVENT,
-} from '@datadog/browser-core'
-import type { Clock } from '@datadog/browser-core/test'
-import { createNewEvent, mockClock } from '@datadog/browser-core/test'
+} from '@openobserve/browser-core'
+import type { Clock } from '@openobserve/browser-core/test'
+import { createNewEvent, mockClock } from '@openobserve/browser-core/test'
 import type { RumConfiguration } from './configuration'
 import { validateAndBuildRumConfiguration } from './configuration'
 
