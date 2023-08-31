@@ -1,5 +1,5 @@
-import type { RelativeTime, Duration } from '@datadog/browser-core'
-import { addDuration } from '@datadog/browser-core'
+import type { RelativeTime, Duration } from '@openobserve/browser-core'
+import { addDuration } from '@openobserve/browser-core'
 import type { TestSetupBuilder } from '../../../../../test'
 import { setup } from '../../../../../test'
 import type { RumPerformanceNavigationTiming } from '../../../../browser/performanceCollection'

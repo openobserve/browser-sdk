@@ -1,5 +1,5 @@
-import { isIE } from '@datadog/browser-core'
-import { isFirefox } from '@datadog/browser-core/test'
+import { isIE } from '@openobserve/browser-core'
+import { isFirefox } from '@openobserve/browser-core/test'
 import { serializeDocument, SerializationContextStatus } from '../serialization'
 import { createElementsScrollPositions } from '../elementsScrollPositions'
 import type { StyleSheetCallback } from './styleSheetObserver'

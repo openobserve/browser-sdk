@@ -1,4 +1,4 @@
-import { isIE } from '@datadog/browser-core'
+import { isIE } from '@openobserve/browser-core'
 import {
   NodePrivacyLevel,
   PRIVACY_ATTR_NAME,
@@ -89,169 +89,169 @@ describe('getNodeSelfPrivacyLevel', () => {
       pending('IE not supported')
     }
   })
-  ;[
-    {
-      msg: 'is not an element',
-      html: 'foo',
-      expected: undefined,
-    },
+    ;[
+      {
+        msg: 'is not an element',
+        html: 'foo',
+        expected: undefined,
+      },
 
-    // Overrules
-    {
-      msg: 'has no privacy attribute or class',
-      html: '<span>',
-      expected: undefined,
-    },
-    {
-      msg: 'is a "base" element (forced override)',
-      html: '<base class="dd-privacy-mask">',
-      expected: NodePrivacyLevel.ALLOW,
-    },
-    {
-      msg: 'is an "input" element of type "password" (forced override)',
-      html: '<input type="password" class="dd-privacy-allow">',
-      expected: NodePrivacyLevel.MASK,
-    },
-    {
-      msg: 'is an "input" element of type "tel" (forced override)',
-      html: '<input type="tel" class="dd-privacy-allow">',
-      expected: NodePrivacyLevel.MASK,
-    },
-    {
-      msg: 'is an "input" element of type "email" (forced override)',
-      html: '<input type="email" class="dd-privacy-allow">',
-      expected: NodePrivacyLevel.MASK,
-    },
-    {
-      msg: 'is an "input" element of type "hidden" (forced override)',
-      html: '<input type="hidden" class="dd-privacy-allow">',
-      expected: NodePrivacyLevel.MASK,
-    },
-    {
-      msg: 'is an "input" element and has an autocomplete attribute starting with "cc-" (forced override)',
-      html: '<input type="text" class="dd-privacy-allow" autocomplete="cc-foo">',
-      expected: NodePrivacyLevel.MASK,
-    },
-    {
-      msg: 'is an "input" element and has an autocomplete attribute not starting with "cc-"',
-      html: '<input type="text" autocomplete="email">',
-      expected: undefined,
-    },
+      // Overrules
+      {
+        msg: 'has no privacy attribute or class',
+        html: '<span>',
+        expected: undefined,
+      },
+      {
+        msg: 'is a "base" element (forced override)',
+        html: '<base class="dd-privacy-mask">',
+        expected: NodePrivacyLevel.ALLOW,
+      },
+      {
+        msg: 'is an "input" element of type "password" (forced override)',
+        html: '<input type="password" class="dd-privacy-allow">',
+        expected: NodePrivacyLevel.MASK,
+      },
+      {
+        msg: 'is an "input" element of type "tel" (forced override)',
+        html: '<input type="tel" class="dd-privacy-allow">',
+        expected: NodePrivacyLevel.MASK,
+      },
+      {
+        msg: 'is an "input" element of type "email" (forced override)',
+        html: '<input type="email" class="dd-privacy-allow">',
+        expected: NodePrivacyLevel.MASK,
+      },
+      {
+        msg: 'is an "input" element of type "hidden" (forced override)',
+        html: '<input type="hidden" class="dd-privacy-allow">',
+        expected: NodePrivacyLevel.MASK,
+      },
+      {
+        msg: 'is an "input" element and has an autocomplete attribute starting with "cc-" (forced override)',
+        html: '<input type="text" class="dd-privacy-allow" autocomplete="cc-foo">',
+        expected: NodePrivacyLevel.MASK,
+      },
+      {
+        msg: 'is an "input" element and has an autocomplete attribute not starting with "cc-"',
+        html: '<input type="text" autocomplete="email">',
+        expected: undefined,
+      },
 
-    // Class
-    {
-      msg: 'has a dd-privacy-allow class',
-      html: '<span class="dd-privacy-allow">',
-      expected: NodePrivacyLevel.ALLOW,
-    },
-    {
-      msg: 'has a dd-privacy-hidden class',
-      html: '<span class="dd-privacy-hidden">',
-      expected: NodePrivacyLevel.HIDDEN,
-    },
-    {
-      msg: 'has a dd-privacy-mask class',
-      html: '<span class="dd-privacy-mask">',
-      expected: NodePrivacyLevel.MASK,
-    },
-    {
-      msg: 'has a dd-privacy-mask-user-input class',
-      html: '<span class="dd-privacy-mask-user-input">',
-      expected: NodePrivacyLevel.MASK_USER_INPUT,
-    },
-    {
-      msg: 'has an unknown class starting with dd-privacy-',
-      html: '<span class="dd-privacy-foo">',
-      expected: undefined,
-    },
+      // Class
+      {
+        msg: 'has a dd-privacy-allow class',
+        html: '<span class="dd-privacy-allow">',
+        expected: NodePrivacyLevel.ALLOW,
+      },
+      {
+        msg: 'has a dd-privacy-hidden class',
+        html: '<span class="dd-privacy-hidden">',
+        expected: NodePrivacyLevel.HIDDEN,
+      },
+      {
+        msg: 'has a dd-privacy-mask class',
+        html: '<span class="dd-privacy-mask">',
+        expected: NodePrivacyLevel.MASK,
+      },
+      {
+        msg: 'has a dd-privacy-mask-user-input class',
+        html: '<span class="dd-privacy-mask-user-input">',
+        expected: NodePrivacyLevel.MASK_USER_INPUT,
+      },
+      {
+        msg: 'has an unknown class starting with dd-privacy-',
+        html: '<span class="dd-privacy-foo">',
+        expected: undefined,
+      },
 
-    // Attributes
-    {
-      msg: 'has a data-dd-privacy="allow" attribute',
-      html: '<span data-dd-privacy="allow">',
-      expected: NodePrivacyLevel.ALLOW,
-    },
-    {
-      msg: 'has a data-dd-privacy="hidden" attribute',
-      html: '<span data-dd-privacy="hidden">',
-      expected: NodePrivacyLevel.HIDDEN,
-    },
-    {
-      msg: 'has a data-dd-privacy="mask" attribute',
-      html: '<span data-dd-privacy="mask">',
-      expected: NodePrivacyLevel.MASK,
-    },
-    {
-      msg: 'has a data-dd-privacy="mask-user-input" attribute',
-      html: '<span data-dd-privacy="mask-user-input">',
-      expected: NodePrivacyLevel.MASK_USER_INPUT,
-    },
-    {
-      msg: 'has an unknown data-dd-privacy attribute value',
-      html: '<span data-dd-privacy="foo">',
-      expected: undefined,
-    },
+      // Attributes
+      {
+        msg: 'has a data-dd-privacy="allow" attribute',
+        html: '<span data-dd-privacy="allow">',
+        expected: NodePrivacyLevel.ALLOW,
+      },
+      {
+        msg: 'has a data-dd-privacy="hidden" attribute',
+        html: '<span data-dd-privacy="hidden">',
+        expected: NodePrivacyLevel.HIDDEN,
+      },
+      {
+        msg: 'has a data-dd-privacy="mask" attribute',
+        html: '<span data-dd-privacy="mask">',
+        expected: NodePrivacyLevel.MASK,
+      },
+      {
+        msg: 'has a data-dd-privacy="mask-user-input" attribute',
+        html: '<span data-dd-privacy="mask-user-input">',
+        expected: NodePrivacyLevel.MASK_USER_INPUT,
+      },
+      {
+        msg: 'has an unknown data-dd-privacy attribute value',
+        html: '<span data-dd-privacy="foo">',
+        expected: undefined,
+      },
 
-    // Ignored elements
-    {
-      msg: 'should be ignored',
-      html: '<script>',
-      expected: NodePrivacyLevel.IGNORE,
-    },
-    {
-      msg: 'should be ignored but has an ALLOW privacy class',
-      html: '<script class="dd-privacy-allow">',
-      expected: NodePrivacyLevel.ALLOW,
-    },
-    {
-      msg: 'is a link with rel=preload and as=script',
-      html: '<link rel="preload" crossorigins as="script">',
-      expected: NodePrivacyLevel.IGNORE,
-    },
-    {
-      msg: 'is a link with rel=modulepreload and as=script',
-      html: '<link rel="modulepreload" as="script">',
-      expected: NodePrivacyLevel.IGNORE,
-    },
-    {
-      msg: 'is a link with rel=prefetch and as=script',
-      html: '<link rel="prefetch" as="script">',
-      expected: NodePrivacyLevel.IGNORE,
-    },
-    {
-      msg: 'is a link with rel=stylesheet and a not expected as=script',
-      html: '<link rel="stylesheet" as="script">',
-      expected: undefined,
-    },
+      // Ignored elements
+      {
+        msg: 'should be ignored',
+        html: '<script>',
+        expected: NodePrivacyLevel.IGNORE,
+      },
+      {
+        msg: 'should be ignored but has an ALLOW privacy class',
+        html: '<script class="dd-privacy-allow">',
+        expected: NodePrivacyLevel.ALLOW,
+      },
+      {
+        msg: 'is a link with rel=preload and as=script',
+        html: '<link rel="preload" crossorigins as="script">',
+        expected: NodePrivacyLevel.IGNORE,
+      },
+      {
+        msg: 'is a link with rel=modulepreload and as=script',
+        html: '<link rel="modulepreload" as="script">',
+        expected: NodePrivacyLevel.IGNORE,
+      },
+      {
+        msg: 'is a link with rel=prefetch and as=script',
+        html: '<link rel="prefetch" as="script">',
+        expected: NodePrivacyLevel.IGNORE,
+      },
+      {
+        msg: 'is a link with rel=stylesheet and a not expected as=script',
+        html: '<link rel="stylesheet" as="script">',
+        expected: undefined,
+      },
 
-    // Precedence
-    {
-      msg: 'has an ALLOW privacy class and a MASK privacy attribute (MASK takes precedence)',
-      html: '<span data-dd-privacy="mask" class="dd-privacy-allow">',
-      expected: NodePrivacyLevel.MASK,
-    },
-    {
-      msg: 'has ALLOW and MASK_USER_INPUT privacy classes (MASK_USER_INPUT takes precedence)',
-      html: '<span class="dd-privacy-allow dd-privacy-mask-user-input">',
-      expected: NodePrivacyLevel.MASK_USER_INPUT,
-    },
-    {
-      msg: 'has MASK_USER_INPUT and MASK privacy classes (MASK takes precedence)',
-      html: '<span class="dd-privacy-mask-user-input dd-privacy-mask">',
-      expected: NodePrivacyLevel.MASK,
-    },
-    {
-      msg: 'has MASK and HIDDEN privacy classes (HIDDEN takes precedence)',
-      html: '<span class="dd-privacy-mask dd-privacy-hidden">',
-      expected: NodePrivacyLevel.HIDDEN,
-    },
-  ].forEach(({ msg, html, expected }) => {
-    it(`returns ${String(expected)} when the node ${msg}`, () => {
-      const el = document.createElement('div')
-      el.innerHTML = html
-      expect(getNodeSelfPrivacyLevel(el.childNodes[0])).toBe(expected)
+      // Precedence
+      {
+        msg: 'has an ALLOW privacy class and a MASK privacy attribute (MASK takes precedence)',
+        html: '<span data-dd-privacy="mask" class="dd-privacy-allow">',
+        expected: NodePrivacyLevel.MASK,
+      },
+      {
+        msg: 'has ALLOW and MASK_USER_INPUT privacy classes (MASK_USER_INPUT takes precedence)',
+        html: '<span class="dd-privacy-allow dd-privacy-mask-user-input">',
+        expected: NodePrivacyLevel.MASK_USER_INPUT,
+      },
+      {
+        msg: 'has MASK_USER_INPUT and MASK privacy classes (MASK takes precedence)',
+        html: '<span class="dd-privacy-mask-user-input dd-privacy-mask">',
+        expected: NodePrivacyLevel.MASK,
+      },
+      {
+        msg: 'has MASK and HIDDEN privacy classes (HIDDEN takes precedence)',
+        html: '<span class="dd-privacy-mask dd-privacy-hidden">',
+        expected: NodePrivacyLevel.HIDDEN,
+      },
+    ].forEach(({ msg, html, expected }) => {
+      it(`returns ${String(expected)} when the node ${msg}`, () => {
+        const el = document.createElement('div')
+        el.innerHTML = html
+        expect(getNodeSelfPrivacyLevel(el.childNodes[0])).toBe(expected)
+      })
     })
-  })
 })
 
 describe('derivePrivacyLevelGivenParent', () => {

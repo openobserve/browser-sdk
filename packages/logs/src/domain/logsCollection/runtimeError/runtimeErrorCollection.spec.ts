@@ -1,4 +1,4 @@
-import { ErrorSource } from '@datadog/browser-core'
+import { ErrorSource } from '@openobserve/browser-core'
 import type { RawRuntimeLogsEvent } from '../../../rawLogsEvent.types'
 import type { LogsConfiguration } from '../../configuration'
 import { StatusType } from '../../logger'
@@ -31,7 +31,7 @@ describe('runtime error collection', () => {
   })
 
   it('should send runtime errors', (done) => {
-    ;({ stop: stopRuntimeErrorCollection } = startRuntimeErrorCollection(configuration, lifeCycle))
+    ; ({ stop: stopRuntimeErrorCollection } = startRuntimeErrorCollection(configuration, lifeCycle))
     setTimeout(() => {
       throw new Error('error!')
     })
@@ -49,7 +49,7 @@ describe('runtime error collection', () => {
   })
 
   it('should not send runtime errors when forwardErrorsToLogs is false', (done) => {
-    ;({ stop: stopRuntimeErrorCollection } = startRuntimeErrorCollection(
+    ; ({ stop: stopRuntimeErrorCollection } = startRuntimeErrorCollection(
       { ...configuration, forwardErrorsToLogs: false },
       lifeCycle
     ))

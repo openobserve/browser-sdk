@@ -1,4 +1,4 @@
-import type { Context, Duration, RelativeTime } from '@datadog/browser-core'
+import type { Context, Duration, RelativeTime } from '@openobserve/browser-core'
 import {
   PageExitReason,
   timeStampNow,
@@ -6,7 +6,7 @@ import {
   relativeToClocks,
   relativeNow,
   resetExperimentalFeatures,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { TestSetupBuilder } from '../../../../test'
 import { setup } from '../../../../test'
 import { RumEventType, ViewLoadingType } from '../../../rawRumEvent.types'
@@ -460,18 +460,17 @@ describe('view lifecycle', () => {
       { exitReason: PageExitReason.FROZEN, expectViewEnd: false },
       { exitReason: PageExitReason.HIDDEN, expectViewEnd: false },
     ].forEach(({ exitReason, expectViewEnd }) => {
-      it(`should ${
-        expectViewEnd ? '' : 'not '
-      }end the current view when the page is exiting for reason ${exitReason}`, () => {
-        const { lifeCycle } = setupBuilder.build()
-        const { getViewEndCount } = viewTest
+      it(`should ${expectViewEnd ? '' : 'not '
+        }end the current view when the page is exiting for reason ${exitReason}`, () => {
+          const { lifeCycle } = setupBuilder.build()
+          const { getViewEndCount } = viewTest
 
-        expect(getViewEndCount()).toEqual(0)
+          expect(getViewEndCount()).toEqual(0)
 
-        lifeCycle.notify(LifeCycleEventType.PAGE_EXITED, { reason: exitReason })
+          lifeCycle.notify(LifeCycleEventType.PAGE_EXITED, { reason: exitReason })
 
-        expect(getViewEndCount()).toEqual(expectViewEnd ? 1 : 0)
-      })
+          expect(getViewEndCount()).toEqual(expectViewEnd ? 1 : 0)
+        })
     })
 
     it('should not create a new view when ending the view on page exit', () => {

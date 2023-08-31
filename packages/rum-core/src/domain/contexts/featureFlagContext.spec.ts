@@ -1,4 +1,4 @@
-import type { RelativeTime } from '@datadog/browser-core'
+import type { RelativeTime } from '@openobserve/browser-core'
 import {
   display,
   ExperimentalFeature,
@@ -6,7 +6,7 @@ import {
   addExperimentalFeatures,
   relativeToClocks,
   CUSTOMER_DATA_BYTES_LIMIT,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { TestSetupBuilder } from '../../../test'
 import { setup } from '../../../test'
 import type { Clock } from '../../../../core/test'
@@ -185,7 +185,7 @@ describe('featureFlagContexts', () => {
 
     beforeEach(() => {
       addExperimentalFeatures([ExperimentalFeature.FEATURE_FLAGS])
-      ;({ clock, lifeCycle } = setupBuilder.withFakeClock().build())
+        ; ({ clock, lifeCycle } = setupBuilder.withFakeClock().build())
       lifeCycle.notify(LifeCycleEventType.VIEW_CREATED, {
         startClocks: relativeToClocks(0 as RelativeTime),
       } as ViewCreatedEvent)

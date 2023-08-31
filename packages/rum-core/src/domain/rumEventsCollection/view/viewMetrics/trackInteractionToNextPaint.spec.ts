@@ -1,10 +1,10 @@
-import type { Duration } from '@datadog/browser-core'
+import type { Duration } from '@openobserve/browser-core'
 import {
   ExperimentalFeature,
   addExperimentalFeatures,
   relativeNow,
   resetExperimentalFeatures,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { TestSetupBuilder } from '../../../../../test'
 import { setup } from '../../../../../test'
 import type {
@@ -55,7 +55,7 @@ describe('trackInteractionToNextPaint', () => {
 
     interactionCountStub = subInteractionCount()
     setupBuilder = setup().beforeBuild(({ lifeCycle }) => {
-      ;({ getInteractionToNextPaint } = trackInteractionToNextPaint(ViewLoadingType.INITIAL_LOAD, lifeCycle))
+      ; ({ getInteractionToNextPaint } = trackInteractionToNextPaint(ViewLoadingType.INITIAL_LOAD, lifeCycle))
     })
   })
 

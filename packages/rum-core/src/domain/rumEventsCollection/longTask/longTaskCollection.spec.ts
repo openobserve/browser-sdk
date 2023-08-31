@@ -1,4 +1,4 @@
-import type { Duration, RelativeTime, ServerDuration } from '@datadog/browser-core'
+import type { Duration, RelativeTime, ServerDuration } from '@openobserve/browser-core'
 import type { RumSessionManagerMock, TestSetupBuilder } from '../../../../test'
 import { createRumSessionManagerMock, setup } from '../../../../test'
 import type { RumPerformanceEntry, RumPerformanceLongTaskTiming } from '../../../browser/performanceCollection'

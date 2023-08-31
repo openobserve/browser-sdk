@@ -1,4 +1,4 @@
-import type { Context, RelativeTime, TelemetryEvent, TimeStamp } from '@datadog/browser-core'
+import type { Context, RelativeTime, TelemetryEvent, TimeStamp } from '@openobserve/browser-core'
 import {
   Observable,
   TelemetryService,
@@ -7,9 +7,9 @@ import {
   ONE_MINUTE,
   getTimeStamp,
   noop,
-} from '@datadog/browser-core'
-import type { Clock } from '@datadog/browser-core/test'
-import { mockClock, cleanupSyntheticsWorkerValues, mockSyntheticsWorkerValues } from '@datadog/browser-core/test'
+} from '@openobserve/browser-core'
+import type { Clock } from '@openobserve/browser-core/test'
+import { mockClock, cleanupSyntheticsWorkerValues, mockSyntheticsWorkerValues } from '@openobserve/browser-core/test'
 import type { LogsEvent } from '../logsEvent.types'
 import type { CommonContext } from '../rawLogsEvent.types'
 import { getRUMInternalContext, resetRUMInternalContext, startLogsAssembly } from './assembly'
@@ -260,7 +260,7 @@ describe('startLogsAssembly', () => {
     it('should allow modification of existing fields', () => {
       beforeSend = (event: LogsEvent) => {
         event.message = 'modified message'
-        ;(event.service as any) = 'modified service'
+          ; (event.service as any) = 'modified service'
       }
 
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
@@ -386,118 +386,118 @@ describe('logs limitation', () => {
     clock.cleanup()
     serverLogs = []
   })
-  ;[
-    { status: StatusType.error, messageContext: {}, message: 'Reached max number of errors by minute: 1' },
-    { status: StatusType.warn, messageContext: {}, message: 'Reached max number of warns by minute: 1' },
-    { status: StatusType.info, messageContext: {}, message: 'Reached max number of infos by minute: 1' },
-    { status: StatusType.debug, messageContext: {}, message: 'Reached max number of debugs by minute: 1' },
-    {
-      status: StatusType.debug,
-      messageContext: { status: 'unknown' }, // overrides the rawLogsEvent status
-      message: 'Reached max number of customs by minute: 1',
-    },
-  ].forEach(({ status, message, messageContext }) => {
-    it(`stops sending ${status} logs when reaching the limit`, () => {
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
-        messageContext,
-      })
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'bar', status },
-        messageContext,
-      })
-
-      expect(serverLogs.length).toEqual(1)
-      expect(serverLogs[0].message).toBe('foo')
-      expect(reportErrorSpy).toHaveBeenCalledTimes(1)
-      expect(reportErrorSpy.calls.argsFor(0)[0]).toEqual(
-        jasmine.objectContaining({
-          message,
-          source: ErrorSource.AGENT,
+    ;[
+      { status: StatusType.error, messageContext: {}, message: 'Reached max number of errors by minute: 1' },
+      { status: StatusType.warn, messageContext: {}, message: 'Reached max number of warns by minute: 1' },
+      { status: StatusType.info, messageContext: {}, message: 'Reached max number of infos by minute: 1' },
+      { status: StatusType.debug, messageContext: {}, message: 'Reached max number of debugs by minute: 1' },
+      {
+        status: StatusType.debug,
+        messageContext: { status: 'unknown' }, // overrides the rawLogsEvent status
+        message: 'Reached max number of customs by minute: 1',
+      },
+    ].forEach(({ status, message, messageContext }) => {
+      it(`stops sending ${status} logs when reaching the limit`, () => {
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
+          messageContext,
         })
-      )
-    })
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'bar', status },
+          messageContext,
+        })
 
-    it(`does not take discarded ${status} logs into account`, () => {
-      beforeSend = (event) => {
-        if (event.message === 'discard me') {
-          return false
+        expect(serverLogs.length).toEqual(1)
+        expect(serverLogs[0].message).toBe('foo')
+        expect(reportErrorSpy).toHaveBeenCalledTimes(1)
+        expect(reportErrorSpy.calls.argsFor(0)[0]).toEqual(
+          jasmine.objectContaining({
+            message,
+            source: ErrorSource.AGENT,
+          })
+        )
+      })
+
+      it(`does not take discarded ${status} logs into account`, () => {
+        beforeSend = (event) => {
+          if (event.message === 'discard me') {
+            return false
+          }
         }
-      }
 
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'discard me', status },
-        messageContext,
-      })
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'discard me', status },
-        messageContext,
-      })
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'discard me', status },
-        messageContext,
-      })
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
-        messageContext,
-      })
-
-      expect(serverLogs.length).toEqual(1)
-      expect(serverLogs[0].message).toBe('foo')
-    })
-
-    it(`allows to send new ${status}s after a minute`, () => {
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
-        messageContext,
-      })
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'bar', status },
-        messageContext,
-      })
-      clock.tick(ONE_MINUTE)
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'baz', status },
-        messageContext,
-      })
-
-      expect(serverLogs.length).toEqual(2)
-      expect(serverLogs[0].message).toEqual('foo')
-      expect(serverLogs[1].message).toEqual('baz')
-      expect(reportErrorSpy).toHaveBeenCalledTimes(1)
-      expect(reportErrorSpy.calls.argsFor(0)[0]).toEqual(
-        jasmine.objectContaining({
-          source: ErrorSource.AGENT,
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'discard me', status },
+          messageContext,
         })
-      )
-    })
-
-    it('allows to send logs with a different status when reaching the limit', () => {
-      const otherLogStatus = status === StatusType.error ? StatusType.info : StatusType.error
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
-        messageContext,
-      })
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'bar', status },
-        messageContext,
-      })
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'baz', status: otherLogStatus },
-        ...{ ...messageContext, status: otherLogStatus },
-      })
-
-      expect(serverLogs.length).toEqual(2)
-      expect(serverLogs[0].message).toEqual('foo')
-      expect(serverLogs[1].message).toEqual('baz')
-      expect(reportErrorSpy).toHaveBeenCalledTimes(1)
-      expect(reportErrorSpy.calls.argsFor(0)[0]).toEqual(
-        jasmine.objectContaining({
-          source: ErrorSource.AGENT,
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'discard me', status },
+          messageContext,
         })
-      )
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'discard me', status },
+          messageContext,
+        })
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
+          messageContext,
+        })
+
+        expect(serverLogs.length).toEqual(1)
+        expect(serverLogs[0].message).toBe('foo')
+      })
+
+      it(`allows to send new ${status}s after a minute`, () => {
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
+          messageContext,
+        })
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'bar', status },
+          messageContext,
+        })
+        clock.tick(ONE_MINUTE)
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'baz', status },
+          messageContext,
+        })
+
+        expect(serverLogs.length).toEqual(2)
+        expect(serverLogs[0].message).toEqual('foo')
+        expect(serverLogs[1].message).toEqual('baz')
+        expect(reportErrorSpy).toHaveBeenCalledTimes(1)
+        expect(reportErrorSpy.calls.argsFor(0)[0]).toEqual(
+          jasmine.objectContaining({
+            source: ErrorSource.AGENT,
+          })
+        )
+      })
+
+      it('allows to send logs with a different status when reaching the limit', () => {
+        const otherLogStatus = status === StatusType.error ? StatusType.info : StatusType.error
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
+          messageContext,
+        })
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'bar', status },
+          messageContext,
+        })
+        lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+          rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'baz', status: otherLogStatus },
+          ...{ ...messageContext, status: otherLogStatus },
+        })
+
+        expect(serverLogs.length).toEqual(2)
+        expect(serverLogs[0].message).toEqual('foo')
+        expect(serverLogs[1].message).toEqual('baz')
+        expect(reportErrorSpy).toHaveBeenCalledTimes(1)
+        expect(reportErrorSpy.calls.argsFor(0)[0]).toEqual(
+          jasmine.objectContaining({
+            source: ErrorSource.AGENT,
+          })
+        )
+      })
     })
-  })
 
   it('two different custom statuses are accounted by the same limit', () => {
     lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {

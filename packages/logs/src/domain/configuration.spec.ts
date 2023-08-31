@@ -1,4 +1,4 @@
-import { display } from '@datadog/browser-core'
+import { display } from '@openobserve/browser-core'
 import { validateAndBuildForwardOption, validateAndBuildLogsConfiguration } from './configuration'
 
 const DEFAULT_INIT_CONFIGURATION = { clientToken: 'xxx' }

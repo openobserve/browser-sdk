@@ -1,4 +1,4 @@
-import type { RumInitConfiguration } from '@datadog/browser-rum-core'
+import type { RumInitConfiguration } from '@openobserve/browser-rum-core'
 import { IncrementalSource, NodeType } from '@datadog/browser-rum/src/types'
 import type { DocumentFragmentNode, MouseInteractionData, SerializedNodeWithId } from '@datadog/browser-rum/src/types'
 

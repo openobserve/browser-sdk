@@ -1,4 +1,4 @@
-import { display, isIE, objectEntries } from '@datadog/browser-core'
+import { display, isIE, objectEntries } from '@openobserve/browser-core'
 import type { TestSetupBuilder, RumSessionManagerMock } from '../../../test'
 import { setup, createRumSessionManagerMock } from '../../../test'
 import type { RumFetchResolveContext, RumFetchStartContext, RumXhrStartContext } from '../requestCollection'
@@ -21,7 +21,7 @@ describe('tracer', () => {
     clientToken: 'xxx',
     applicationId: 'xxx',
     service: 'service',
-    allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['datadog'] }],
+    allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['openobserve'] }],
   }
 
   beforeEach(() => {
@@ -173,10 +173,10 @@ describe('tracer', () => {
         })
       )
 
-      expect(xhrStub.headers['x-datadog-origin']).toBeUndefined()
-      expect(xhrStub.headers['x-datadog-parent-id']).toBeUndefined()
-      expect(xhrStub.headers['x-datadog-trace-id']).toBeUndefined()
-      expect(xhrStub.headers['x-datadog-sampling-priority']).toBeUndefined()
+      expect(xhrStub.headers['x-openobserve-origin']).toBeUndefined()
+      expect(xhrStub.headers['x-openobserve-parent-id']).toBeUndefined()
+      expect(xhrStub.headers['x-openobserve-trace-id']).toBeUndefined()
+      expect(xhrStub.headers['x-openobserve-sampling-priority']).toBeUndefined()
     })
 
     it('should add headers for B3 (single) and tracecontext propagators', () => {
@@ -209,7 +209,7 @@ describe('tracer', () => {
 
       expect(xhrStub.headers['b3']).toBeUndefined()
       expect(xhrStub.headers['traceparent']).toBeUndefined()
-      expect(xhrStub.headers['x-datadog-trace-id']).toBeUndefined()
+      expect(xhrStub.headers['x-openobserve-trace-id']).toBeUndefined()
       expect(xhrStub.headers['X-B3-TraceId']).toBeUndefined()
     })
 
@@ -225,7 +225,7 @@ describe('tracer', () => {
 
       expect(xhrStub.headers['b3']).toBeUndefined()
       expect(xhrStub.headers['traceparent']).toBeUndefined()
-      expect(xhrStub.headers['x-datadog-trace-id']).toBeUndefined()
+      expect(xhrStub.headers['x-openobserve-trace-id']).toBeUndefined()
       expect(xhrStub.headers['X-B3-TraceId']).toBeUndefined()
     })
 
@@ -489,10 +489,10 @@ describe('tracer', () => {
         ])
       )
 
-      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-datadog-origin']))
-      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-datadog-parent-id']))
-      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-datadog-trace-id']))
-      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-datadog-sampling-priority']))
+      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-origin']))
+      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-parent-id']))
+      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
+      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-sampling-priority']))
     })
 
     it('should add headers for b3 (single) and tracecontext propagators', () => {
@@ -525,7 +525,7 @@ describe('tracer', () => {
 
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['b3']))
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['traceparent']))
-      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-datadog-trace-id']))
+      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['X-B3-TraceId']))
     })
   })
@@ -570,8 +570,8 @@ describe('TraceIdentifier', () => {
 
   it('should pad the string to 16 characters', () => {
     const traceIdentifier = new TraceIdentifier()
-    // Forcing as any to access private member: buffer
-    ;(traceIdentifier as any).buffer = new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
+      // Forcing as any to access private member: buffer
+      ; (traceIdentifier as any).buffer = new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
 
     expect(traceIdentifier.toPaddedHexadecimalString()).toEqual('0001020304050607')
   })
@@ -587,10 +587,10 @@ function toPlainObject(headers: Headers) {
 
 function tracingHeadersFor(traceId: TraceIdentifier, spanId: TraceIdentifier, samplingPriority: '1' | '0') {
   return {
-    'x-datadog-origin': 'rum',
-    'x-datadog-parent-id': spanId.toDecimalString(),
-    'x-datadog-sampling-priority': samplingPriority,
-    'x-datadog-trace-id': traceId.toDecimalString(),
+    'x-openobserve-origin': 'rum',
+    'x-openobserve-parent-id': spanId.toDecimalString(),
+    'x-openobserve-sampling-priority': samplingPriority,
+    'x-openobserve-trace-id': traceId.toDecimalString(),
   }
 }
 

@@ -5,7 +5,7 @@
  * WARNING: this module is not intended for public usages, and won't follow semver for breaking
  * changes.
  */
-import { makeRumPublicApi, startRum } from '@datadog/browser-rum-core'
+import { makeRumPublicApi, startRum } from '@openobserve/browser-rum-core'
 
 import { startRecording } from '../boot/startRecording'
 import { makeRecorderApi } from '../boot/recorderApi'

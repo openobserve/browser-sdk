@@ -1,4 +1,4 @@
-import type { Duration, RelativeTime, ServerDuration, TimeStamp } from '@datadog/browser-core'
+import type { Duration, RelativeTime, ServerDuration, TimeStamp } from '@openobserve/browser-core'
 import {
   resetExperimentalFeatures,
   addExperimentalFeatures,
@@ -6,7 +6,7 @@ import {
   RequestType,
   ResourceType,
   ExperimentalFeature,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { RumFetchResourceEventDomainContext } from '../../../domainContext.types'
 import { createResourceEntry, setup, createRumSessionManagerMock } from '../../../../test'
 import type { TestSetupBuilder } from '../../../../test'
@@ -227,26 +227,25 @@ describe('resourceCollection', () => {
       error: undefined,
     })
   })
-  ;[null, undefined, 42, {}].forEach((input: any) => {
-    it(`should support ${
-      typeof input === 'object' ? JSON.stringify(input) : String(input)
-    } as fetch input parameter`, () => {
-      if (isIE()) {
-        pending('No IE support')
-      }
-      const { lifeCycle, rawRumEvents } = setupBuilder.build()
-      lifeCycle.notify(
-        LifeCycleEventType.REQUEST_COMPLETED,
-        createCompletedRequest({
-          type: RequestType.FETCH,
-          input,
-        })
-      )
+    ;[null, undefined, 42, {}].forEach((input: any) => {
+      it(`should support ${typeof input === 'object' ? JSON.stringify(input) : String(input)
+        } as fetch input parameter`, () => {
+          if (isIE()) {
+            pending('No IE support')
+          }
+          const { lifeCycle, rawRumEvents } = setupBuilder.build()
+          lifeCycle.notify(
+            LifeCycleEventType.REQUEST_COMPLETED,
+            createCompletedRequest({
+              type: RequestType.FETCH,
+              input,
+            })
+          )
 
-      expect(rawRumEvents.length).toBe(1)
-      expect((rawRumEvents[0].domainContext as RumFetchResourceEventDomainContext).requestInput).toBe(input)
+          expect(rawRumEvents.length).toBe(1)
+          expect((rawRumEvents[0].domainContext as RumFetchResourceEventDomainContext).requestInput).toBe(input)
+        })
     })
-  })
 
   it('should include the error in failed fetch requests', () => {
     const { lifeCycle, rawRumEvents } = setupBuilder.build()

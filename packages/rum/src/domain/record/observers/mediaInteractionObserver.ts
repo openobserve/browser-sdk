@@ -1,6 +1,6 @@
 import type { DefaultPrivacyLevel, ListenerHandler } from '@openobserve/browser-core'
 import { DOM_EVENT, addEventListeners } from '@openobserve/browser-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import { NodePrivacyLevel } from '../../../constants'
 import type { MediaInteraction } from '../../../types'
 import { MediaInteractionType } from '../../../types'

@@ -1,5 +1,5 @@
-import type { Duration, RelativeTime } from '@datadog/browser-core'
-import { restorePageVisibility, setPageVisibility } from '@datadog/browser-core/test'
+import type { Duration, RelativeTime } from '@openobserve/browser-core'
+import { restorePageVisibility, setPageVisibility } from '@openobserve/browser-core/test'
 import type { TestSetupBuilder } from '../../../../../test'
 import { setup } from '../../../../../test'
 import { LifeCycleEventType } from '../../../lifeCycle'

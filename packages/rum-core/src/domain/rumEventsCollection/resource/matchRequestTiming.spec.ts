@@ -1,5 +1,5 @@
-import type { Duration, RelativeTime } from '@datadog/browser-core'
-import { isIE, relativeToClocks } from '@datadog/browser-core'
+import type { Duration, RelativeTime } from '@openobserve/browser-core'
+import { isIE, relativeToClocks } from '@openobserve/browser-core'
 import { createResourceEntry } from '../../../../test'
 import type { RumPerformanceResourceTiming } from '../../../browser/performanceCollection'
 import type { RequestCompleteEvent } from '../../requestCollection'

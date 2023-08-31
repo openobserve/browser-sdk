@@ -1,4 +1,4 @@
-import type { RelativeTime, Observable, RawError, Duration } from '@datadog/browser-core'
+import type { RelativeTime, Observable, RawError, Duration } from '@openobserve/browser-core'
 import {
   CustomerDataType,
   createContextManager,
@@ -9,13 +9,13 @@ import {
   noop,
   relativeNow,
   isIE,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import {
   createNewEvent,
   interceptRequests,
   initEventBridgeStub,
   deleteEventBridgeStub,
-} from '@datadog/browser-core/test'
+} from '@openobserve/browser-core/test'
 import type { RumSessionManagerMock, TestSetupBuilder } from '../../test'
 import { createRumSessionManagerMock, noopRecorderApi, noopWebVitalTelemetryDebug, setup } from '../../test'
 import type { RumPerformanceNavigationTiming, RumPerformanceEntry } from '../browser/performanceCollection'

@@ -1,5 +1,5 @@
 import type { ListenerHandler } from '@openobserve/browser-core'
-import type { LifeCycle, RumConfiguration } from '@datadog/browser-rum-core'
+import type { LifeCycle, RumConfiguration } from '@openobserve/browser-rum-core'
 import type { ElementsScrollPositions } from '../elementsScrollPositions'
 import type { ShadowRootsController } from '../shadowRootsController'
 import type { MousemoveCallBack } from './moveObserver'

@@ -190,7 +190,7 @@ function validateAndBuildTracingOptions(initConfiguration: RumInitConfiguration)
     const tracingOptions: TracingOption[] = []
     initConfiguration.allowedTracingUrls.forEach((option) => {
       if (isMatchOption(option)) {
-        tracingOptions.push({ match: option, propagatorTypes: ['datadog'] })
+        tracingOptions.push({ match: option, propagatorTypes: ['openobserve'] })
       } else if (isTracingOption(option)) {
         tracingOptions.push(option)
       } else {
@@ -247,12 +247,12 @@ function convertLegacyMatchOptionToTracingOption(item: MatchOption): TracingOpti
     return undefined
   }
 
-  return { match, propagatorTypes: ['datadog'] }
+  return { match, propagatorTypes: ['openobserve'] }
 }
 
 /**
  * Combines the selected tracing propagators from the different options in allowedTracingUrls,
- * and assumes 'datadog' has been selected when using allowedTracingOrigins
+ * and assumes 'openobserve' has been selected when using allowedTracingOrigins
  */
 function getSelectedTracingPropagators(configuration: RumInitConfiguration): PropagatorType[] {
   const usedTracingPropagators = new Set<PropagatorType>()
@@ -260,7 +260,7 @@ function getSelectedTracingPropagators(configuration: RumInitConfiguration): Pro
   if (Array.isArray(configuration.allowedTracingUrls) && configuration.allowedTracingUrls.length > 0) {
     configuration.allowedTracingUrls.forEach((option) => {
       if (isMatchOption(option)) {
-        usedTracingPropagators.add('datadog')
+        usedTracingPropagators.add('openobserve')
       } else if (getType(option) === 'object' && Array.isArray(option.propagatorTypes)) {
         // Ensure we have an array, as we cannot rely on types yet (configuration is provided by users)
         option.propagatorTypes.forEach((propagatorType) => usedTracingPropagators.add(propagatorType))
@@ -269,7 +269,7 @@ function getSelectedTracingPropagators(configuration: RumInitConfiguration): Pro
   }
 
   if (Array.isArray(configuration.allowedTracingOrigins) && configuration.allowedTracingOrigins.length > 0) {
-    usedTracingPropagators.add('datadog')
+    usedTracingPropagators.add('openobserve')
   }
 
   return arrayFrom(usedTracingPropagators)

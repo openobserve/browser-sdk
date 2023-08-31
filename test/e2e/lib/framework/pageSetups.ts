@@ -1,5 +1,5 @@
 import type { LogsInitConfiguration } from '@datadog/browser-logs'
-import type { RumInitConfiguration } from '@datadog/browser-rum-core'
+import type { RumInitConfiguration } from '@openobserve/browser-rum-core'
 import type { Servers } from './httpServers'
 
 export interface SetupOptions {
@@ -33,10 +33,10 @@ export const DEFAULT_SETUPS =
   !isContinuousIntegration || isBrowserStack
     ? [{ name: 'bundle', factory: bundleSetup }]
     : [
-        { name: 'async', factory: asyncSetup },
-        { name: 'npm', factory: npmSetup },
-        { name: 'bundle', factory: bundleSetup },
-      ]
+      { name: 'async', factory: asyncSetup },
+      { name: 'npm', factory: npmSetup },
+      { name: 'bundle', factory: bundleSetup },
+    ]
 
 export function asyncSetup(options: SetupOptions, servers: Servers) {
   let body = options.body || ''

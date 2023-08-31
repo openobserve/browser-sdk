@@ -1,4 +1,4 @@
-import type { RelativeTime, ServerDuration } from '@datadog/browser-core'
+import type { RelativeTime, ServerDuration } from '@openobserve/browser-core'
 import type { Clock } from '../../../../core/test'
 import { mockClock } from '../../../../core/test'
 import type { RumConfiguration } from '../configuration'

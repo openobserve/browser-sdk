@@ -1,5 +1,5 @@
 import type { LogsInitConfiguration } from '@datadog/browser-logs'
-import type { RumInitConfiguration } from '@datadog/browser-rum-core'
+import type { RumInitConfiguration } from '@openobserve/browser-rum-core'
 import { getRunId } from '../../../envUtils'
 import { deleteAllCookies, getBrowserName, withBrowserLogs } from '../helpers/browser'
 import { APPLICATION_ID, CLIENT_TOKEN } from '../helpers/constants'
@@ -55,7 +55,7 @@ class TestBuilder {
   private eventBridge = false
   private setups: Array<{ factory: SetupFactory; name?: string }> = []
 
-  constructor(private title: string) {}
+  constructor(private title: string) { }
 
   withRum(rumInitConfiguration?: Partial<RumInitConfiguration>) {
     this.rumConfiguration = { ...DEFAULT_RUM_CONFIGURATION, ...rumInitConfiguration }

@@ -1,4 +1,4 @@
-import { Observable } from '@datadog/browser-core'
+import { Observable } from '@openobserve/browser-core'
 import { startInternalContext } from './internalContext'
 
 describe('internal context', () => {

@@ -1,3 +1,3 @@
 # `rum-core`
 
-Datadog browser RUM core utilities.
+Openobserve browser RUM core utilities.

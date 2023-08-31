@@ -2,7 +2,7 @@ import type { InputData, StyleSheetRuleData, BrowserSegment, ScrollData } from '
 import { NodeType, IncrementalSource, MouseInteractionType } from '@datadog/browser-rum/src/types'
 
 // Import from src to have properties of const enums
-import { FrustrationType } from '@datadog/browser-rum-core/src/rawRumEvent.types'
+import { FrustrationType } from '@openobserve/browser-rum-core/src/rawRumEvent.types'
 import { DefaultPrivacyLevel } from '@datadog/browser-rum'
 
 import {

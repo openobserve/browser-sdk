@@ -1,4 +1,4 @@
-import { relativeNow } from '@datadog/browser-core'
+import { relativeNow } from '@openobserve/browser-core'
 import type { TestSetupBuilder } from '../../../../../test'
 import { setup } from '../../../../../test'
 import type { LifeCycle } from '../../../lifeCycle'

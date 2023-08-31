@@ -14,22 +14,22 @@ const {
 } = require('./lib/deployment-utils')
 
 /**
- * Upload source maps to datadog
+ * Upload source maps to openobserve
  * Usage:
  * BUILD_MODE=canary|release node upload-source-maps.js staging|canary|vXXX root,us1,eu1,...
  */
 const version = process.argv[2]
 let uploadPathTypes = process.argv[3].split(',')
 const siteByDatacenter = {
-  us1: 'datadoghq.com',
-  eu1: 'datadoghq.eu',
-  us3: 'us3.datadoghq.com',
-  us5: 'us5.datadoghq.com',
-  ap1: 'ap1.datadoghq.com',
+  us1: 'api.openobserve.ai',
+  eu1: 'api.openobserve.ai',
+  us3: 'api.openobserve.ai',
+  us5: 'api.openobserve.ai',
+  ap1: 'api.openobserve.ai',
 }
 const sitesByVersion = {
-  staging: ['datad0g.com', 'datadoghq.com'],
-  canary: ['datadoghq.com'],
+  staging: ['api.openobserve.ai'],
+  canary: ['api.openobserve.ai'],
   // TODO remove in next major
   v4: Object.values(siteByDatacenter),
 }
@@ -71,12 +71,12 @@ function uploadSourceMaps(packageName, service, prefix, bundleFolder, sites) {
     printLog(`Uploading ${packageName} source maps with prefix ${prefix} for ${site}...`)
 
     command`
-    datadog-ci sourcemaps upload ${bundleFolder}
+    openobserve-ci sourcemaps upload ${bundleFolder}
       --service ${service}
       --release-version ${getBuildEnvValue('SDK_VERSION')}
       --minified-path-prefix ${prefix}
-      --project-path @datadog/browser-${packageName}/
-      --repository-url https://www.github.com/datadog/browser-sdk
+      --project-path @openobserve/browser-${packageName}/
+      --repository-url https://www.github.com/openobserve/browser-sdk
   `
       .withEnvironment({
         DATADOG_API_KEY: getTelemetryOrgApiKey(site),

@@ -1,7 +1,7 @@
 // Keep the following in sync with packages/rum-slim/src/entries/main.ts
 import { defineGlobal, getGlobalObject } from '@openobserve/browser-core'
-import type { RumPublicApi } from '@datadog/browser-rum-core'
-import { makeRumPublicApi, startRum } from '@datadog/browser-rum-core'
+import type { RumPublicApi } from '@openobserve/browser-rum-core'
+import { makeRumPublicApi, startRum } from '@openobserve/browser-rum-core'
 
 import { startRecording } from '../boot/startRecording'
 import { makeRecorderApi } from '../boot/recorderApi'
@@ -26,7 +26,7 @@ export {
   RumXhrResourceEventDomainContext,
   RumOtherResourceEventDomainContext,
   RumLongTaskEventDomainContext,
-} from '@datadog/browser-rum-core'
+} from '@openobserve/browser-rum-core'
 export { DefaultPrivacyLevel } from '@openobserve/browser-core'
 
 const recorderApi = makeRecorderApi(startRecording)

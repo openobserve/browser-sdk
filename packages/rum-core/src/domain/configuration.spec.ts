@@ -1,4 +1,4 @@
-import { DefaultPrivacyLevel, display } from '@datadog/browser-core'
+import { DefaultPrivacyLevel, display } from '@openobserve/browser-core'
 import type { RumInitConfiguration } from './configuration'
 import { serializeRumConfiguration, validateAndBuildRumConfiguration } from './configuration'
 
@@ -197,7 +197,7 @@ describe('validateAndBuildRumConfiguration', () => {
           allowedTracingOrigins: ['foo'],
           service: 'bar',
         })!.allowedTracingUrls
-      ).toEqual([{ match: 'foo', propagatorTypes: ['datadog'] }])
+      ).toEqual([{ match: 'foo', propagatorTypes: ['openobserve'] }])
     })
 
     it('accepts functions', () => {
@@ -242,7 +242,7 @@ describe('validateAndBuildRumConfiguration', () => {
           allowedTracingUrls: ['foo'],
           service: 'bar',
         })!.allowedTracingUrls
-      ).toEqual([{ match: 'foo', propagatorTypes: ['datadog'] }])
+      ).toEqual([{ match: 'foo', propagatorTypes: ['openobserve'] }])
     })
 
     it('accepts functions', () => {
@@ -254,7 +254,7 @@ describe('validateAndBuildRumConfiguration', () => {
           allowedTracingUrls: [customOriginFunction],
           service: 'bar',
         })!.allowedTracingUrls
-      ).toEqual([{ match: customOriginFunction, propagatorTypes: ['datadog'] }])
+      ).toEqual([{ match: customOriginFunction, propagatorTypes: ['openobserve'] }])
     })
 
     it('accepts RegExp', () => {
@@ -264,7 +264,7 @@ describe('validateAndBuildRumConfiguration', () => {
           allowedTracingUrls: [/az/i],
           service: 'bar',
         })!.allowedTracingUrls
-      ).toEqual([{ match: /az/i, propagatorTypes: ['datadog'] }])
+      ).toEqual([{ match: /az/i, propagatorTypes: ['openobserve'] }])
     })
 
     it('keeps headers', () => {
@@ -285,7 +285,7 @@ describe('validateAndBuildRumConfiguration', () => {
           allowedTracingUrls: [
             42 as any,
             undefined,
-            { match: 42 as any, propagatorTypes: ['datadog'] },
+            { match: 42 as any, propagatorTypes: ['openobserve'] },
             { match: 'toto' },
           ],
         })!.allowedTracingUrls
@@ -518,12 +518,12 @@ describe('validateAndBuildRumConfiguration', () => {
         expect(serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION).selected_tracing_propagators).toEqual([])
       })
 
-      it('should return Datadog propagator type', () => {
+      it('should return Openobserve propagator type', () => {
         const simpleTracingConfig: RumInitConfiguration = {
           ...DEFAULT_INIT_CONFIGURATION,
           allowedTracingUrls: ['foo'],
         }
-        expect(serializeRumConfiguration(simpleTracingConfig).selected_tracing_propagators).toEqual(['datadog'])
+        expect(serializeRumConfiguration(simpleTracingConfig).selected_tracing_propagators).toEqual(['openobserve'])
       })
 
       it('should return all propagator types', () => {
@@ -531,14 +531,14 @@ describe('validateAndBuildRumConfiguration', () => {
           ...DEFAULT_INIT_CONFIGURATION,
           allowedTracingUrls: [
             'foo',
-            { match: 'first', propagatorTypes: ['datadog'] },
+            { match: 'first', propagatorTypes: ['openobserve'] },
             { match: 'test', propagatorTypes: ['tracecontext'] },
             { match: 'other', propagatorTypes: ['b3'] },
             { match: 'final', propagatorTypes: ['b3multi'] },
           ],
         }
         expect(serializeRumConfiguration(complexTracingConfig).selected_tracing_propagators).toEqual(
-          jasmine.arrayWithExactContents(['datadog', 'b3', 'b3multi', 'tracecontext'])
+          jasmine.arrayWithExactContents(['openobserve', 'datadog', 'b3', 'b3multi', 'tracecontext'])
         )
       })
 

@@ -1,6 +1,6 @@
-import { isIE, RequestType } from '@datadog/browser-core'
-import type { FetchStub, FetchStubManager } from '@datadog/browser-core/test'
-import { SPEC_ENDPOINTS, stubFetch, stubXhr, withXhr } from '@datadog/browser-core/test'
+import { isIE, RequestType } from '@openobserve/browser-core'
+import type { FetchStub, FetchStubManager } from '@openobserve/browser-core/test'
+import { SPEC_ENDPOINTS, stubFetch, stubXhr, withXhr } from '@openobserve/browser-core/test'
 import type { RumConfiguration } from './configuration'
 import { validateAndBuildRumConfiguration } from './configuration'
 import { LifeCycle, LifeCycleEventType } from './lifeCycle'
@@ -41,7 +41,7 @@ describe('collect fetch', () => {
         context.spanId = new TraceIdentifier()
       },
     }
-    ;({ stop: stopFetchTracking } = trackFetch(lifeCycle, configuration, tracerStub as Tracer))
+      ; ({ stop: stopFetchTracking } = trackFetch(lifeCycle, configuration, tracerStub as Tracer))
 
     fetchStub = window.fetch as FetchStub
     window.onunhandledrejection = (ev: PromiseRejectionEvent) => {
@@ -208,7 +208,7 @@ describe('collect xhr', () => {
         context.spanId = new TraceIdentifier()
       },
     }
-    ;({ stop: stopXhrTracking } = trackXhr(lifeCycle, configuration, tracerStub as Tracer))
+      ; ({ stop: stopXhrTracking } = trackXhr(lifeCycle, configuration, tracerStub as Tracer))
   })
 
   afterEach(() => {

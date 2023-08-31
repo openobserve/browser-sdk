@@ -1,6 +1,6 @@
-import type { RawTelemetryEvent } from '@datadog/browser-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
-import { noop, startFakeTelemetry } from '@datadog/browser-core'
+import type { RawTelemetryEvent } from '@openobserve/browser-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
+import { noop, startFakeTelemetry } from '@openobserve/browser-core'
 import { MockWorker } from '../../../test'
 import { DeflateEncoderStreamId, createDeflateEncoder } from './deflateEncoder'
 
