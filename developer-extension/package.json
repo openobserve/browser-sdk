@@ -16,7 +16,7 @@
     "webpack": "5.88.2"
   },
   "dependencies": {
-    "@datadog/browser-logs": "workspace:*",
+    "@openobserve/browser-logs": "workspace:*",
     "@datadog/browser-rum": "workspace:*",
     "@emotion/react": "11.11.1",
     "@mantine/core": "6.0.19",

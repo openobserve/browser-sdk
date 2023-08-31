@@ -1,4 +1,4 @@
-import type { LogsInitConfiguration } from '@datadog/browser-logs'
+import type { LogsInitConfiguration } from '@openobserve/browser-logs'
 import type { RumInitConfiguration } from '@openobserve/browser-rum-core'
 import type { Servers } from './httpServers'
 

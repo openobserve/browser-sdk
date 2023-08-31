@@ -1,15 +1,15 @@
 # Browser Log Collection
 
-Send logs to Datadog from web browser pages with the browser logs SDK.
+Send logs to openobserve from web browser pages with the browser logs SDK.
 
-See the [dedicated datadog documentation][1] for more details.
+See the [dedicated openobserve documentation][1] for more details.
 
 ## Usage
 
-After adding [`@datadog/browser-logs`][2] to your `package.json` file, initialize it with:
+After adding [`@openobserve/browser-logs`][2] to your `package.json` file, initialize it with:
 
 ```javascript
-import { datadogLogs } from '@datadog/browser-logs'
+import { datadogLogs } from '@openobserve/browser-logs'
 
 datadogLogs.init({
   clientToken: '<DATADOG_CLIENT_TOKEN>',
@@ -19,10 +19,10 @@ datadogLogs.init({
 })
 ```
 
-After the Datadog browser logs SDK is initialized, send custom log entries directly to Datadog:
+After the openobserve browser logs SDK is initialized, send custom log entries directly to openobserve:
 
 ```javascript
-import { datadogLogs } from '@datadog/browser-logs'
+import { datadogLogs } from '@openobserve/browser-logs'
 
 datadogLogs.logger.info('Button clicked', { name: 'buttonName', id: 123 })
 
@@ -38,4 +38,4 @@ try {
 <!-- Note: all URLs should be absolute -->
 
 [1]: https://docs.datadoghq.com/logs/log_collection/javascript
-[2]: https://www.npmjs.com/package/@datadog/browser-logs
+[2]: https://www.npmjs.com/package/@openobserve/browser-logs

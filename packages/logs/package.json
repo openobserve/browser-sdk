@@ -1,6 +1,6 @@
 {
-  "name": "@datadog/browser-logs",
-  "version": "4.47.0",
+  "name": "@openobserve/browser-logs",
+  "version": "0.1.0",
   "license": "Apache-2.0",
   "main": "cjs/entries/main.js",
   "module": "esm/entries/main.js",
@@ -25,7 +25,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/DataDog/browser-sdk.git",
+    "url": "https://github.com/openobserve/browser-sdk.git",
     "directory": "packages/logs"
   },
   "volta": {

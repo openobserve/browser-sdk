@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@openobserve/browser-core": "portal:../../packages/core",
-    "@datadog/browser-logs": "portal:../../packages/logs",
+    "@openobserve/browser-logs": "portal:../../packages/logs",
     "@datadog/browser-rum": "portal:../../packages/rum",
     "@openobserve/browser-rum-core": "portal:../../packages/rum-core"
   },
