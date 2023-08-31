@@ -1,3 +1,3 @@
 # `worker`
 
-Datadog browser web Worker.
+Openobserve browser web Worker.
