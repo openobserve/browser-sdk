@@ -1,5 +1,5 @@
 *
-!/bundle/datadog-logs.js
+!/bundle/openobserve-logs.js
 !/cjs/**/*
 !/esm/**/*
 !/src/**/*

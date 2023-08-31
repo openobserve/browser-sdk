@@ -1,4 +1,4 @@
-import type { LogsEvent } from '@datadog/browser-logs'
+import type { LogsEvent } from '@openobserve/browser-logs'
 import type { RumEvent } from '@datadog/browser-rum'
 import type { TelemetryEvent } from '@openobserve/browser-core'
 import type { SessionReplayCall } from '../types/serverEvents'
