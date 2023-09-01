@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-sdk-developer-extension",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "build": "rm -rf dist && webpack --mode production",
@@ -16,11 +16,11 @@
     "webpack": "5.88.2"
   },
   "dependencies": {
-    "@openobserve/browser-logs": "workspace:*",
-    "@openobserve/browser-rum": "workspace:*",
     "@emotion/react": "11.11.1",
     "@mantine/core": "6.0.19",
     "@mantine/hooks": "6.0.19",
+    "@openobserve/browser-logs": "workspace:*",
+    "@openobserve/browser-rum": "workspace:*",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-json-view": "1.21.3"
