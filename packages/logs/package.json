@@ -13,10 +13,10 @@
     "replace-build-env": "node ../../scripts/build/replace-build-env.js"
   },
   "dependencies": {
-    "@datadog/browser-core": "4.47.0"
+    "@openobserve/browser-core": "0.1.1"
   },
   "peerDependencies": {
-    "@datadog/browser-rum": "4.47.0"
+    "@openobserve/browser-rum": "0.1.1"
   },
   "peerDependenciesMeta": {
     "@openobserve/browser-rum": {
