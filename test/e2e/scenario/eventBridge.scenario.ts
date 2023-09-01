@@ -70,7 +70,7 @@ describe('bridge present', () => {
             throw new window.Error('bar')
           },
         }
-        window.DD_LOGS!.logger.log('hop', context as any)
+        window.OO_LOGS!.logger.log('hop', context as any)
       })
 
       await flushEvents()
@@ -84,7 +84,7 @@ describe('bridge present', () => {
     .withEventBridge()
     .run(async ({ intakeRegistry }) => {
       await browserExecute(() => {
-        window.DD_LOGS!.logger.log('hello')
+        window.OO_LOGS!.logger.log('hello')
       })
       await flushEvents()
 

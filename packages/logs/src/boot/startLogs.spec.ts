@@ -35,8 +35,8 @@ interface Rum {
 }
 declare global {
   interface Window {
-    DD_RUM?: Rum
-    DD_RUM_SYNTHETICS?: Rum
+    OO_RUM?: Rum
+    OO_RUM_SYNTHETICS?: Rum
   }
 }
 
@@ -73,7 +73,7 @@ describe('logs', () => {
   })
 
   afterEach(() => {
-    delete window.DD_RUM
+    delete window.OO_RUM
     deleteEventBridgeStub()
     stopSessionManager()
     interceptor.restore()

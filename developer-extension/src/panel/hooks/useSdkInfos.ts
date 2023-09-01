@@ -53,24 +53,24 @@ async function getInfos(): Promise<SdkInfos> {
         const cookieRawValue = document.cookie
           .split(';')
           .map(cookie => cookie.match(/(\\S*?)=(.*)/)?.slice(1) || [])
-          .find(([name, _]) => name === '_dd_s')
+          .find(([name, _]) => name === '_oo_s')
           ?.[1]
 
         const cookie = cookieRawValue && Object.fromEntries(
           cookieRawValue.split('&').map(value => value.split('='))
         )
-        const rum = window.DD_RUM && {
-          version: window.DD_RUM?.version,
-          config: window.DD_RUM?.getInitConfiguration?.(),
-          internalContext: window.DD_RUM?.getInternalContext?.(),
-          globalContext: window.DD_RUM?.getGlobalContext?.(),
-          user: window.DD_RUM?.getUser?.(),
+        const rum = window.OO_RUM && {
+          version: window.OO_RUM?.version,
+          config: window.OO_RUM?.getInitConfiguration?.(),
+          internalContext: window.OO_RUM?.getInternalContext?.(),
+          globalContext: window.OO_RUM?.getRumGlobalContext?.(),
+          user: window.OO_RUM?.getUser?.(),
         }
-        const logs = window.DD_LOGS && {
-          version: window.DD_LOGS?.version,
-          config: window.DD_LOGS?.getInitConfiguration?.(),
-          globalContext: window.DD_LOGS?.getGlobalContext?.(),
-          user: window.DD_LOGS?.getUser?.(),
+        const logs = window.OO_LOGS && {
+          version: window.OO_LOGS?.version,
+          config: window.OO_LOGS?.getInitConfiguration?.(),
+          globalContext: window.OO_LOGS?.getLoggerGlobalContext?.(),
+          user: window.OO_LOGS?.getUser?.(),
         }
         return { rum, logs, cookie }
       `

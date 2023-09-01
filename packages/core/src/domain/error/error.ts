@@ -81,8 +81,8 @@ function hasUsableStack(isErrorInstance: boolean, stackTrace?: StackTrace): stac
 }
 
 export function tryToGetFingerprint(originalError: unknown) {
-  return originalError instanceof Error && 'dd_fingerprint' in originalError
-    ? String(originalError.dd_fingerprint)
+  return originalError instanceof Error && 'oo_fingerprint' in originalError
+    ? String(originalError.oo_fingerprint)
     : undefined
 }
 

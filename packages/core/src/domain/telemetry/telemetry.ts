@@ -86,7 +86,7 @@ export function startTelemetry(telemetryService: TelemetryService, configuration
         service: telemetryService,
         version: __BUILD_ENV__SDK_VERSION__,
         source: 'browser' as const,
-        _dd: {
+        _oo: {
           format_version: 2 as const,
         },
         telemetry: combine(event, {

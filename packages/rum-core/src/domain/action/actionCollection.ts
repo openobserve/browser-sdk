@@ -75,7 +75,7 @@ function processAction(
           count: action.counts.resourceCount,
         },
       },
-      _dd: {
+      _oo: {
         action: {
           target: action.target,
           position: action.position,

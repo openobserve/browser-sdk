@@ -103,7 +103,7 @@ describe('rum errors', () => {
 
   createTest('send custom errors')
     .withRum()
-    .withBody(createBody('DD_RUM.addError(foo())'))
+    .withBody(createBody('OO_RUM.addError(foo())'))
     .run(async ({ intakeRegistry, baseUrl }) => {
       const button = await $('button')
       await button.click()

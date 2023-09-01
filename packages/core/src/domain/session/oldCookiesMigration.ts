@@ -4,9 +4,9 @@ import { SESSION_STORE_KEY } from './storeStrategies/sessionStoreStrategy'
 import type { SessionState } from './sessionState'
 import { expandSessionState, isSessionInExpiredState } from './sessionState'
 
-export const OLD_SESSION_COOKIE_NAME = '_dd'
-export const OLD_RUM_COOKIE_NAME = '_dd_r'
-export const OLD_LOGS_COOKIE_NAME = '_dd_l'
+export const OLD_SESSION_COOKIE_NAME = '_oo'
+export const OLD_RUM_COOKIE_NAME = '_oo_r'
+export const OLD_LOGS_COOKIE_NAME = '_oo_l'
 
 // duplicate values to avoid dependency issues
 export const RUM_SESSION_KEY = 'rum'

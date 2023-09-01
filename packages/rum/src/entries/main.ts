@@ -31,9 +31,9 @@ export {
 export { DefaultPrivacyLevel } from '@openobserve/browser-core'
 
 const recorderApi = makeRecorderApi(startRecording)
-export const datadogRum = makeRumPublicApi(startRum, recorderApi, { startDeflateWorker, createDeflateEncoder })
+export const openobserveRum = makeRumPublicApi(startRum, recorderApi, { startDeflateWorker, createDeflateEncoder })
 
 interface BrowserWindow extends Window {
-  DD_RUM?: RumPublicApi
+  OO_RUM?: RumPublicApi
 }
-defineGlobal(getGlobalObject<BrowserWindow>(), 'DD_RUM', datadogRum)
+defineGlobal(getGlobalObject<BrowserWindow>(), 'OO_RUM', openobserveRum)

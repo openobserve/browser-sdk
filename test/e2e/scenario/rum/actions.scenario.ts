@@ -42,7 +42,7 @@ describe('action collection', () => {
               type: [],
             },
           },
-          _dd: jasmine.objectContaining({
+          _oo: jasmine.objectContaining({
             action: {
               target: jasmine.objectContaining({
                 selector: jasmine.any(String),
@@ -80,7 +80,7 @@ describe('action collection', () => {
 
       expect(actionEvents.length).toBe(1)
       expect(actionEvents[0].action?.target?.name).toBe('click me')
-      expect(actionEvents[0]._dd.action?.target?.selector).toBe('BODY>BUTTON')
+      expect(actionEvents[0]._oo.action?.target?.selector).toBe('BODY>BUTTON')
     })
 
   // When the target element changes between mousedown and mouseup, Firefox does not dispatch a

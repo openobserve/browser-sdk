@@ -1,10 +1,10 @@
-import { datadogRum } from '@openobserve/browser-rum'
-import { datadogLogs } from '@openobserve/browser-logs'
+import { openobserveRum } from '@openobserve/browser-rum'
+import { openobserveLogs } from '@openobserve/browser-logs'
 import packageJson from '../../package.json'
 import { DEFAULT_PANEL_TAB } from '../common/constants'
 
 export function initMonitoring() {
-  datadogRum.init({
+  openobserveRum.init({
     applicationId: '235202fa-3da1-4aeb-abc4-d01b10ca1539',
     clientToken: 'pub74fd472504982beb427b647893758040',
     site: 'api.openobserve.ai',
@@ -21,10 +21,10 @@ export function initMonitoring() {
     trackLongTasks: true,
     defaultPrivacyLevel: 'mask',
   })
-  datadogRum.startSessionReplayRecording()
-  datadogRum.startView(DEFAULT_PANEL_TAB)
+  openobserveRum.startSessionReplayRecording()
+  openobserveRum.startView(DEFAULT_PANEL_TAB)
 
-  datadogLogs.init({
+  openobserveLogs.init({
     clientToken: 'pub74fd472504982beb427b647893758040',
     site: 'api.openobserve.ai',
     service: 'browser-sdk-developer-extension',

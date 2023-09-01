@@ -258,20 +258,20 @@ export type RumErrorEvent = CommonProperties &
            * The type of provider
            */
           readonly type?:
-            | 'ad'
-            | 'advertising'
-            | 'analytics'
-            | 'cdn'
-            | 'content'
-            | 'customer-success'
-            | 'first party'
-            | 'hosting'
-            | 'marketing'
-            | 'other'
-            | 'social'
-            | 'tag-manager'
-            | 'utility'
-            | 'video'
+          | 'ad'
+          | 'advertising'
+          | 'analytics'
+          | 'cdn'
+          | 'content'
+          | 'customer-success'
+          | 'first party'
+          | 'hosting'
+          | 'marketing'
+          | 'other'
+          | 'social'
+          | 'tag-manager'
+          | 'utility'
+          | 'video'
           [k: string]: unknown
         }
         [k: string]: unknown
@@ -327,7 +327,7 @@ export type RumLongTaskEvent = CommonProperties &
     /**
      * Internal properties
      */
-    readonly _dd?: {
+    readonly _oo?: {
       /**
        * Whether the long task should be discarded or indexed
        */
@@ -358,17 +358,17 @@ export type RumResourceEvent = CommonProperties &
        * Resource type
        */
       readonly type:
-        | 'document'
-        | 'xhr'
-        | 'beacon'
-        | 'fetch'
-        | 'css'
-        | 'js'
-        | 'image'
-        | 'font'
-        | 'media'
-        | 'other'
-        | 'native'
+      | 'document'
+      | 'xhr'
+      | 'beacon'
+      | 'fetch'
+      | 'css'
+      | 'js'
+      | 'image'
+      | 'font'
+      | 'media'
+      | 'other'
+      | 'native'
       /**
        * HTTP method of the resource
        */
@@ -489,20 +489,20 @@ export type RumResourceEvent = CommonProperties &
          * The type of provider
          */
         readonly type?:
-          | 'ad'
-          | 'advertising'
-          | 'analytics'
-          | 'cdn'
-          | 'content'
-          | 'customer-success'
-          | 'first party'
-          | 'hosting'
-          | 'marketing'
-          | 'other'
-          | 'social'
-          | 'tag-manager'
-          | 'utility'
-          | 'video'
+        | 'ad'
+        | 'advertising'
+        | 'analytics'
+        | 'cdn'
+        | 'content'
+        | 'customer-success'
+        | 'first party'
+        | 'hosting'
+        | 'marketing'
+        | 'other'
+        | 'social'
+        | 'tag-manager'
+        | 'utility'
+        | 'video'
         [k: string]: unknown
       }
       /**
@@ -532,7 +532,7 @@ export type RumResourceEvent = CommonProperties &
     /**
      * Internal properties
      */
-    readonly _dd?: {
+    readonly _oo?: {
       /**
        * span identifier in decimal format
        */
@@ -1132,7 +1132,7 @@ export interface CommonProperties {
   /**
    * Internal properties
    */
-  readonly _dd: {
+  readonly _oo: {
     /**
      * Version of the RUM event format
      */

@@ -6,7 +6,7 @@ describe('API calls and events around init', () => {
   createTest('should display a console log when calling init without configuration')
     .withRum()
     .withRumInit(() => {
-      ;(window.DD_RUM! as unknown as { init(): void }).init()
+      ;(window.OO_RUM! as unknown as { init(): void }).init()
     })
     .run(async () => {
       await withBrowserLogs((logs) => {
@@ -20,19 +20,19 @@ describe('API calls and events around init', () => {
     .withRum()
     .withRumSlim()
     .withRumInit((configuration) => {
-      window.DD_RUM!.addError('before manual view')
-      window.DD_RUM!.addAction('before manual view')
-      window.DD_RUM!.addTiming('before manual view')
+      window.OO_RUM!.addError('before manual view')
+      window.OO_RUM!.addAction('before manual view')
+      window.OO_RUM!.addTiming('before manual view')
 
-      setTimeout(() => window.DD_RUM!.startView('manual view'), 10)
+      setTimeout(() => window.OO_RUM!.startView('manual view'), 10)
 
       setTimeout(() => {
-        window.DD_RUM!.addError('after manual view')
-        window.DD_RUM!.addAction('after manual view')
-        window.DD_RUM!.addTiming('after manual view')
+        window.OO_RUM!.addError('after manual view')
+        window.OO_RUM!.addAction('after manual view')
+        window.OO_RUM!.addTiming('after manual view')
       }, 20)
 
-      setTimeout(() => window.DD_RUM!.init(configuration), 30)
+      setTimeout(() => window.OO_RUM!.init(configuration), 30)
     })
     .run(async ({ intakeRegistry }) => {
       await flushEvents()
@@ -69,24 +69,24 @@ describe('API calls and events around init', () => {
     .withRum({ trackViewsManually: true })
     .withRumSlim()
     .withRumInit((configuration) => {
-      window.DD_RUM!.addError('before init')
-      window.DD_RUM!.addAction('before init')
-      window.DD_RUM!.addTiming('before init')
+      window.OO_RUM!.addError('before init')
+      window.OO_RUM!.addAction('before init')
+      window.OO_RUM!.addTiming('before init')
 
-      setTimeout(() => window.DD_RUM!.init(configuration), 10)
+      setTimeout(() => window.OO_RUM!.init(configuration), 10)
 
       setTimeout(() => {
-        window.DD_RUM!.addError('before manual view')
-        window.DD_RUM!.addAction('before manual view')
-        window.DD_RUM!.addTiming('before manual view')
+        window.OO_RUM!.addError('before manual view')
+        window.OO_RUM!.addAction('before manual view')
+        window.OO_RUM!.addTiming('before manual view')
       }, 20)
 
-      setTimeout(() => window.DD_RUM!.startView('manual view'), 30)
+      setTimeout(() => window.OO_RUM!.startView('manual view'), 30)
 
       setTimeout(() => {
-        window.DD_RUM!.addError('after manual view')
-        window.DD_RUM!.addAction('after manual view')
-        window.DD_RUM!.addTiming('after manual view')
+        window.OO_RUM!.addError('after manual view')
+        window.OO_RUM!.addAction('after manual view')
+        window.OO_RUM!.addTiming('after manual view')
       }, 40)
     })
     .run(async ({ intakeRegistry }) => {
@@ -146,9 +146,9 @@ describe('beforeSend', () => {
     })
     .withRumSlim()
     .withRumInit((configuration) => {
-      window.DD_RUM!.init(configuration)
-      window.DD_RUM!.setGlobalContextProperty('foo', 'baz')
-      window.DD_RUM!.setGlobalContextProperty('zig', 'zag')
+      window.OO_RUM!.init(configuration)
+      window.OO_RUM!.setGlobalContextProperty('foo', 'baz')
+      window.OO_RUM!.setGlobalContextProperty('zig', 'zag')
     })
     .run(async ({ intakeRegistry }) => {
       await flushEvents()

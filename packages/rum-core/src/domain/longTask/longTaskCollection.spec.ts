@@ -71,7 +71,7 @@ describe('long task collection', () => {
         duration: (100 * 1e6) as ServerDuration,
       },
       type: RumEventType.LONG_TASK,
-      _dd: {
+      _oo: {
         discarded: false,
       },
     })

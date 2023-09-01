@@ -58,10 +58,10 @@ n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
   if (options.logs) {
     body += html`
       <script>
-        ${formatSnippet('./openobserve-logs.js', 'DD_LOGS')}
-        DD_LOGS.onReady(function () {
-          DD_LOGS.setGlobalContext(${JSON.stringify(options.context)})
-          DD_LOGS.init(${formatConfiguration(options.logs, servers)})
+        ${formatSnippet('./openobserve-logs.js', 'OO_LOGS')}
+        OO_LOGS.onReady(function () {
+          OO_LOGS.setGlobalContext(${JSON.stringify(options.context)})
+          OO_LOGS.init(${formatConfiguration(options.logs, servers)})
         })
       </script>
     `
@@ -70,9 +70,9 @@ n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
   if (options.rum) {
     body += html`
       <script type="text/javascript">
-        ${formatSnippet(options.useRumSlim ? './openobserve-rum-slim.js' : './openobserve-rum.js', 'DD_RUM')}
-        DD_RUM.onReady(function () {
-          DD_RUM.setGlobalContext(${JSON.stringify(options.context)})
+        ${formatSnippet(options.useRumSlim ? './openobserve-rum-slim.js' : './openobserve-rum.js', 'OO_RUM')}
+        OO_RUM.onReady(function () {
+          OO_RUM.setGlobalContext(${JSON.stringify(options.context)})
           ;(${options.rumInit.toString()})(${formatConfiguration(options.rum, servers)})
         })
       </script>
@@ -96,8 +96,8 @@ export function bundleSetup(options: SetupOptions, servers: Servers) {
     header += html`
       <script type="text/javascript" src="./openobserve-logs.js"></script>
       <script type="text/javascript">
-        DD_LOGS.setGlobalContext(${JSON.stringify(options.context)})
-        DD_LOGS.init(${formatConfiguration(options.logs, servers)})
+        OO_LOGS.setGlobalContext(${JSON.stringify(options.context)})
+        OO_LOGS.init(${formatConfiguration(options.logs, servers)})
       </script>
     `
   }
@@ -109,7 +109,7 @@ export function bundleSetup(options: SetupOptions, servers: Servers) {
         src="${options.useRumSlim ? './openobserve-rum-slim.js' : './openobserve-rum.js'}"
       ></script>
       <script type="text/javascript">
-        DD_RUM.setGlobalContext(${JSON.stringify(options.context)})
+        OO_RUM.setGlobalContext(${JSON.stringify(options.context)})
         ;(${options.rumInit.toString()})(${formatConfiguration(options.rum, servers)})
       </script>
     `
@@ -132,7 +132,7 @@ export function npmSetup(options: SetupOptions, servers: Servers) {
     header += html`
       <script type="text/javascript">
         window.LOGS_INIT = () => {
-          window.DD_LOGS.setGlobalContext(${JSON.stringify(options.context)})
+          window.OO_LOGS.setGlobalContext(${JSON.stringify(options.context)})
           ;(${options.logsInit.toString()})(${formatConfiguration(options.logs, servers)})
         }
       </script>
@@ -143,7 +143,7 @@ export function npmSetup(options: SetupOptions, servers: Servers) {
     header += html`
       <script type="text/javascript">
         window.RUM_INIT = () => {
-          window.DD_RUM.setGlobalContext(${JSON.stringify(options.context)})
+          window.OO_RUM.setGlobalContext(${JSON.stringify(options.context)})
           ;(${options.rumInit.toString()})(${formatConfiguration(options.rum, servers)})
         }
       </script>

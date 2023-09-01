@@ -109,7 +109,7 @@ describe('viewCollection', () => {
 
     expect(rawRumEvents[rawRumEvents.length - 1].startTime).toBe(1234 as RelativeTime)
     expect(rawRumEvents[rawRumEvents.length - 1].rawRumEvent).toEqual({
-      _dd: {
+      _oo: {
         document_version: 3,
         replay_stats: undefined,
         page_states: [
@@ -195,7 +195,7 @@ describe('viewCollection', () => {
     expect(getReplayStatsSpy).toHaveBeenCalledWith(VIEW.id)
     expect(rawRumEvents[rawRumEvents.length - 1].startTime).toBe(1234 as RelativeTime)
     const rawRumViewEvent = rawRumEvents[rawRumEvents.length - 1].rawRumEvent as RawRumViewEvent
-    expect(rawRumViewEvent._dd.replay_stats).toEqual({
+    expect(rawRumViewEvent._oo.replay_stats).toEqual({
       segments_count: 4,
       records_count: 10,
       segments_total_raw_size: 1000,

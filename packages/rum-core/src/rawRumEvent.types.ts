@@ -38,7 +38,7 @@ export interface RawRumResourceEvent {
     first_byte?: PerformanceResourceDetailsElement
     download?: PerformanceResourceDetailsElement
   }
-  _dd: {
+  _oo: {
     trace_id?: string
     span_id?: string // not available for initial document tracing
     rule_psr?: number
@@ -116,7 +116,7 @@ export interface RawRumViewEvent {
   privacy?: {
     replay_level: DefaultPrivacyLevel
   }
-  _dd: {
+  _oo: {
     document_version: number
     replay_stats?: ReplayStats
     page_states?: PageStateServerEntry[]
@@ -163,7 +163,7 @@ export interface RawRumLongTaskEvent {
     id: string
     duration: ServerDuration
   }
-  _dd: {
+  _oo: {
     discarded: boolean
   }
 }
@@ -188,7 +188,7 @@ export interface RawRumActionEvent {
   view?: {
     in_foreground: boolean
   }
-  _dd?: {
+  _oo?: {
     action?: {
       target?: {
         selector?: string
@@ -258,7 +258,7 @@ export interface RumContext {
   ci_test?: {
     test_execution_id: string
   }
-  _dd: {
+  _oo: {
     format_version: 2
     drift: number
     configuration: {

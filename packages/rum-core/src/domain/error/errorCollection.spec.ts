@@ -123,10 +123,10 @@ describe('error collection', () => {
       const { rawRumEvents } = setupBuilder.build()
 
       interface DatadogError extends Error {
-        dd_fingerprint?: string
+        oo_fingerprint?: string
       }
       const error = new Error('foo')
-        ; (error as DatadogError).dd_fingerprint = 'my-fingerprint'
+        ; (error as DatadogError).oo_fingerprint = 'my-fingerprint'
 
       addError({
         error,
@@ -141,7 +141,7 @@ describe('error collection', () => {
       const { rawRumEvents } = setupBuilder.build()
 
       const error = new Error('foo')
-        ; (error as any).dd_fingerprint = 2
+        ; (error as any).oo_fingerprint = 2
 
       addError({
         error,
