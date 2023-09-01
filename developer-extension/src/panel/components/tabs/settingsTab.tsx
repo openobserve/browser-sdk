@@ -65,7 +65,7 @@ export function SettingsTab() {
                   color="violet"
                 />
               }
-              description={<>Block requests made to the intake, preventing any data to be sent to Datadog.</>}
+              description={<>Block requests made to the intake, preventing any data to be sent to Openobserve.</>}
             />
           </Columns.Column>
 

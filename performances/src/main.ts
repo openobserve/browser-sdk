@@ -31,7 +31,7 @@ Options:
   const proxy = await startProxy()
 
   const options: ProfilingOptions = {
-    bundleUrl: 'https://www.datadoghq-browser-agent.com/datadog-rum-v4.js',
+    bundleUrl: 'https://www.openobserve.ai/openobserve-rum-v4.js',
     proxy,
     startRecording,
   }
@@ -80,7 +80,7 @@ async function setupSDK(page: Page, options: ProfilingOptions) {
           window.DD_RUM.init({
             clientToken: 'xxx',
             applicationId: 'xxx',
-            site: 'datadoghq.com',
+            site: 'api.openobserve.ai',
             trackInteractions: true,
             proxyUrl: ${JSON.stringify(options.proxy.origin)}
           })

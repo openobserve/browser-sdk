@@ -555,14 +555,14 @@ describe('serializeNodeWithId', () => {
     it('serializes style node with dynamic CSS that cannot be fetched', () => {
       const linkNode = document.createElement('link')
       linkNode.setAttribute('rel', 'stylesheet')
-      linkNode.setAttribute('href', 'https://datadoghq.com/some/style.css')
+      linkNode.setAttribute('href', 'https://cloud.openobserve.ai/some/style.css')
       isolatedDom.document.head.appendChild(linkNode)
       expect(serializeNodeWithId(linkNode, DEFAULT_OPTIONS)).toEqual({
         type: NodeType.Element,
         tagName: 'link',
         id: jasmine.any(Number) as unknown as number,
         isSVG: undefined,
-        attributes: { rel: 'stylesheet', href: 'https://datadoghq.com/some/style.css' },
+        attributes: { rel: 'stylesheet', href: 'https://cloud.openobserve.ai/some/style.css' },
         childNodes: [],
       })
     })
@@ -570,12 +570,12 @@ describe('serializeNodeWithId', () => {
     it('serializes style node with dynamic CSS that can be fetched', () => {
       const linkNode = document.createElement('link')
       linkNode.setAttribute('rel', 'stylesheet')
-      linkNode.setAttribute('href', 'https://datadoghq.com/some/style.css')
+      linkNode.setAttribute('href', 'https://cloud.openobserve.ai/some/style.css')
       isolatedDom.document.head.appendChild(linkNode)
       Object.defineProperty(isolatedDom.document, 'styleSheets', {
         value: [
           {
-            href: 'https://datadoghq.com/some/style.css',
+            href: 'https://cloud.openobserve.ai/some/style.css',
             cssRules: [{ cssText: 'body { width: 100%; }' }],
           },
         ],
@@ -589,7 +589,7 @@ describe('serializeNodeWithId', () => {
         attributes: {
           _cssText: 'body { width: 100%; }',
           rel: 'stylesheet',
-          href: 'https://datadoghq.com/some/style.css',
+          href: 'https://cloud.openobserve.ai/some/style.css',
         },
         childNodes: [],
       })
@@ -599,12 +599,12 @@ describe('serializeNodeWithId', () => {
       addExperimentalFeatures([ExperimentalFeature.DISABLE_REPLAY_INLINE_CSS])
       const linkNode = document.createElement('link')
       linkNode.setAttribute('rel', 'stylesheet')
-      linkNode.setAttribute('href', 'https://datadoghq.com/some/style.css')
+      linkNode.setAttribute('href', 'https://cloud.openobserve.ai/some/style.css')
       isolatedDom.document.head.appendChild(linkNode)
       Object.defineProperty(isolatedDom.document, 'styleSheets', {
         value: [
           {
-            href: 'https://datadoghq.com/some/style.css',
+            href: 'https://cloud.openobserve.ai/some/style.css',
             cssRules: [{ cssText: 'body { width: 100%; }' }],
           },
         ],
@@ -616,7 +616,7 @@ describe('serializeNodeWithId', () => {
     it('does not serialize style node with dynamic CSS that is behind CORS', () => {
       const linkNode = document.createElement('link')
       linkNode.setAttribute('rel', 'stylesheet')
-      linkNode.setAttribute('href', 'https://datadoghq.com/some/style.css')
+      linkNode.setAttribute('href', 'https://cloud.openobserve.ai/some/style.css')
       isolatedDom.document.head.appendChild(linkNode)
       class FakeCSSStyleSheet {
         get cssRules() {
@@ -637,7 +637,7 @@ describe('serializeNodeWithId', () => {
         isSVG: undefined,
         attributes: {
           rel: 'stylesheet',
-          href: 'https://datadoghq.com/some/style.css',
+          href: 'https://cloud.openobserve.ai/some/style.css',
         },
         childNodes: [],
       })

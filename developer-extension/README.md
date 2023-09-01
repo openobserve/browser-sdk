@@ -4,17 +4,13 @@ Browser extension to investigate your Browser SDK integration.
 
 ## Getting started
 
-### From the Chrome Web Store
-
-The extension is available to **Datadog employees** on the [Chrome Web Store](https://chrome.google.com/webstore/detail/datadog-browser-sdk-devel/boceobohkgenpcpogecpjlnmnfbdigda).
-
 ### By loading the extension unpacked
 
 The packed extension is not (yet?) published publicly. You will need to clone this repository and
 build the extension manually.
 
 ```
-$ git clone https://github.com/DataDog/browser-sdk
+$ git clone https://github.com/openobserve/browser-sdk
 $ cd browser-sdk
 $ yarn
 $ yarn build

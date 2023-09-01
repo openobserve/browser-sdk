@@ -7,7 +7,7 @@ assignees: ''
 ---
 
 <!-- Guidelines -->
-<!-- Please check if an issue does not exist already for it: https://github.com/DataDog/browser-sdk/issues -->
+<!-- Please check if an issue does not exist already for it: https://github.com/openobserve/browser-sdk/issues -->
 <!-- Please check if the issue happens with latest version -->
 
 **Is your feature request related to a problem? Please describe.**

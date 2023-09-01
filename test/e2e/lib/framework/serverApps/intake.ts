@@ -4,7 +4,7 @@ import connectBusboy from 'connect-busboy'
 import express from 'express'
 
 import cors from 'cors'
-import type { BrowserSegmentMetadataAndSegmentSizes } from '@datadog/browser-rum/src/domain/segmentCollection'
+import type { BrowserSegmentMetadataAndSegmentSizes } from '@openobserve/browser-rum/src/domain/segmentCollection'
 import type { SegmentFile } from '../../types/serverEvents'
 import type { EventRegistry, IntakeType } from '../eventsRegistry'
 
@@ -146,7 +146,7 @@ function prepareIntakeRequest(req: express.Request) {
       'User-Agent': req.headers['user-agent'],
     },
   }
-  return https.request(new URL(ddforward, 'https://browser-intake-datadoghq.com'), options)
+  return https.request(new URL(ddforward, 'https://api.openobserve.ai'), options)
 }
 
 function readStream(stream: NodeJS.ReadableStream): Promise<Buffer> {

@@ -1,4 +1,4 @@
-import type { RumEvent } from '@datadog/browser-rum'
+import type { RumEvent } from '@openobserve/browser-rum'
 import ajv from 'ajv'
 import rumEventsSchemaJson from '../../../../rum-events-format/schemas/rum-events-schema.json'
 import _commonSchemaJson from '../../../../rum-events-format/schemas/rum/_common-schema.json'

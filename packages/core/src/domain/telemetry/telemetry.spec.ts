@@ -180,10 +180,10 @@ describe('formatError', () => {
 describe('scrubCustomerFrames', () => {
   it('should remove stack trace frames that are related to customer files', () => {
     ;[
-      { scrub: false, url: 'https://www.datadoghq-browser-agent.com/datadog-rum-v4.js' },
-      { scrub: false, url: 'https://www.datad0g-browser-agent.com/datadog-rum-v5.js' },
-      { scrub: false, url: 'https://d3uc069fcn7uxw.cloudfront.net/datadog-logs-staging.js' },
-      { scrub: false, url: 'https://d20xtzwzcl0ceb.cloudfront.net/datadog-rum-canary.js' },
+      { scrub: false, url: 'https://cloud.openobserve.ai/openobserve-rum-v4.js' },
+      { scrub: false, url: 'https://cloud.openobserve.ai/openobserve-rum-v5.js' },
+      { scrub: false, url: 'https://cloud.openobserve.ai/openobserve-logs-staging.js' },
+      { scrub: false, url: 'https://cloud.openobserve.ai/openobserve-rum-canary.js' },
       { scrub: false, url: 'http://localhost/index.html' },
       { scrub: false, url: undefined },
       { scrub: false, url: '<anonymous>' },

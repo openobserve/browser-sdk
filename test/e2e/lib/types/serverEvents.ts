@@ -1,7 +1,7 @@
 import type { TelemetryErrorEvent, TelemetryEvent, TelemetryConfigurationEvent } from '@openobserve/browser-core'
-import type { RumActionEvent, RumErrorEvent, RumEvent, RumResourceEvent, RumViewEvent } from '@datadog/browser-rum'
-import type { BrowserSegmentMetadataAndSegmentSizes } from '@datadog/browser-rum/src/domain/segmentCollection'
-import type { BrowserSegment } from '@datadog/browser-rum/src/types'
+import type { RumActionEvent, RumErrorEvent, RumEvent, RumResourceEvent, RumViewEvent } from '@openobserve/browser-rum'
+import type { BrowserSegmentMetadataAndSegmentSizes } from '@openobserve/browser-rum/src/domain/segmentCollection'
+import type { BrowserSegment } from '@openobserve/browser-rum/src/types'
 
 export function isRumResourceEvent(event: RumEvent): event is RumResourceEvent {
   return event.type === 'resource'

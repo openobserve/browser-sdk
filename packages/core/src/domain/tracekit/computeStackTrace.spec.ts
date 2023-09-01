@@ -507,7 +507,7 @@ Error: foo
 
   it('should parse Chrome anonymous function errors', () => {
     const stack = `Error: RTE Simulation
-    at https://datadoghq.com/somefile.js:8489:191
+    at https://cloud.openobserve.ai/somefile.js:8489:191
     at chrome-extension://<id>/content/index.js:85:37379`
 
     const stackFrames = computeStackTrace({ stack } as Error)
@@ -517,7 +517,7 @@ Error: foo
       column: 191,
       func: '?',
       line: 8489,
-      url: 'https://datadoghq.com/somefile.js',
+      url: 'https://cloud.openobserve.ai/somefile.js',
     })
     expect(stackFrames.stack[1]).toEqual({
       args: [],
