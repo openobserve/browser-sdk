@@ -1,6 +1,6 @@
 {
-  "name": "@datadog/browser-sdk-developer-extension",
-  "version": "4.47.0",
+  "name": "@openobserve/browser-sdk-developer-extension",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "build": "rm -rf dist && webpack --mode production",
