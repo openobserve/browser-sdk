@@ -13,7 +13,7 @@ Illustrates a mostly static site scenario.
     await page.goto('https://en.wikipedia.org/wiki/Event_monitoring')
     await takeMeasurements()
 
-    await page.goto('https://en.wikipedia.org/wiki/Datadog')
+    await page.goto('https://en.wikipedia.org/wiki/openobserve')
     await takeMeasurements()
 
     await page.type('[type="search"]', 'median', {

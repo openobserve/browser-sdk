@@ -1,9 +1,9 @@
-import type { InputData, StyleSheetRuleData, BrowserSegment, ScrollData } from '@datadog/browser-rum/src/types'
-import { NodeType, IncrementalSource, MouseInteractionType } from '@datadog/browser-rum/src/types'
+import type { InputData, StyleSheetRuleData, BrowserSegment, ScrollData } from '@openobserve/browser-rum/src/types'
+import { NodeType, IncrementalSource, MouseInteractionType } from '@openobserve/browser-rum/src/types'
 
 // Import from src to have properties of const enums
 import { FrustrationType } from '@openobserve/browser-rum-core/src/rawRumEvent.types'
-import { DefaultPrivacyLevel } from '@datadog/browser-rum'
+import { DefaultPrivacyLevel } from '@openobserve/browser-rum'
 
 import {
   findElement,
@@ -17,7 +17,7 @@ import {
   findAllFrustrationRecords,
   findMouseInteractionRecords,
   findElementWithTagName,
-} from '@datadog/browser-rum/test'
+} from '@openobserve/browser-rum/test'
 import { flushEvents, createTest, bundleSetup, html } from '../../lib/framework'
 import { browserExecute, browserExecuteAsync } from '../../lib/helpers/browser'
 

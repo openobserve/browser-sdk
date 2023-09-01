@@ -51,11 +51,11 @@ export const config: OptionsWithLogsPath = {
   },
   onPrepare: (_config, _capabilities) => {
     console.log(
-      `[RUM events] https://app.datadoghq.com/rum/explorer?query=${encodeURIComponent(
+      `[RUM events] https://api.openobserve.ai/rum/explorer?query=${encodeURIComponent(
         `@application.id:${APPLICATION_ID} @context.run_id:"${getRunId()}"`
       )}`
     )
-    console.log(`[Log events] https://app.datadoghq.com/logs?query=${encodeURIComponent(`@run_id:"${getRunId()}"`)}\n`)
+    console.log(`[Log events] https://api.openobserve.ai/logs?query=${encodeURIComponent(`@run_id:"${getRunId()}"`)}\n`)
 
     if (testReportDirectory) {
       try {

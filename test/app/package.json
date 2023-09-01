@@ -9,13 +9,13 @@
   "dependencies": {
     "@openobserve/browser-core": "portal:../../packages/core",
     "@openobserve/browser-logs": "portal:../../packages/logs",
-    "@datadog/browser-rum": "portal:../../packages/rum",
+    "@openobserve/browser-rum": "portal:../../packages/rum",
     "@openobserve/browser-rum-core": "portal:../../packages/rum-core"
   },
   "resolutions": {
     "@openobserve/browser-core": "portal:../../packages/core",
     "@openobserve/browser-rum-core": "portal:../../packages/rum-core",
-    "@datadog/browser-rum": "portal:../../packages/rum",
+    "@openobserve/browser-rum": "portal:../../packages/rum",
     "@openobserve/browser-worker": "portal:../../packages/worker"
   },
   "devDependencies": {

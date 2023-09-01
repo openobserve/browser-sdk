@@ -146,7 +146,7 @@ function onError(configuration: RumConfiguration, source: string, error: unknown
         baseMessage = 'Please make sure CSP is correctly configured.'
       }
       display.error(
-        `${baseMessage} See documentation at https://docs.datadoghq.com/integrations/content_security_policy_logs/#use-csp-with-real-user-monitoring-and-session-replay`
+        `${baseMessage} See documentation at https://docs.openobserve.ai/integrations/content_security_policy_logs/#use-csp-with-real-user-monitoring-and-session-replay`
       )
     } else {
       addTelemetryError(error)

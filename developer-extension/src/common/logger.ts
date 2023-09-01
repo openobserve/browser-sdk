@@ -1,4 +1,4 @@
-const DEVELOPER_EXTENSION_PREFIX = 'Datadog Browser SDK extension:'
+const DEVELOPER_EXTENSION_PREFIX = 'Openobserve Browser SDK extension:'
 
 export function createLogger(module: string) {
   return {

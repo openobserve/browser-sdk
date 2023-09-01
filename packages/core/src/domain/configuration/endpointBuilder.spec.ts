@@ -17,7 +17,7 @@ describe('endpointBuilder', () => {
 
   beforeEach(() => {
     initConfiguration = { clientToken }
-    ;(window as unknown as BuildEnvWindow).__BUILD_ENV__SDK_VERSION__ = 'some_version'
+      ; (window as unknown as BuildEnvWindow).__BUILD_ENV__SDK_VERSION__ = 'some_version'
     resetExperimentalFeatures()
   })
 
@@ -69,7 +69,7 @@ describe('endpointBuilder', () => {
       ).toMatch(
         `https://proxy.io/path\\?ddforward=${encodeURIComponent(
           `/api/v2/rum?ddsource=(.*)&ddtags=(.*)&dd-api-key=${clientToken}` +
-            '&dd-evp-origin-version=(.*)&dd-evp-origin=browser&dd-request-id=(.*)&batch_time=(.*)'
+          '&dd-evp-origin-version=(.*)&dd-evp-origin=browser&dd-request-id=(.*)&batch_time=(.*)'
         )}`
       )
     })
@@ -89,7 +89,7 @@ describe('endpointBuilder', () => {
       expect(
         createEndpointBuilder({ ...initConfiguration, proxy: proxyFn }, 'rum', []).build('xhr', DEFAULT_PAYLOAD)
       ).toMatch(
-        `https://proxy.io/prefix/api/v2/rum/suffix\\?ddsource=(.*)&ddtags=(.*)&dd-api-key=${clientToken}&dd-evp-origin-version=(.*)&dd-evp-origin=browser&dd-request-id=(.*)&batch_time=(.*)`
+        `https://proxy.io/prefix/api/v2/rum/suffix\\?ddsource=(.*)&o2tags=(.*)&o2-api-key=${clientToken}&o2-evp-origin-version=(.*)&o2-evp-origin=browser&o2-request-id=(.*)&batch_time=(.*)`
       )
     })
   })

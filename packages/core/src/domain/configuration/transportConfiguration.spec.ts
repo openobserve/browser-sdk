@@ -10,8 +10,8 @@ describe('transportConfiguration', () => {
   describe('site', () => {
     it('should use US site by default', () => {
       const configuration = computeTransportConfiguration({ clientToken })
-      expect(configuration.rumEndpointBuilder.build('xhr', DEFAULT_PAYLOAD)).toContain('datadoghq.com')
-      expect(configuration.site).toBe('datadoghq.com')
+      expect(configuration.rumEndpointBuilder.build('xhr', DEFAULT_PAYLOAD)).toContain('openobserve.ai')
+      expect(configuration.site).toBe('openobserve.ai')
     })
 
     it('should use logs intake domain for fed staging', () => {
@@ -28,7 +28,7 @@ describe('transportConfiguration', () => {
   })
 
   describe('internalAnalyticsSubdomain', () => {
-    it('should use internal analytics subdomain value when set for datadoghq.com site', () => {
+    it('should use internal analytics subdomain value when set for openobserve.ai site', () => {
       const configuration = computeTransportConfiguration({
         clientToken,
         internalAnalyticsSubdomain,
@@ -85,13 +85,7 @@ describe('transportConfiguration', () => {
 
   describe('isIntakeUrl', () => {
     ;[
-      { site: 'datadoghq.eu', intakeDomain: 'browser-intake-datadoghq.eu' },
-      { site: 'datadoghq.com', intakeDomain: 'browser-intake-datadoghq.com' },
-      { site: 'us3.datadoghq.com', intakeDomain: 'browser-intake-us3-datadoghq.com' },
-      { site: 'us5.datadoghq.com', intakeDomain: 'browser-intake-us5-datadoghq.com' },
-      { site: 'ddog-gov.com', intakeDomain: 'browser-intake-ddog-gov.com' },
-      { site: 'ap1.datadoghq.com', intakeDomain: 'browser-intake-ap1-datadoghq.com' },
-      { site: 'dd0g-gov.com', intakeDomain: 'http-intake.logs.dd0g-gov.com' },
+      { site: 'api.openobserve.ai', intakeDomain: 'api.openobserve.ai' },
     ].forEach(({ site, intakeDomain }) => {
       it(`should detect intake request for ${site} site`, () => {
         const configuration = computeTransportConfiguration({ clientToken, site })
@@ -102,12 +96,12 @@ describe('transportConfiguration', () => {
       })
     })
 
-    it('should detect internal analytics intake request for datadoghq.com site', () => {
+    it('should detect internal analytics intake request for openobserve.ai site', () => {
       const configuration = computeTransportConfiguration({
         clientToken,
         internalAnalyticsSubdomain,
       })
-      expect(configuration.isIntakeUrl(`https://${internalAnalyticsSubdomain}.datadoghq.com/api/v2/rum?xxx`)).toBe(true)
+      expect(configuration.isIntakeUrl(`https://api.openobserve.ai/api/v2/rum?xxx`)).toBe(true)
     })
 
     it('should not detect non intake request', () => {
@@ -122,7 +116,7 @@ describe('transportConfiguration', () => {
           proxy: 'https://www.proxy.com',
         })
         expect(
-          configuration.isIntakeUrl(`https://www.proxy.com/?ddforward=${encodeURIComponent('/api/v2/rum?foo=bar')}`)
+          configuration.isIntakeUrl(`https://www.proxy.com/?o2forward=${encodeURIComponent('/api/v2/rum?foo=bar')}`)
         ).toBe(true)
 
         configuration = computeTransportConfiguration({
@@ -131,7 +125,7 @@ describe('transportConfiguration', () => {
         })
         expect(
           configuration.isIntakeUrl(
-            `https://www.proxy.com/custom/path?ddforward=${encodeURIComponent('/api/v2/rum?foo=bar')}`
+            `https://www.proxy.com/custom/path?o2forward=${encodeURIComponent('/api/v2/rum?foo=bar')}`
           )
         ).toBe(true)
       })
@@ -145,10 +139,7 @@ describe('transportConfiguration', () => {
       })
     })
     ;[
-      { site: 'datadoghq.eu' },
-      { site: 'us3.datadoghq.com' },
-      { site: 'us5.datadoghq.com' },
-      { site: 'ap1.datadoghq.com' },
+      { site: 'openobserve.ai' },
     ].forEach(({ site }) => {
       it(`should detect replica intake request for site ${site}`, () => {
         const configuration = computeTransportConfiguration({
@@ -158,16 +149,10 @@ describe('transportConfiguration', () => {
           internalAnalyticsSubdomain,
         })
 
-        expect(configuration.isIntakeUrl(`https://${internalAnalyticsSubdomain}.datadoghq.com/api/v2/rum?xxx`)).toBe(
-          true
-        )
-        expect(configuration.isIntakeUrl(`https://${internalAnalyticsSubdomain}.datadoghq.com/api/v2/logs?xxx`)).toBe(
-          true
-        )
-        expect(configuration.isIntakeUrl(`https://${internalAnalyticsSubdomain}.datadoghq.com/api/v2/replay?xxx`)).toBe(
-          false
-        )
+          expect(configuration.isIntakeUrl(`https://api.openobserve.ai/api/v2/rum?xxx`)).toBe(
+            true
+          )
+        })
       })
-    })
   })
 })

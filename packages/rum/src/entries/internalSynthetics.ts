@@ -1,5 +1,5 @@
 /**
- * Entry point consumed by the Datadog Synthetics worker to automatically inject a RUM SDK instance
+ * Entry point consumed by the Openobserve Synthetics worker to automatically inject a RUM SDK instance
  * in test runs.
  *
  * WARNING: this module is not intended for public usages, and won't follow semver for breaking

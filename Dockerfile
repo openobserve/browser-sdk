@@ -49,8 +49,8 @@ RUN apt-get install -y -q --no-install-recommends jq
 # Node fsevents deps
 RUN apt-get install -y -q --no-install-recommends g++ build-essential
 
-# Datadog CI cli
-RUN yarn global add @openobserve/datadog-ci
+# Openobserve CI cli
+RUN yarn global add @openobserve/openobserve-ci
 
 # Gihub cli
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg \

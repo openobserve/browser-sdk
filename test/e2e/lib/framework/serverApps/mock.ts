@@ -115,15 +115,15 @@ export function createMockServerApp(servers: Servers, setup: string): MockServer
     res.end()
   })
 
-  app.get('/datadog-logs.js', (_req, res) => {
+  app.get('/openobserve-logs.js', (_req, res) => {
     res.sendFile(sdkBuilds.LOGS_BUNDLE)
   })
 
-  app.get('/datadog-rum.js', (_req, res) => {
+  app.get('/openobserve-rum.js', (_req, res) => {
     res.sendFile(sdkBuilds.RUM_BUNDLE)
   })
 
-  app.get('/datadog-rum-slim.js', (_req, res) => {
+  app.get('/openobserve-rum-slim.js', (_req, res) => {
     res.sendFile(sdkBuilds.RUM_SLIM_BUNDLE)
   })
 

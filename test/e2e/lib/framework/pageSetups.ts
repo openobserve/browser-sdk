@@ -58,7 +58,7 @@ n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
   if (options.logs) {
     body += html`
       <script>
-        ${formatSnippet('./datadog-logs.js', 'DD_LOGS')}
+        ${formatSnippet('./openobserve-logs.js', 'DD_LOGS')}
         DD_LOGS.onReady(function () {
           DD_LOGS.setGlobalContext(${JSON.stringify(options.context)})
           DD_LOGS.init(${formatConfiguration(options.logs, servers)})
@@ -70,7 +70,7 @@ n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
   if (options.rum) {
     body += html`
       <script type="text/javascript">
-        ${formatSnippet(options.useRumSlim ? './datadog-rum-slim.js' : './datadog-rum.js', 'DD_RUM')}
+        ${formatSnippet(options.useRumSlim ? './openobserve-rum-slim.js' : './openobserve-rum.js', 'DD_RUM')}
         DD_RUM.onReady(function () {
           DD_RUM.setGlobalContext(${JSON.stringify(options.context)})
           ;(${options.rumInit.toString()})(${formatConfiguration(options.rum, servers)})
@@ -94,7 +94,7 @@ export function bundleSetup(options: SetupOptions, servers: Servers) {
 
   if (options.logs) {
     header += html`
-      <script type="text/javascript" src="./datadog-logs.js"></script>
+      <script type="text/javascript" src="./openobserve-logs.js"></script>
       <script type="text/javascript">
         DD_LOGS.setGlobalContext(${JSON.stringify(options.context)})
         DD_LOGS.init(${formatConfiguration(options.logs, servers)})
@@ -106,7 +106,7 @@ export function bundleSetup(options: SetupOptions, servers: Servers) {
     header += html`
       <script
         type="text/javascript"
-        src="${options.useRumSlim ? './datadog-rum-slim.js' : './datadog-rum.js'}"
+        src="${options.useRumSlim ? './openobserve-rum-slim.js' : './openobserve-rum.js'}"
       ></script>
       <script type="text/javascript">
         DD_RUM.setGlobalContext(${JSON.stringify(options.context)})
@@ -196,7 +196,7 @@ function setupEventBridge(servers: Servers) {
   const baseHostname = new URL(servers.base.url).hostname
 
   // Send EventBridge events to the intake so we can inspect them in our E2E test cases. The URL
-  // needs to be similar to the normal Datadog intake (through proxy) to make the SDK completely
+  // needs to be similar to the normal Openobserve intake (through proxy) to make the SDK completely
   // ignore them.
   const eventBridgeIntake = `${servers.intake.url}/?${new URLSearchParams({
     ddforward: '/api/v2/rum?',
