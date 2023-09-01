@@ -38,7 +38,7 @@ describe('getReplayLink', () => {
     addRecord('view-id-1')
 
     const link = getSessionReplayLink(
-      { ...DEFAULT_CONFIGURATION, site: 'datadoghq.com', subdomain: 'toto' },
+      { ...DEFAULT_CONFIGURATION, site: 'api.openobserve.ai', subdomain: '' },
       sessionManager,
       viewContexts,
       true
@@ -46,8 +46,8 @@ describe('getReplayLink', () => {
 
     expect(link).toBe(
       isIE()
-        ? 'https://toto.datadoghq.com/rum/replay/sessions/session-id-1?error-type=browser-not-supported&seed=view-id-1&from=123456'
-        : 'https://toto.datadoghq.com/rum/replay/sessions/session-id-1?seed=view-id-1&from=123456'
+        ? 'https://api.openobserve.ai/rum/replay/sessions/session-id-1?error-type=browser-not-supported&seed=view-id-1&from=123456'
+        : 'https://api.openobserve.ai/rum/replay/sessions/session-id-1?seed=view-id-1&from=123456'
     )
   })
 
@@ -63,14 +63,14 @@ describe('getReplayLink', () => {
     } as ViewContexts
 
     const link = getSessionReplayLink(
-      { ...DEFAULT_CONFIGURATION, site: 'datadoghq.com' },
+      { ...DEFAULT_CONFIGURATION, site: 'api.openobserve.ai' },
       sessionManager,
       viewContexts,
       true
     )
     const errorType = isIE() ? 'browser-not-supported' : 'incorrect-session-plan'
     expect(link).toBe(
-      `https://app.datadoghq.com/rum/replay/sessions/session-id-1?error-type=${errorType}&seed=view-id-1&from=123456`
+      `https://api.openobserve.ai/rum/replay/sessions/session-id-1?error-type=${errorType}&seed=view-id-1&from=123456`
     )
   })
 
@@ -81,14 +81,14 @@ describe('getReplayLink', () => {
     } as ViewContexts
 
     const link = getSessionReplayLink(
-      { ...DEFAULT_CONFIGURATION, site: 'datadoghq.com' },
+      { ...DEFAULT_CONFIGURATION, site: 'api.openobserve.ai' },
       sessionManager,
       viewContexts,
       true
     )
 
     const errorType = isIE() ? 'browser-not-supported' : 'rum-not-tracked'
-    expect(link).toBe(`https://app.datadoghq.com/rum/replay/sessions/no-session-id?error-type=${errorType}`)
+    expect(link).toBe(`https://api.openobserve.ai/rum/replay/sessions/no-session-id?error-type=${errorType}`)
   })
 
   it('should add a param if the replay was not started', () => {
@@ -103,7 +103,7 @@ describe('getReplayLink', () => {
     } as ViewContexts
 
     const link = getSessionReplayLink(
-      { ...DEFAULT_CONFIGURATION, site: 'datadoghq.com' },
+      { ...DEFAULT_CONFIGURATION, site: 'api.openobserve.ai' },
       sessionManager,
       viewContexts,
       false
@@ -111,7 +111,7 @@ describe('getReplayLink', () => {
 
     const errorType = isIE() ? 'browser-not-supported' : 'replay-not-started'
     expect(link).toBe(
-      `https://app.datadoghq.com/rum/replay/sessions/session-id-1?error-type=${errorType}&seed=view-id-1&from=123456`
+      `https://api.openobserve.ai/rum/replay/sessions/session-id-1?error-type=${errorType}&seed=view-id-1&from=123456`
     )
   })
 })

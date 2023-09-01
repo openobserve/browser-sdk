@@ -56,7 +56,7 @@ runMain(() => {
 })
 
 function renameFilesWithVersionSuffix(packageName, bundleFolder) {
-  // The datadog-ci CLI is taking a directory as an argument. It will scan every source map files in
+  // The openobserve-ci CLI is taking a directory as an argument. It will scan every source map files in
   // it and upload those along with the minified bundle. The file names must match the one from the
   // CDN, thus we need to rename the bundles with the right suffix.
   for (const extension of ['js', 'js.map']) {

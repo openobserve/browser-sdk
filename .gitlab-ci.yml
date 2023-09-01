@@ -1,11 +1,11 @@
 variables:
   CURRENT_STAGING: staging-35
-  APP: 'browser-sdk'
+  APP: "browser-sdk"
   CURRENT_CI_IMAGE: 51
-  BUILD_STABLE_REGISTRY: '486234852809.dkr.ecr.us-east-1.amazonaws.com'
-  CI_IMAGE: '$BUILD_STABLE_REGISTRY/ci/$APP:$CURRENT_CI_IMAGE'
-  GIT_REPOSITORY: 'git@github.com:DataDog/browser-sdk.git'
-  MAIN_BRANCH: 'main'
+  BUILD_STABLE_REGISTRY: "486234852809.dkr.ecr.us-east-1.amazonaws.com"
+  CI_IMAGE: "$BUILD_STABLE_REGISTRY/ci/$APP:$CURRENT_CI_IMAGE"
+  GIT_REPOSITORY: "git@github.com:openobserve/browser-sdk.git"
+  MAIN_BRANCH: "main"
   CHROME_PACKAGE_VERSION: 116.0.5845.110-1
 
 cache:
@@ -29,7 +29,7 @@ stages:
   - notify
 
 .base-configuration:
-  tags: ['runner:main', 'size:large']
+  tags: ["runner:main", "size:large"]
   image: $CI_IMAGE
 
 ########################################################################################################################
@@ -90,7 +90,7 @@ ci-image:
     - .base-configuration
     - .feature-branches
   when: manual
-  tags: ['runner:docker', 'size:large']
+  tags: ["runner:docker", "size:large"]
   image: $BUILD_STABLE_REGISTRY/docker:18.03.1
   script:
     - docker build --build-arg CHROME_PACKAGE_VERSION=$CHROME_PACKAGE_VERSION --tag $CI_IMAGE .
@@ -182,7 +182,7 @@ e2e:
   interruptible: true
   artifacts:
     when: always
-    paths: ['test-report/e2e/specs.log']
+    paths: ["test-report/e2e/specs.log"]
     reports:
       junit: test-report/e2e/*.xml
   script:
@@ -235,7 +235,7 @@ e2e-bs:
   resource_group: browserstack
   artifacts:
     when: always
-    paths: ['test-report/e2e-bs/specs.log']
+    paths: ["test-report/e2e-bs/specs.log"]
     reports:
       junit: test-report/e2e-bs/*.xml
   script:
@@ -252,7 +252,7 @@ deploy-feature:
   stage: deploy
   when: manual
   variables:
-    SUFFIX: 'my-feature' #/datadog-[product]-${SUFFIX}.js
+    SUFFIX: "my-feature" #/openobserve-[product]-${SUFFIX}.js
   extends:
     - .base-configuration
     - .feature-branches
@@ -334,7 +334,7 @@ step-4_publish-npm:
 # Notify
 ########################################################################################################################
 
-include: 'https://gitlab-templates.ddbuild.io/slack-notifier/v1/template.yml'
+include: "https://gitlab-templates.ddbuild.io/slack-notifier/v1/template.yml"
 
 notify-feature-branch-failure:
   extends:
@@ -363,7 +363,7 @@ notify-release-ready:
     - .prepare_notification
     - .tags
   script:
-    - 'MESSAGE_TEXT=":i: $CI_PROJECT_NAME <$BUILD_URL|$COMMIT_MESSAGE> ready to be deployed to :datadog:"'
+    - 'MESSAGE_TEXT=":i: $CI_PROJECT_NAME <$BUILD_URL|$COMMIT_MESSAGE> ready to be deployed to :openobserve:"'
     - postmessage "#browser-sdk-deploy" "$MESSAGE_TEXT"
 
 notify-prod-canary-success:
@@ -372,7 +372,7 @@ notify-prod-canary-success:
     - .prepare_notification
     - .main
   script:
-    - 'MESSAGE_TEXT=":rocket: $CI_PROJECT_NAME <$COMMIT_URL|$COMMIT_MESSAGE> deployed to :datadog:."'
+    - 'MESSAGE_TEXT=":rocket: $CI_PROJECT_NAME <$COMMIT_URL|$COMMIT_MESSAGE> deployed to :openobserve:."'
     - postmessage "#browser-sdk-deploy" "$MESSAGE_TEXT"
     - postmessage "#rum-browser-sdk-ops" "$MESSAGE_TEXT"
 
@@ -478,7 +478,7 @@ tests-passed:
     - .feature-branches
   interruptible: true
   script:
-    - 'true'
+    - "true"
 
 # in after-tests to not block `to-staging` merge
 check-squash-into-staging:

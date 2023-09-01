@@ -63,5 +63,4 @@ label our Commit messages and Pull Request titles:
 
 👌 - Updating code due to code review changes.
 
-[1]: https://docs.datadoghq.com/help/
-[2]: https://gitmoji.carloscuesta.me/
+[1]: https://docs.openobserve.ai/

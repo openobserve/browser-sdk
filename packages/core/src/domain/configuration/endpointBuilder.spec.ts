@@ -14,7 +14,7 @@ describe('endpointBuilder', () => {
 
   beforeEach(() => {
     initConfiguration = { clientToken }
-    ;(window as unknown as BuildEnvWindow).__BUILD_ENV__SDK_VERSION__ = 'some_version'
+      ; (window as unknown as BuildEnvWindow).__BUILD_ENV__SDK_VERSION__ = 'some_version'
     resetExperimentalFeatures()
   })
 
@@ -50,7 +50,7 @@ describe('endpointBuilder', () => {
       ).toMatch(
         `https://proxy.io/path\\?ddforward=${encodeURIComponent(
           `/api/v2/rum?ddsource=(.*)&ddtags=(.*)&dd-api-key=${clientToken}` +
-            '&dd-evp-origin-version=(.*)&dd-evp-origin=browser&dd-request-id=(.*)&batch_time=(.*)'
+          '&dd-evp-origin-version=(.*)&dd-evp-origin=browser&dd-request-id=(.*)&batch_time=(.*)'
         )}`
       )
     })
@@ -79,7 +79,7 @@ describe('endpointBuilder', () => {
           'rum',
           []
         ).build('xhr')
-      ).toMatch(/^https:\/\/rum.browser-intake-datadoghq.com\//)
+      ).toMatch(/^https:\/\/api.openobserve.ai\//)
     })
   })
 
@@ -89,8 +89,8 @@ describe('endpointBuilder', () => {
         createEndpointBuilder({ ...initConfiguration, proxyUrl: 'https://proxy.io/path' }, 'rum', []).build('xhr')
       ).toMatch(
         `https://proxy.io/path\\?ddforward=${encodeURIComponent(
-          `https://rum.browser-intake-datadoghq.com/api/v2/rum?ddsource=(.*)&ddtags=(.*)&dd-api-key=${clientToken}` +
-            '&dd-evp-origin-version=(.*)&dd-evp-origin=browser&dd-request-id=(.*)&batch_time=(.*)'
+          `https://api.openobserve.ai/api/v2/rum?ddsource=(.*)&ddtags=(.*)&dd-api-key=${clientToken}` +
+          '&dd-evp-origin-version=(.*)&dd-evp-origin=browser&dd-request-id=(.*)&batch_time=(.*)'
         )}`
       )
     })

@@ -1,6 +1,6 @@
 import type { RumInitConfiguration } from '@openobserve/browser-rum-core'
-import { IncrementalSource, NodeType } from '@datadog/browser-rum/src/types'
-import type { DocumentFragmentNode, MouseInteractionData, SerializedNodeWithId } from '@datadog/browser-rum/src/types'
+import { IncrementalSource, NodeType } from '@openobserve/browser-rum/src/types'
+import type { DocumentFragmentNode, MouseInteractionData, SerializedNodeWithId } from '@openobserve/browser-rum/src/types'
 
 import {
   createMutationPayloadValidatorFromSegment,
@@ -11,7 +11,7 @@ import {
   findNode,
   findTextContent,
   findTextNode,
-} from '@datadog/browser-rum/test'
+} from '@openobserve/browser-rum/test'
 
 import type { EventRegistry } from '../../lib/framework'
 import { flushEvents, createTest, bundleSetup, html } from '../../lib/framework'

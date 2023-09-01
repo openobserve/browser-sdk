@@ -1,5 +1,5 @@
 import { datadogLogs } from '@openobserve/browser-logs'
-import { datadogRum } from '@datadog/browser-rum'
+import { datadogRum } from '@openobserve/browser-rum'
 
 declare global {
   interface Window {

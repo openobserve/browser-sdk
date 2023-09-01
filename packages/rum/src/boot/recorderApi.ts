@@ -185,7 +185,7 @@ export function makeRecorderApi(
       // * the worker is unresponsive for some reason and timeouts
       //
       // It is not expected to happen often. Nonetheless, the "replayable" status on RUM events is
-      // an important part of the Datadog App:
+      // an important part of the Openobserve App:
       // * If we have a false positive (we set has_replay: true even if no replay data is present),
       // we might display broken links to the Session Replay player.
       // * If we have a false negative (we don't set has_replay: true even if replay data is

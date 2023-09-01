@@ -31,24 +31,24 @@ describe('normalize url', () => {
 
 describe('isValidUrl', () => {
   it('should ensure url is valid', () => {
-    expect(isValidUrl('http://www.datadoghq.com')).toBe(true)
-    expect(isValidUrl('http://www.datadoghq.com/foo/bar?a=b#hello')).toBe(true)
-    expect(isValidUrl('file://www.datadoghq.com')).toBe(true)
+    expect(isValidUrl('https://cloud.openobserve.ai/')).toBe(true)
+    expect(isValidUrl('https://api.openobserve.ai/')).toBe(true)
+    expect(isValidUrl('file://cloud.openobserve.ai')).toBe(true)
     expect(isValidUrl('/plop')).toBe(false)
     expect(isValidUrl('')).toBe(false)
   })
 
   it('should return the same result if the URL has been wrongfully overridden between calls', () => {
-    expect(isValidUrl('http://www.datadoghq.com')).toBe(true)
+    expect(isValidUrl('https://cloud.openobserve.ai/')).toBe(true)
     spyOn(window, 'URL').and.throwError('wrong URL override')
-    expect(isValidUrl('http://www.datadoghq.com')).toBe(true)
+    expect(isValidUrl('https://cloud.openobserve.ai')).toBe(true)
   })
 })
 
 describe('getOrigin', () => {
   it('should retrieve url origin', () => {
-    expect(getOrigin('http://www.datadoghq.com')).toBe('http://www.datadoghq.com')
-    expect(getOrigin('http://www.datadoghq.com/foo/bar?a=b#hello')).toBe('http://www.datadoghq.com')
+    expect(getOrigin('http://cloud.openobserve.ai')).toBe('http://cloud.openobserve.ai')
+    expect(getOrigin('http://cloud.openobserve.ai/foo/bar?a=b#hello')).toBe('http://cloud.openobserve.ai')
     expect(getOrigin('http://localhost:8080')).toBe('http://localhost:8080')
   })
 
@@ -64,21 +64,21 @@ describe('getOrigin', () => {
 
 describe('getPathName', () => {
   it('should retrieve url path name', () => {
-    expect(getPathName('http://www.datadoghq.com')).toBe('/')
-    expect(getPathName('http://www.datadoghq.com/foo/bar?a=b#hello')).toBe('/foo/bar')
+    expect(getPathName('http://cloud.openobserve.ai')).toBe('/')
+    expect(getPathName('http://cloud.openobserve.ai/foo/bar?a=b#hello')).toBe('/foo/bar')
   })
 })
 
 describe('getSearch', () => {
   it('should retrieve url search', () => {
-    expect(getSearch('http://www.datadoghq.com')).toBe('')
-    expect(getSearch('http://www.datadoghq.com/foo/bar?a=b#hello')).toBe('?a=b')
+    expect(getSearch('http://cloud.openobserve.ai')).toBe('')
+    expect(getSearch('http://cloud.openobserve.ai/foo/bar?a=b#hello')).toBe('?a=b')
   })
 })
 
 describe('getHash', () => {
   it('should retrieve url hash', () => {
-    expect(getHash('http://www.datadoghq.com')).toBe('')
-    expect(getHash('http://www.datadoghq.com/foo/bar?a=b#hello')).toBe('#hello')
+    expect(getHash('http://cloud.openobserve.ai')).toBe('')
+    expect(getHash('http://cloud.openobserve.ai/foo/bar?a=b#hello')).toBe('#hello')
   })
 })

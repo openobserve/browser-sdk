@@ -61,16 +61,16 @@ function buildRules(
     const devRumUrl = useRumSlim ? DEV_RUM_SLIM_URL : DEV_RUM_URL
     logger.log('add redirect to dev bundles rules')
     rules.push(
-      createRedirectRule(/^https:\/\/.*\/datadog-rum(-v\d|-canary|-staging)?\.js$/, { url: devRumUrl }),
-      createRedirectRule(/^https:\/\/.*\/datadog-rum-slim(-v\d|-canary|-staging)?\.js$/, {
+      createRedirectRule(/^https:\/\/.*\/openobserve-rum(-v\d|-canary|-staging)?\.js$/, { url: devRumUrl }),
+      createRedirectRule(/^https:\/\/.*\/openobserve-rum-slim(-v\d|-canary|-staging)?\.js$/, {
         url: DEV_RUM_SLIM_URL,
       }),
-      createRedirectRule(/^https:\/\/.*\/datadog-logs(-v\d|-canary|-staging)?\.js$/, { url: DEV_LOGS_URL }),
-      createRedirectRule('https://localhost:8443/static/datadog-rum-hotdog.js', { url: devRumUrl })
+      createRedirectRule(/^https:\/\/.*\/openobserve-logs(-v\d|-canary|-staging)?\.js$/, { url: DEV_LOGS_URL }),
+      createRedirectRule('https://localhost:8443/static/openobserve-rum-hotdog.js', { url: devRumUrl })
     )
   } else if (useRumSlim) {
     logger.log('add redirect to rum slim rule')
-    rules.push(createRedirectRule(/^(https:\/\/.*\/datadog-rum)(-slim)?/, { regexSubstitution: '\\1-slim' }))
+    rules.push(createRedirectRule(/^(https:\/\/.*\/openobserve-rum)(-slim)?/, { regexSubstitution: '\\1-slim' }))
   }
 
   if (blockIntakeRequests) {
