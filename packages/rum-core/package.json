@@ -12,7 +12,7 @@
     "replace-build-env": "node ../../scripts/build/replace-build-env.js"
   },
   "dependencies": {
-    "@datadog/browser-core": "4.47.0"
+    "@openobserve/browser-core": "0.1.1"
   },
   "devDependencies": {
     "ajv": "6.12.6"
