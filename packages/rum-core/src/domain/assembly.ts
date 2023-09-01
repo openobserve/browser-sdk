@@ -121,7 +121,7 @@ export function startRumAssembly(
         const actionId = actionContexts.findActionId(startTime)
 
         const rumContext: RumContext = {
-          _dd: {
+          _oo: {
             format_version: 2,
             drift: currentDrift(),
             session: {

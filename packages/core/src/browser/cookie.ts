@@ -33,7 +33,7 @@ export function areCookiesAuthorized(options: CookieOptions): boolean {
   try {
     // Use a unique cookie name to avoid issues when the SDK is initialized multiple times during
     // the test cookie lifetime
-    const testCookieName = `dd_cookie_test_${generateUUID()}`
+    const testCookieName = `oo_cookie_test_${generateUUID()}`
     const testCookieValue = 'test'
     setCookie(testCookieName, testCookieValue, ONE_MINUTE, options)
     const isCookieCorrectlySet = getCookie(testCookieName) === testCookieValue
@@ -55,7 +55,7 @@ export function getCurrentSite() {
   if (getCurrentSiteCache === undefined) {
     // Use a unique cookie name to avoid issues when the SDK is initialized multiple times during
     // the test cookie lifetime
-    const testCookieName = `dd_site_test_${generateUUID()}`
+    const testCookieName = `oo_site_test_${generateUUID()}`
     const testCookieValue = 'test'
 
     const domainLevels = window.location.hostname.split('.')

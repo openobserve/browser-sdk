@@ -160,7 +160,7 @@ export function makeLogsPublicApi(startLogsImpl: StartLogs) {
   function canInitLogs(initConfiguration: LogsInitConfiguration) {
     if (isAlreadyInitialized) {
       if (!initConfiguration.silentMultipleInit) {
-        display.error('DD_LOGS is already initialized.')
+        display.error('OO_LOGS is already initialized.')
       }
       return false
     }

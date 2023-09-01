@@ -5,77 +5,77 @@ import type { Subscription } from '../../tools/observable'
 import type { ConsoleLog } from './consoleObservable'
 import { initConsoleObservable } from './consoleObservable'
 
-// prettier: avoid formatting issue
-// cf https://github.com/prettier/prettier/issues/12211
-;[
-  { api: ConsoleApiName.log, prefix: '' },
-  { api: ConsoleApiName.info, prefix: '' },
-  { api: ConsoleApiName.warn, prefix: '' },
-  { api: ConsoleApiName.debug, prefix: '' },
-  { api: ConsoleApiName.error, prefix: 'console error: ' },
-].forEach(({ api, prefix }) => {
-  describe(`console ${api} observable`, () => {
-    let consoleStub: jasmine.Spy
-    let consoleSubscription: Subscription
-    let notifyLog: jasmine.Spy
+  // prettier: avoid formatting issue
+  // cf https://github.com/prettier/prettier/issues/12211
+  ;[
+    { api: ConsoleApiName.log, prefix: '' },
+    { api: ConsoleApiName.info, prefix: '' },
+    { api: ConsoleApiName.warn, prefix: '' },
+    { api: ConsoleApiName.debug, prefix: '' },
+    { api: ConsoleApiName.error, prefix: 'console error: ' },
+  ].forEach(({ api, prefix }) => {
+    describe(`console ${api} observable`, () => {
+      let consoleStub: jasmine.Spy
+      let consoleSubscription: Subscription
+      let notifyLog: jasmine.Spy
 
-    beforeEach(() => {
-      consoleStub = spyOn(console, api)
-      notifyLog = jasmine.createSpy('notifyLog')
+      beforeEach(() => {
+        consoleStub = spyOn(console, api)
+        notifyLog = jasmine.createSpy('notifyLog')
 
-      consoleSubscription = initConsoleObservable([api]).subscribe(notifyLog)
-    })
+        consoleSubscription = initConsoleObservable([api]).subscribe(notifyLog)
+      })
 
-    afterEach(() => {
-      consoleSubscription.unsubscribe()
-    })
+      afterEach(() => {
+        consoleSubscription.unsubscribe()
+      })
 
-    it(`should notify ${api}`, () => {
-      console[api]('foo', 'bar')
+      it(`should notify ${api}`, () => {
+        console[api]('foo', 'bar')
 
-      const consoleLog = notifyLog.calls.mostRecent().args[0]
+        const consoleLog = notifyLog.calls.mostRecent().args[0]
 
-      expect(consoleLog).toEqual(
-        jasmine.objectContaining({
-          message: `${prefix}foo bar`,
-          api,
-        })
-      )
-    })
+        expect(consoleLog).toEqual(
+          jasmine.objectContaining({
+            message: `${prefix}foo bar`,
+            api,
+          })
+        )
+      })
 
-    it('should keep original behavior', () => {
-      console[api]('foo', 'bar')
+      it('should keep original behavior', () => {
+        console[api]('foo', 'bar')
 
-      expect(consoleStub).toHaveBeenCalledWith('foo', 'bar')
-    })
+        expect(consoleStub).toHaveBeenCalledWith('foo', 'bar')
+      })
 
-    it('should format error instance', () => {
-      console[api](new TypeError('hello'))
-      const consoleLog = notifyLog.calls.mostRecent().args[0]
-      expect(consoleLog.message).toBe(`${prefix}TypeError: hello`)
-    })
+      it('should format error instance', () => {
+        console[api](new TypeError('hello'))
+        const consoleLog = notifyLog.calls.mostRecent().args[0]
+        expect(consoleLog.message).toBe(`${prefix}TypeError: hello`)
+      })
 
-    it('should stringify object parameters', () => {
-      console[api]('Hello', { foo: 'bar' })
-      const consoleLog = notifyLog.calls.mostRecent().args[0]
-      expect(consoleLog.message).toBe(`${prefix}Hello {\n  "foo": "bar"\n}`)
-    })
+      it('should stringify object parameters', () => {
+        console[api]('Hello', { foo: 'bar' })
+        const consoleLog = notifyLog.calls.mostRecent().args[0]
+        expect(consoleLog.message).toBe(`${prefix}Hello {\n  "foo": "bar"\n}`)
+      })
 
-    it('should allow multiple callers', () => {
-      const notifyOtherCaller = jasmine.createSpy('notifyOtherCaller')
-      const instrumentedConsoleApi = console[api]
-      const otherConsoleSubscription = initConsoleObservable([api]).subscribe(notifyOtherCaller)
+      it('should allow multiple callers', () => {
+        const notifyOtherCaller = jasmine.createSpy('notifyOtherCaller')
+        const instrumentedConsoleApi = console[api]
+        const otherConsoleSubscription = initConsoleObservable([api]).subscribe(notifyOtherCaller)
 
-      console[api]('foo', 'bar')
+        console[api]('foo', 'bar')
 
-      expect(instrumentedConsoleApi).toEqual(console[api])
-      expect(notifyLog).toHaveBeenCalledTimes(1)
-      expect(notifyOtherCaller).toHaveBeenCalledTimes(1)
+        expect(instrumentedConsoleApi).toEqual(console[api])
+        expect(notifyLog).toHaveBeenCalledTimes(1)
+        expect(notifyOtherCaller).toHaveBeenCalledTimes(1)
 
-      otherConsoleSubscription.unsubscribe()
+        otherConsoleSubscription.unsubscribe()
+      })
     })
   })
-})
 
 describe('console error observable', () => {
   let consoleSubscription: Subscription
@@ -113,10 +113,10 @@ describe('console error observable', () => {
 
   it('should retrieve fingerprint from error', () => {
     interface DatadogError extends Error {
-      dd_fingerprint?: string
+      oo_fingerprint?: string
     }
     const error = new Error('foo')
-    ;(error as DatadogError).dd_fingerprint = 'my-fingerprint'
+      ; (error as DatadogError).oo_fingerprint = 'my-fingerprint'
 
     // eslint-disable-next-line no-console
     console.error(error)
@@ -127,7 +127,7 @@ describe('console error observable', () => {
 
   it('should sanitize error fingerprint', () => {
     const error = new Error('foo')
-    ;(error as any).dd_fingerprint = 2
+      ; (error as any).oo_fingerprint = 2
 
     // eslint-disable-next-line no-console
     console.error(error)

@@ -580,7 +580,7 @@ describe('rum assembly', () => {
         id: '1234',
         type: 'user',
       })
-      expect(serverRumEvents[0]._dd.session).toEqual({
+      expect(serverRumEvents[0]._oo.session).toEqual({
         plan: RumSessionPlan.WITH_SESSION_REPLAY,
       })
     })
@@ -634,7 +634,7 @@ describe('rum assembly', () => {
       notifyRawRumEvent(lifeCycle, {
         rawRumEvent: createRawRumEvent(RumEventType.VIEW),
       })
-      expect(serverRumEvents[0]._dd.configuration).toEqual({
+      expect(serverRumEvents[0]._oo.configuration).toEqual({
         session_replay_sample_rate: 100,
         session_sample_rate: 100,
       })
@@ -650,7 +650,7 @@ describe('rum assembly', () => {
       notifyRawRumEvent(lifeCycle, {
         rawRumEvent: createRawRumEvent(RumEventType.VIEW),
       })
-      expect(serverRumEvents[0]._dd.configuration).toEqual({
+      expect(serverRumEvents[0]._oo.configuration).toEqual({
         session_sample_rate: 1.234,
         session_replay_sample_rate: 6.789,
       })
@@ -679,8 +679,8 @@ describe('rum assembly', () => {
 
       notifyRawRumEvent(lifeCycle, { rawRumEvent: createRawRumEvent(RumEventType.VIEW) })
 
-      expect(serverRumEvents[0]._dd.browser_sdk_version).not.toBeDefined()
-      expect(serverRumEvents[1]._dd.browser_sdk_version).toBeDefined()
+      expect(serverRumEvents[0]._oo.browser_sdk_version).not.toBeDefined()
+      expect(serverRumEvents[1]._oo.browser_sdk_version).toBeDefined()
     })
   })
 

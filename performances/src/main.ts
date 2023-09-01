@@ -77,14 +77,14 @@ async function setupSDK(page: Page, options: ProfilingOptions) {
     if (location.href !== 'about:blank') {
       import(${JSON.stringify(options.bundleUrl)})
         .then(() => {
-          window.DD_RUM.init({
+          window.OO_RUM.init({
             clientToken: 'xxx',
             applicationId: 'xxx',
             site: 'api.openobserve.ai',
             trackInteractions: true,
             proxyUrl: ${JSON.stringify(options.proxy.origin)}
           })
-          ${options.startRecording ? 'window.DD_RUM.startSessionReplayRecording()' : ''}
+          ${options.startRecording ? 'window.OO_RUM.startSessionReplayRecording()' : ''}
         })
     }
   `)

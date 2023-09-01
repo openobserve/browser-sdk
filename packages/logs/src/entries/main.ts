@@ -8,9 +8,9 @@ export { LoggerConfiguration, LogsPublicApi as LogsGlobal } from '../boot/logsPu
 export { LogsInitConfiguration } from '../domain/configuration'
 export { LogsEvent } from '../logsEvent.types'
 
-export const datadogLogs = makeLogsPublicApi(startLogs)
+export const openobserveLogs = makeLogsPublicApi(startLogs)
 
 interface BrowserWindow extends Window {
-  DD_LOGS?: LogsPublicApi
+  OO_LOGS?: LogsPublicApi
 }
-defineGlobal(getGlobalObject<BrowserWindow>(), 'DD_LOGS', datadogLogs)
+defineGlobal(getGlobalObject<BrowserWindow>(), 'OO_LOGS', openobserveLogs)

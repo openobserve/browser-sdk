@@ -278,8 +278,8 @@ function getFirstSegment(events: EventRegistry) {
 }
 
 function initRumAndStartRecording(initConfiguration: RumInitConfiguration) {
-  window.DD_RUM!.init(initConfiguration)
-  window.DD_RUM!.startSessionReplayRecording()
+  window.OO_RUM!.init(initConfiguration)
+  window.OO_RUM!.startSessionReplayRecording()
 }
 
 async function getNodeInsideShadowDom(hostTag: string, selector: string) {

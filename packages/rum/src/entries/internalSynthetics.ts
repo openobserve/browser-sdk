@@ -16,5 +16,5 @@ export { DefaultPrivacyLevel } from '@openobserve/browser-core'
 // have side effects.
 /* eslint-disable local-rules/disallow-side-effects */
 const recorderApi = makeRecorderApi(startRecording)
-export const datadogRum = makeRumPublicApi(startRum, recorderApi, { ignoreInitIfSyntheticsWillInjectRum: false })
+export const openobserveRum = makeRumPublicApi(startRum, recorderApi, { ignoreInitIfSyntheticsWillInjectRum: false })
 /* eslint-enable local-rules/disallow-side-effects */

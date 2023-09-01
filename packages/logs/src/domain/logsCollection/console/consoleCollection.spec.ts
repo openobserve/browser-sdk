@@ -70,10 +70,10 @@ describe('console collection', () => {
       lifeCycle
     ))
     interface DatadogError extends Error {
-      dd_fingerprint?: string
+      oo_fingerprint?: string
     }
     const error = new Error('foo')
-      ; (error as DatadogError).dd_fingerprint = 'my-fingerprint'
+      ; (error as DatadogError).oo_fingerprint = 'my-fingerprint'
 
     // eslint-disable-next-line no-console
     console.error(error)

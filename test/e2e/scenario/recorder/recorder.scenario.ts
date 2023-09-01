@@ -778,7 +778,7 @@ describe('recorder', () => {
         await scroll({ windowY: 100, containerX: 10 })
 
         await browserExecute(() => {
-          window.DD_RUM!.startSessionReplayRecording()
+          window.OO_RUM!.startSessionReplayRecording()
         })
 
         // wait for recorder to be properly started
@@ -789,7 +789,7 @@ describe('recorder', () => {
 
         // trigger new full snapshot
         await browserExecute(() => {
-          window.DD_RUM!.startView()
+          window.OO_RUM!.startView()
         })
 
         await flushEvents()

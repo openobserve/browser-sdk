@@ -8,7 +8,7 @@ describe('logs', () => {
     .withLogs()
     .run(async ({ serverEvents }) => {
       await browserExecute(() => {
-        window.DD_LOGS!.logger.log('hello')
+        window.OO_LOGS!.logger.log('hello')
       })
       await flushEvents()
       expect(serverEvents.logs.length).toBe(1)
@@ -147,7 +147,7 @@ describe('logs', () => {
     .withLogs()
     .run(async ({ serverEvents }) => {
       await browserExecute(() => {
-        window.DD_LOGS!.logger.log('hello')
+        window.OO_LOGS!.logger.log('hello')
       })
       await flushEvents()
       expect(serverEvents.logs.length).toBe(1)
@@ -163,7 +163,7 @@ describe('logs', () => {
     })
     .run(async ({ serverEvents }) => {
       await browserExecute(() => {
-        window.DD_LOGS!.logger.log('hello', {})
+        window.OO_LOGS!.logger.log('hello', {})
       })
       await flushEvents()
       expect(serverEvents.logs.length).toBe(1)

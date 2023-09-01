@@ -57,14 +57,14 @@ describe('rum sessions', () => {
       .withRum()
       .run(async ({ serverEvents }) => {
         await browserExecuteAsync<void>((done) => {
-          window.DD_RUM!.stopSession()
+          window.OO_RUM!.stopSession()
           setTimeout(() => {
             // If called directly after `stopSession`, the action start time may be the same as the
             // session end time. In this case, the sopped session is used, and the action is
             // collected.
             // We might want to improve this by having a strict comparison between the event start
             // time and session end time.
-            window.DD_RUM!.addAction('foo')
+            window.OO_RUM!.addAction('foo')
             done()
           }, 5)
         })
@@ -78,7 +78,7 @@ describe('rum sessions', () => {
       .withRum()
       .run(async ({ serverEvents }) => {
         await browserExecute(() => {
-          window.DD_RUM!.stopSession()
+          window.OO_RUM!.stopSession()
         })
         await (await $('html')).click()
 
@@ -86,7 +86,7 @@ describe('rum sessions', () => {
         await browser.waitUntil(async () => Boolean(await findSessionCookie()))
 
         await browserExecute(() => {
-          window.DD_RUM!.addAction('foo')
+          window.OO_RUM!.addAction('foo')
         })
 
         await flushEvents()
@@ -105,8 +105,8 @@ describe('rum sessions', () => {
         expect(serverEvents.sessionReplay.length).toBe(0)
 
         await browserExecute(() => {
-          window.DD_LOGS!.logger.log('foo')
-          window.DD_RUM!.stopSession()
+          window.OO_LOGS!.logger.log('foo')
+          window.OO_RUM!.stopSession()
         })
 
         await waitForRequests()

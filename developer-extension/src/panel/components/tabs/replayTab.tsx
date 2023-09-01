@@ -73,8 +73,8 @@ function WaitingForFullSnapshot() {
 function generateFullSnapshot() {
   // Restart to make sure we have a fresh Full Snapshot
   evalInWindow(`
-    DD_RUM.stopSessionReplayRecording()
-    DD_RUM.startSessionReplayRecording()
+    OO_RUM.stopSessionReplayRecording()
+    OO_RUM.startSessionReplayRecording()
   `).catch((error) => {
     logger.error('While restarting recording:', error)
   })

@@ -64,8 +64,8 @@ function computeMessage(
   return stackTrace?.message && stackTrace?.name
     ? stackTrace.message
     : !isErrorInstance
-    ? `${nonErrorPrefix} ${jsonStringify(sanitize(originalError))!}`
-    : 'Empty message'
+      ? `${nonErrorPrefix} ${jsonStringify(sanitize(originalError))!}`
+      : 'Empty message'
 }
 
 function hasUsableStack(isErrorInstance: boolean, stackTrace?: StackTrace): stackTrace is StackTrace {
@@ -81,8 +81,8 @@ function hasUsableStack(isErrorInstance: boolean, stackTrace?: StackTrace): stac
 }
 
 export function tryToGetFingerprint(originalError: unknown) {
-  return originalError instanceof Error && 'dd_fingerprint' in originalError
-    ? String(originalError.dd_fingerprint)
+  return originalError instanceof Error && 'oo_fingerprint' in originalError
+    ? String(originalError.oo_fingerprint)
     : undefined
 }
 

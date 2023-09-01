@@ -12,7 +12,7 @@ describe('telemetry', () => {
             throw new window.Error('bar')
           },
         }
-        window.DD_LOGS!.logger.log('hop', context as any)
+        window.OO_LOGS!.logger.log('hop', context as any)
       })
       await flushEvents()
       expect(serverEvents.telemetryErrors.length).toBe(1)
@@ -34,7 +34,7 @@ describe('telemetry', () => {
             throw new window.Error('bar')
           },
         }
-        window.DD_RUM!.addAction('hop', context as any)
+        window.OO_RUM!.addAction('hop', context as any)
       })
       await flushEvents()
       expect(serverEvents.telemetryErrors.length).toBe(1)
