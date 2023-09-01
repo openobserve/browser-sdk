@@ -9,9 +9,9 @@ See the [dedicated openobserve documentation][1] for more details.
 To start collecting events, add [`@openobserve/browser-rum`][2] to your `package.json` file, then initialize it with:
 
 ```javascript
-import { datadogRum } from '@openobserve/browser-rum'
+import { openobserveRum } from '@openobserve/browser-rum'
 
-datadogRum.init({
+openobserveRum.init({
   applicationId: '<DATADOG_APPLICATION_ID>',
   clientToken: '<DATADOG_CLIENT_TOKEN>',
   site: '<DATADOG_SITE>',

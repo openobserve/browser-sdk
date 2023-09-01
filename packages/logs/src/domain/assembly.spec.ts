@@ -63,13 +63,13 @@ describe('startLogsAssembly', () => {
     beforeSend = noop
     mainLogger = new Logger(() => noop)
     startLogsAssembly(sessionManager, configuration, lifeCycle, () => COMMON_CONTEXT, mainLogger, noop)
-    window.DD_RUM = {
+    window.OO_RUM = {
       getInternalContext: noop,
     }
   })
 
   afterEach(() => {
-    delete window.DD_RUM
+    delete window.OO_RUM
     serverLogs = []
   })
 
@@ -110,7 +110,7 @@ describe('startLogsAssembly', () => {
 
   describe('contexts inclusion', () => {
     it('should include message context', () => {
-      spyOn(window.DD_RUM!, 'getInternalContext').and.returnValue({
+      spyOn(window.OO_RUM!, 'getInternalContext').and.returnValue({
         view: { url: 'http://from-rum-context.com', id: 'view-id' },
       })
 
@@ -172,7 +172,7 @@ describe('startLogsAssembly', () => {
     })
 
     it('should include rum internal context related to the error time', () => {
-      window.DD_RUM = {
+      window.OO_RUM = {
         getInternalContext(startTime) {
           return { foo: startTime === 1234 ? 'b' : 'a' }
         },
@@ -186,7 +186,7 @@ describe('startLogsAssembly', () => {
     })
 
     it('should include RUM context', () => {
-      window.DD_RUM = {
+      window.OO_RUM = {
         getInternalContext() {
           return { view: { url: 'http://from-rum-context.com', id: 'view-id' } }
         },
@@ -223,7 +223,7 @@ describe('startLogsAssembly', () => {
     })
 
     it('RUM context should take precedence over common context', () => {
-      spyOn(window.DD_RUM!, 'getInternalContext').and.returnValue({ view: { url: 'from-rum-context' } })
+      spyOn(window.OO_RUM!, 'getInternalContext').and.returnValue({ view: { url: 'from-rum-context' } })
 
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, { rawLogsEvent: DEFAULT_MESSAGE })
 
@@ -231,7 +231,7 @@ describe('startLogsAssembly', () => {
     })
 
     it('raw log should take precedence over RUM context', () => {
-      spyOn(window.DD_RUM!, 'getInternalContext').and.returnValue({ message: 'from-rum-context' })
+      spyOn(window.OO_RUM!, 'getInternalContext').and.returnValue({ message: 'from-rum-context' })
 
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, { rawLogsEvent: DEFAULT_MESSAGE })
 
@@ -309,7 +309,7 @@ describe('user management', () => {
   })
 
   afterEach(() => {
-    delete window.DD_RUM
+    delete window.OO_RUM
     serverLogs = []
   })
 
@@ -523,8 +523,8 @@ describe('logs limitation', () => {
 
 describe('getRUMInternalContext', () => {
   afterEach(() => {
-    delete window.DD_RUM
-    delete window.DD_RUM_SYNTHETICS
+    delete window.OO_RUM
+    delete window.OO_RUM_SYNTHETICS
     resetRUMInternalContext()
   })
 
@@ -533,12 +533,12 @@ describe('getRUMInternalContext', () => {
   })
 
   it('returns undefined if the global variable does not have a `getInternalContext` method', () => {
-    window.DD_RUM = {} as any
+    window.OO_RUM = {} as any
     expect(getRUMInternalContext()).toBeUndefined()
   })
 
   it('returns the internal context from the `getInternalContext` method', () => {
-    window.DD_RUM = {
+    window.OO_RUM = {
       getInternalContext: () => ({ foo: 'bar' }),
     }
     expect(getRUMInternalContext()).toEqual({ foo: 'bar' })
@@ -562,7 +562,7 @@ describe('getRUMInternalContext', () => {
     })
 
     it('uses the global variable created when the synthetics worker is injecting RUM', () => {
-      window.DD_RUM_SYNTHETICS = {
+      window.OO_RUM_SYNTHETICS = {
         getInternalContext: () => ({ foo: 'bar' }),
       }
       expect(getRUMInternalContext()).toEqual({ foo: 'bar' })

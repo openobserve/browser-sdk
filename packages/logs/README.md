@@ -9,9 +9,9 @@ See the [dedicated openobserve documentation][1] for more details.
 After adding [`@openobserve/browser-logs`][2] to your `package.json` file, initialize it with:
 
 ```javascript
-import { datadogLogs } from '@openobserve/browser-logs'
+import { openobserveLogs } from '@openobserve/browser-logs'
 
-datadogLogs.init({
+openobserveLogs.init({
   clientToken: '<DATADOG_CLIENT_TOKEN>',
   site: '<DATADOG_SITE>',
   forwardErrorsToLogs: true,
@@ -22,16 +22,16 @@ datadogLogs.init({
 After the openobserve browser logs SDK is initialized, send custom log entries directly to openobserve:
 
 ```javascript
-import { datadogLogs } from '@openobserve/browser-logs'
+import { openobserveLogs } from '@openobserve/browser-logs'
 
-datadogLogs.logger.info('Button clicked', { name: 'buttonName', id: 123 })
+openobserveLogs.logger.info('Button clicked', { name: 'buttonName', id: 123 })
 
 try {
   ...
   throw new Error('Wrong behavior')
   ...
 } catch (ex) {
-  datadogLogs.logger.error('Error occurred', { team: 'myTeam' }, ex)
+  openobserveLogs.logger.error('Error occurred', { team: 'myTeam' }, ex)
 }
 ```
 

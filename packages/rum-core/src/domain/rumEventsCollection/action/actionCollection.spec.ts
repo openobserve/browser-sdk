@@ -76,7 +76,7 @@ describe('actionCollection', () => {
       view: {
         in_foreground: true,
       },
-      _dd: {
+      _oo: {
         action: {
           target: {
             selector: '#foo',

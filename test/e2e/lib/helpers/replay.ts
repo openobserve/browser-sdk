@@ -10,6 +10,6 @@ export function getLastSegment(events: EventRegistry) {
 }
 
 export function initRumAndStartRecording(initConfiguration: RumInitConfiguration) {
-  window.DD_RUM!.init(initConfiguration)
-  window.DD_RUM!.startSessionReplayRecording()
+  window.OO_RUM!.init(initConfiguration)
+  window.OO_RUM!.startSessionReplayRecording()
 }

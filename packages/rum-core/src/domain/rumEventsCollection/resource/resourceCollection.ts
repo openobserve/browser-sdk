@@ -171,7 +171,7 @@ function computeRequestTracingInfo(request: RequestCompleteEvent, configuration:
     return undefined
   }
   return {
-    _dd: {
+    _oo: {
       span_id: request.spanId!.toDecimalString(),
       trace_id: request.traceId!.toDecimalString(),
       rule_psr: getRulePsr(configuration),
@@ -185,7 +185,7 @@ function computeEntryTracingInfo(entry: RumPerformanceResourceTiming, configurat
     return undefined
   }
   return {
-    _dd: {
+    _oo: {
       trace_id: entry.traceId,
       rule_psr: getRulePsr(configuration),
     },
@@ -207,7 +207,7 @@ function getRulePsr(configuration: RumConfiguration) {
 function computeIndexingInfo(sessionManager: RumSessionManager, resourceStart: ClocksState) {
   const session = sessionManager.findTrackedSession(resourceStart.relative)
   return {
-    _dd: {
+    _oo: {
       discarded: !session || !session.resourceAllowed,
     },
   }
@@ -219,7 +219,7 @@ function computePageStateInfo(pageStateHistory: PageStateHistory, startClocks: C
   }
 
   return {
-    _dd: {
+    _oo: {
       page_states: pageStateHistory.findAll(startClocks.relative, duration),
       page_was_discarded: String((document as any).wasDiscarded),
     },

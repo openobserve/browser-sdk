@@ -23,7 +23,7 @@ export function startLongTaskCollection(lifeCycle: LifeCycle, sessionManager: Ru
           duration: toServerDuration(entry.duration),
         },
         type: RumEventType.LONG_TASK,
-        _dd: {
+        _oo: {
           discarded: false,
         },
       }

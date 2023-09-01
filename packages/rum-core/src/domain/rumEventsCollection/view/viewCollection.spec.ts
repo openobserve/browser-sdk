@@ -106,7 +106,7 @@ describe('viewCollection', () => {
 
     expect(rawRumEvents[rawRumEvents.length - 1].startTime).toBe(1234 as RelativeTime)
     expect(rawRumEvents[rawRumEvents.length - 1].rawRumEvent).toEqual({
-      _dd: {
+      _oo: {
         document_version: 3,
         replay_stats: undefined,
         page_states: undefined,
@@ -183,7 +183,7 @@ describe('viewCollection', () => {
     expect(getReplayStatsSpy).toHaveBeenCalledWith(VIEW.id)
     expect(rawRumEvents[rawRumEvents.length - 1].startTime).toBe(1234 as RelativeTime)
     const rawRumViewEvent = rawRumEvents[rawRumEvents.length - 1].rawRumEvent as RawRumViewEvent
-    expect(rawRumViewEvent._dd.replay_stats).toEqual({
+    expect(rawRumViewEvent._oo.replay_stats).toEqual({
       segments_count: 4,
       records_count: 10,
       segments_total_raw_size: 1000,
@@ -218,7 +218,7 @@ describe('viewCollection', () => {
     lifeCycle.notify(LifeCycleEventType.VIEW_UPDATED, VIEW)
     const rawRumViewEvent = rawRumEvents[rawRumEvents.length - 1].rawRumEvent as RawRumViewEvent
 
-    expect(rawRumViewEvent._dd.page_states).toBeDefined()
+    expect(rawRumViewEvent._oo.page_states).toBeDefined()
     expect(rawRumViewEvent.view.in_foreground_periods).toBeUndefined()
   })
 
@@ -227,7 +227,7 @@ describe('viewCollection', () => {
     lifeCycle.notify(LifeCycleEventType.VIEW_UPDATED, VIEW)
     const rawRumViewEvent = rawRumEvents[rawRumEvents.length - 1].rawRumEvent as RawRumViewEvent
 
-    expect(rawRumViewEvent._dd.page_states).toBeUndefined()
+    expect(rawRumViewEvent._oo.page_states).toBeUndefined()
     expect(rawRumViewEvent.view.in_foreground_periods).toBeDefined()
   })
 

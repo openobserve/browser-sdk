@@ -280,7 +280,7 @@ export function makeRumPublicApi(
   function canInitRum(initConfiguration: RumInitConfiguration) {
     if (isAlreadyInitialized) {
       if (!initConfiguration.silentMultipleInit) {
-        display.error('DD_RUM is already initialized.')
+        display.error('OO_RUM is already initialized.')
       }
       return false
     }

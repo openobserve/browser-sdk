@@ -66,26 +66,26 @@ describe('session in cookie strategy', () => {
       {
         initConfiguration: { clientToken: 'abc' },
         cookieOptions: {},
-        cookieString: /^dd_cookie_test_[\w-]+=[^;]*;expires=[^;]+;path=\/;samesite=strict$/,
+        cookieString: /^oo_cookie_test_[\w-]+=[^;]*;expires=[^;]+;path=\/;samesite=strict$/,
         description: 'should set samesite to strict by default',
       },
       {
         initConfiguration: { clientToken: 'abc', useCrossSiteSessionCookie: true },
         cookieOptions: { crossSite: true, secure: true },
-        cookieString: /^dd_cookie_test_[\w-]+=[^;]*;expires=[^;]+;path=\/;samesite=none;secure$/,
+        cookieString: /^oo_cookie_test_[\w-]+=[^;]*;expires=[^;]+;path=\/;samesite=none;secure$/,
         description: 'should set samesite to none and secure to true for crossSite',
       },
       {
         initConfiguration: { clientToken: 'abc', useSecureSessionCookie: true },
         cookieOptions: { secure: true },
-        cookieString: /^dd_cookie_test_[\w-]+=[^;]*;expires=[^;]+;path=\/;samesite=strict;secure$/,
+        cookieString: /^oo_cookie_test_[\w-]+=[^;]*;expires=[^;]+;path=\/;samesite=strict;secure$/,
         description: 'should add secure attribute when defined',
       },
       {
         initConfiguration: { clientToken: 'abc', trackSessionAcrossSubdomains: true },
         cookieOptions: { domain: 'foo.bar' },
         cookieString: new RegExp(
-          `^dd_cookie_test_[\\w-]+=[^;]*;expires=[^;]+;path=\\/;samesite=strict;domain=${getCurrentSite()}$`
+          `^oo_cookie_test_[\\w-]+=[^;]*;expires=[^;]+;path=\\/;samesite=strict;domain=${getCurrentSite()}$`
         ),
         description: 'should set cookie domain when tracking accross subdomains',
       },

@@ -8,6 +8,8 @@ local.log
 specs.log
 /test-report/
 browserstack.err
+.env
+.npmrc
 
 # https://yarnpkg.com/getting-started/qa#which-files-should-be-gitignored
 .pnp.*

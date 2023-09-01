@@ -65,7 +65,7 @@ function processViewUpdate(
   const pageStatesEnabled = isExperimentalFeatureEnabled(ExperimentalFeature.PAGE_STATES)
   const pageStates = pageStateHistory.findAll(view.startClocks.relative, view.duration)
   const viewEvent: RawRumViewEvent = {
-    _dd: {
+    _oo: {
       document_version: view.documentVersion,
       replay_stats: replayStats,
       page_states: pageStatesEnabled ? pageStates : undefined,
