@@ -13,8 +13,8 @@
     "replace-build-env": "node ../../scripts/build/replace-build-env.js"
   },
   "dependencies": {
-    "@openobserve/browser-rum-core": "0.1.1",
-    "@openobserve/browser-core": "0.1.1"
+    "@openobserve/browser-core": "0.1.1",
+    "@openobserve/browser-rum-core": "0.1.1"
   },
   "peerDependencies": {
     "@openobserve/browser-logs": "0.1.1"

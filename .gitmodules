@@ -1,4 +1,4 @@
 [submodule "rum-events-format"]
 	path = rum-events-format
 	url = https://github.com/openobserve/rum-events-format
-	branch = master
+	branch = openobserve

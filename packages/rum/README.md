@@ -12,9 +12,9 @@ To start collecting events, add [`@openobserve/browser-rum`][2] to your `package
 import { openobserveRum } from '@openobserve/browser-rum'
 
 openobserveRum.init({
-  applicationId: '<DATADOG_APPLICATION_ID>',
-  clientToken: '<DATADOG_CLIENT_TOKEN>',
-  site: '<DATADOG_SITE>',
+  applicationId: '<OPENOBSERVE_APPLICATION_ID>',
+  clientToken: '<OPENOBSERVE_CLIENT_TOKEN>',
+  site: '<OPENOBSERVE_SITE>',
   //  service: 'my-web-application',
   //  env: 'production',
   //  version: '1.0.0',

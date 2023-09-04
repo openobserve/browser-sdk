@@ -12,8 +12,8 @@ After adding [`@openobserve/browser-logs`][2] to your `package.json` file, initi
 import { openobserveLogs } from '@openobserve/browser-logs'
 
 openobserveLogs.init({
-  clientToken: '<DATADOG_CLIENT_TOKEN>',
-  site: '<DATADOG_SITE>',
+  clientToken: '<OPENOBSERVE_CLIENT_TOKEN>',
+  site: '<OPENOBSERVE_SITE>',
   forwardErrorsToLogs: true,
   sessionSampleRate: 100,
 })

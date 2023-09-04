@@ -83,8 +83,8 @@ function uploadSourceMaps(packageName, service, prefix, bundleFolder, sites) {
       --repository-url https://www.github.com/openobserve/browser-sdk
   `
       .withEnvironment({
-        DATADOG_API_KEY: getTelemetryOrgApiKey(site),
-        DATADOG_SITE: site,
+        OPENOBSERVE_API_KEY: getTelemetryOrgApiKey(site),
+        OPENOBSERVE_SITE: site,
       })
       .run()
   }

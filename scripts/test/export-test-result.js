@@ -16,7 +16,7 @@ const resultFolder = `test-report/${testType}/`
 runMain(() => {
   command`openobserve-ci junit upload --service browser-sdk --env ci --tags test.type:${testType} ${resultFolder}`
     .withEnvironment({
-      DATADOG_API_KEY: getOrg2ApiKey(),
+      OPENOBSERVE_API_KEY: getOrg2ApiKey(),
     })
     .run()
 
