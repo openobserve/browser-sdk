@@ -49,13 +49,13 @@ describe('endpointBuilder', () => {
       ).toContain('&dd-evp-encoding=deflate')
     })
 
-    it('should not start with ddsource for internal analytics mode', () => {
+    it('should not start with oosource for internal analytics mode', () => {
       const url = createEndpointBuilder({ ...initConfiguration, internalAnalyticsSubdomain: 'foo' }, 'rum', []).build(
         'xhr',
         DEFAULT_PAYLOAD
       )
-      expect(url).not.toContain('/rum?ddsource')
-      expect(url).toContain('ddsource=browser')
+      expect(url).not.toContain('/rum?oosource')
+      expect(url).toContain('oosource=browser')
     })
   })
 
@@ -68,7 +68,7 @@ describe('endpointBuilder', () => {
         )
       ).toMatch(
         `https://proxy.io/path\\?ddforward=${encodeURIComponent(
-          `/api/v2/rum?ddsource=(.*)&ddtags=(.*)&oo-api-key=${clientToken}` +
+          `/api/v2/rum?oosource=(.*)&ddtags=(.*)&oo-api-key=${clientToken}` +
           '&oo-evp-origin-version=(.*)&oo-evp-origin=browser&oo-request-id=(.*)&batch_time=(.*)'
         )}`
       )
