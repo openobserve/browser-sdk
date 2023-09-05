@@ -102,7 +102,7 @@ export const AST_HIDDEN = {
       attributes: {
         rr_width: '0px',
         rr_height: '0px',
-        'data-dd-privacy': 'hidden',
+        'data-oo-privacy': 'hidden',
       },
       childNodes: [],
     },
@@ -122,7 +122,7 @@ export const AST_MASK = {
       type: 2,
       tagName: 'html',
       attributes: {
-        'data-dd-privacy': 'mask',
+        'data-oo-privacy': 'mask',
       },
       childNodes: [
         {
@@ -429,7 +429,7 @@ export const AST_MASK_USER_INPUT = {
       type: 2,
       tagName: 'html',
       attributes: {
-        'data-dd-privacy': 'mask-user-input',
+        'data-oo-privacy': 'mask-user-input',
       },
       childNodes: [
         {
@@ -736,7 +736,7 @@ export const AST_ALLOW = {
       type: 2,
       tagName: 'html',
       attributes: {
-        'data-dd-privacy': 'allow',
+        'data-oo-privacy': 'allow',
       },
       childNodes: [
         {

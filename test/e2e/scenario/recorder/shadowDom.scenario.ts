@@ -38,7 +38,7 @@ const inputShadowDom = `<script>
      const privacyOverride = this.getAttribute("privacy");
      const parent = document.createElement("div");
      if (privacyOverride) {
-       parent.setAttribute("data-dd-privacy", privacyOverride);
+       parent.setAttribute("data-oo-privacy", privacyOverride);
      }
      const label = document.createElement("label");
      label.setAttribute("id", "label-" + componentId);
@@ -159,7 +159,7 @@ describe('recorder with shadow DOM', () => {
     .withSetup(bundleSetup)
     .withBody(html`
       ${inputShadowDom}
-      <div data-dd-privacy="mask-user-input"><my-input-field id="privacy-set-outside" /></div>
+      <div data-oo-privacy="mask-user-input"><my-input-field id="privacy-set-outside" /></div>
       <my-input-field privacy="mask-user-input" id="privacy-set-inside" />
     `)
     .run(async ({ intakeRegistry }) => {

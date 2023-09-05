@@ -35,8 +35,8 @@ describe('getDocumentTraceId', () => {
           `${HTML_DOCTYPE}
           <html>
             <head>
-              <meta name="dd-trace-id" content="foo" />
-              <meta name="dd-trace-time" content="${Date.now()}" />
+              <meta name="oo-trace-id" content="foo" />
+              <meta name="oo-trace-time" content="${Date.now()}" />
             </head>
             <body>
             </body>
@@ -54,8 +54,8 @@ describe('getDocumentTraceId', () => {
           ${HTML_DOCTYPE}
           <html>
             <head>
-              <meta name="dd-trace-id" content="meta" />
-              <meta name="dd-trace-time" content="${Date.now()}" />
+              <meta name="oo-trace-id" content="meta" />
+              <meta name="oo-trace-time" content="${Date.now()}" />
             </head>
             <body>
             </body>
@@ -94,8 +94,8 @@ describe('getDocumentTraceDataFromMeta', () => {
           `${HTML_DOCTYPE}
           <html>
             <head>
-              <meta name="dd-trace-id" content="123" />
-              <meta name="dd-trace-time" content="456" />
+              <meta name="oo-trace-id" content="123" />
+              <meta name="oo-trace-time" content="456" />
             </head>
             <body>
             </body>
@@ -112,7 +112,7 @@ describe('getDocumentTraceDataFromMeta', () => {
           `${HTML_DOCTYPE}
           <html>
             <head>
-              <meta name="dd-trace-id" content="123" />
+              <meta name="oo-trace-id" content="123" />
             </head>
             <body>
             </body>

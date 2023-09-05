@@ -20,8 +20,8 @@ export function getDocumentTraceId(document: Document): string | undefined {
 }
 
 export function getDocumentTraceDataFromMeta(document: Document): DocumentTraceData | undefined {
-  const traceIdMeta = document.querySelector<HTMLMetaElement>('meta[name=dd-trace-id]')
-  const traceTimeMeta = document.querySelector<HTMLMetaElement>('meta[name=dd-trace-time]')
+  const traceIdMeta = document.querySelector<HTMLMetaElement>('meta[name=oo-trace-id]')
+  const traceTimeMeta = document.querySelector<HTMLMetaElement>('meta[name=oo-trace-time]')
   return createDocumentTraceData(traceIdMeta && traceIdMeta.content, traceTimeMeta && traceTimeMeta.content)
 }
 

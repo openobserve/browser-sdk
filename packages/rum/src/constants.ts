@@ -9,7 +9,7 @@ export const NodePrivacyLevel = {
 } as const
 export type NodePrivacyLevel = (typeof NodePrivacyLevel)[keyof typeof NodePrivacyLevel]
 
-export const PRIVACY_ATTR_NAME = 'data-dd-privacy'
+export const PRIVACY_ATTR_NAME = 'data-oo-privacy'
 
 // Privacy Attrs
 export const PRIVACY_ATTR_VALUE_ALLOW = 'allow'
@@ -18,10 +18,10 @@ export const PRIVACY_ATTR_VALUE_MASK_USER_INPUT = 'mask-user-input'
 export const PRIVACY_ATTR_VALUE_HIDDEN = 'hidden'
 
 // Privacy Classes - not all customers can set plain HTML attributes, so support classes too
-export const PRIVACY_CLASS_ALLOW = 'dd-privacy-allow'
-export const PRIVACY_CLASS_MASK = 'dd-privacy-mask'
-export const PRIVACY_CLASS_MASK_USER_INPUT = 'dd-privacy-mask-user-input'
-export const PRIVACY_CLASS_HIDDEN = 'dd-privacy-hidden'
+export const PRIVACY_CLASS_ALLOW = 'oo-privacy-allow'
+export const PRIVACY_CLASS_MASK = 'oo-privacy-mask'
+export const PRIVACY_CLASS_MASK_USER_INPUT = 'oo-privacy-mask-user-input'
+export const PRIVACY_CLASS_HIDDEN = 'oo-privacy-hidden'
 
 // Private Replacement Templates
 export const CENSORED_STRING_MARK = '***'

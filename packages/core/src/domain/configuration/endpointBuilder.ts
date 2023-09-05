@@ -93,12 +93,12 @@ function buildEndpointParameters(
   }
 
   const parameters = [
-    'ddsource=browser',
-    `ddtags=${encodeURIComponent(tags.join(','))}`,
-    `dd-api-key=${clientToken}`,
-    `dd-evp-origin-version=${encodeURIComponent(__BUILD_ENV__SDK_VERSION__)}`,
-    'dd-evp-origin=browser',
-    `dd-request-id=${generateUUID()}`,
+    'oosource=browser',
+    `ootags=${encodeURIComponent(tags.join(','))}`,
+    `oo-api-key=${clientToken}`,
+    `oo-evp-origin-version=${encodeURIComponent(__BUILD_ENV__SDK_VERSION__)}`,
+    'oo-evp-origin=browser',
+    `oo-request-id=${generateUUID()}`,
   ]
 
   if (encoding) {

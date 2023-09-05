@@ -83,10 +83,10 @@ describe('recorder', () => {
       .withSetup(bundleSetup)
       .withBody(html`
         <div id="not-obfuscated">displayed</div>
-        <p id="hidden-by-attribute" data-dd-privacy="hidden">hidden</p>
-        <span id="hidden-by-classname" class="dd-privacy-hidden">hidden</span>
+        <p id="hidden-by-attribute" data-oo-privacy="hidden">hidden</p>
+        <span id="hidden-by-classname" class="oo-privacy-hidden">hidden</span>
         <input id="input-not-obfuscated" value="displayed" />
-        <input id="input-masked" data-dd-privacy="mask" value="masked" />
+        <input id="input-masked" data-oo-privacy="mask" value="masked" />
       `)
       .run(async ({ intakeRegistry }) => {
         await flushEvents()
@@ -101,13 +101,13 @@ describe('recorder', () => {
 
         const hiddenNodeByAttribute = findElement(fullSnapshot.data.node, (node) => node.tagName === 'p')
         expect(hiddenNodeByAttribute).toBeTruthy()
-        expect(hiddenNodeByAttribute!.attributes['data-dd-privacy']).toBe('hidden')
+        expect(hiddenNodeByAttribute!.attributes['data-oo-privacy']).toBe('hidden')
         expect(hiddenNodeByAttribute!.childNodes.length).toBe(0)
 
         const hiddenNodeByClassName = findElement(fullSnapshot.data.node, (node) => node.tagName === 'span')
         expect(hiddenNodeByClassName).toBeTruthy()
         expect(hiddenNodeByClassName!.attributes.class).toBeUndefined()
-        expect(hiddenNodeByClassName!.attributes['data-dd-privacy']).toBe('hidden')
+        expect(hiddenNodeByClassName!.attributes['data-oo-privacy']).toBe('hidden')
         expect(hiddenNodeByClassName!.childNodes.length).toBe(0)
 
         const inputIgnored = findElementWithIdAttribute(fullSnapshot.data.node, 'input-not-obfuscated')
@@ -263,7 +263,7 @@ describe('recorder', () => {
       .withRum()
       .withSetup(bundleSetup)
       .withBody(html`
-        <div data-dd-privacy="hidden">
+        <div data-oo-privacy="hidden">
           <ul>
             <li></li>
           </ul>
@@ -524,7 +524,7 @@ describe('recorder', () => {
       .withSetup(bundleSetup)
       .withBody(html`
         <input type="text" id="first" name="first" />
-        <input type="text" id="second" name="second" data-dd-privacy="input-ignored" />
+        <input type="text" id="second" name="second" data-oo-privacy="input-ignored" />
         <input type="text" id="third" name="third" class="dd-privacy-input-ignored" />
         <input type="password" id="fourth" name="fourth" />
       `)
@@ -557,8 +557,8 @@ describe('recorder', () => {
       .withRum()
       .withSetup(bundleSetup)
       .withBody(html`
-        <input type="text" id="by-data-attribute" data-dd-privacy="mask" />
-        <input type="text" id="by-classname" class="dd-privacy-mask" />
+        <input type="text" id="by-data-attribute" data-oo-privacy="mask" />
+        <input type="text" id="by-classname" class="oo-privacy-mask" />
       `)
       .run(async ({ intakeRegistry }) => {
         const firstInput = await $('#by-data-attribute')

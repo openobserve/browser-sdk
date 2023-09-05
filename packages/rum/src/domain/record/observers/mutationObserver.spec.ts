@@ -606,7 +606,7 @@ describe('startMutationCollection', () => {
     })
 
     it('respects the parent privacy level when emitting a text node mutation', () => {
-      sandbox.setAttribute('data-dd-privacy', 'allow')
+      sandbox.setAttribute('data-oo-privacy', 'allow')
       const div = appendElement('<div>foo 81</div>', sandbox)
 
       const serializedDocument = serializeDocumentWithDefaults()
@@ -856,7 +856,7 @@ describe('startMutationCollection', () => {
   describe('hidden nodes', () => {
     let hiddenElement: HTMLElement
     beforeEach(() => {
-      hiddenElement = appendElement("<div data-dd-privacy='hidden'></div>", sandbox)
+      hiddenElement = appendElement("<div data-oo-privacy='hidden'></div>", sandbox)
     })
 
     it('does not emit attribute mutations on hidden nodes', () => {
