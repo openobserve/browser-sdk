@@ -38,7 +38,8 @@ export interface InitConfiguration {
   // tag and context options
   service?: string | undefined
   env?: string | undefined
-  version: string | undefined
+  version?: string | undefined
+  apiVersion: string
   organizationIdentifier: string | undefined
 
   // cookie options
