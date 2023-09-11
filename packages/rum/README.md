@@ -25,6 +25,7 @@ openobserveRum.init({
   trackUserInteractions: true,
   apiVersion: 'v1',
   organizationIdentifier: '<OPENOBSERVE_ORGANIZATION_IDENTIFIER>',
+  insecureHTTP: false,
 })
 ```
 

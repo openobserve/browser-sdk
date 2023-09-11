@@ -132,6 +132,7 @@ export function validateAndBuildRumConfiguration(
       customerDataTelemetrySampleRate: 1,
       apiVersion: initConfiguration.apiVersion ?? 'v1',
       organizationIdentifier: initConfiguration.organizationIdentifier,
+      insecureHTTP: initConfiguration.insecureHTTP,
     },
     baseConfiguration
   )
