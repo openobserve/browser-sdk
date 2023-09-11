@@ -45,11 +45,11 @@ export function createIntakeServerApp(intakeRegistry: IntakeRegistry) {
 }
 
 function computeIntakeRequestInfos(req: express.Request): IntakeRequestInfos {
-  const ddforward = req.query.ddforward as string | undefined
-  if (!ddforward) {
+  const ooforward = req.query.ooforward as string | undefined
+  if (!ooforward) {
     throw new Error('ddforward is missing')
   }
-  const { pathname, searchParams } = new URL(ddforward, 'https://example.org')
+  const { pathname, searchParams } = new URL(ooforward, 'https://example.org')
 
   const encoding = req.headers['content-encoding'] || searchParams.get('dd-evp-encoding')
 

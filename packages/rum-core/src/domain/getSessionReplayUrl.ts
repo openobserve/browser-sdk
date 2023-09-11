@@ -40,9 +40,9 @@ function getSiteDefaultSubdomain(configuration: RumConfiguration): string | unde
   switch (configuration.site) {
     case INTAKE_SITE_US1:
     case INTAKE_SITE_EU1:
-      return 'app'
+      return ''
     case INTAKE_SITE_STAGING:
-      return 'dd'
+      return ''
     default:
       return undefined
   }

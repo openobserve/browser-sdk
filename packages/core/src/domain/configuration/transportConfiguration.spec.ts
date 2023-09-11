@@ -101,7 +101,7 @@ describe('transportConfiguration', () => {
         clientToken,
         internalAnalyticsSubdomain,
       })
-      expect(configuration.isIntakeUrl(`https://api.openobserve.ai/api/v2/rum?xxx`)).toBe(true)
+      expect(configuration.isIntakeUrl(`https://api.openobserve.ai/rum/v2/rum?xxx`)).toBe(true)
     })
 
     it('should not detect non intake request', () => {
@@ -149,7 +149,7 @@ describe('transportConfiguration', () => {
           internalAnalyticsSubdomain,
         })
 
-          expect(configuration.isIntakeUrl(`https://api.openobserve.ai/api/v2/rum?xxx`)).toBe(
+          expect(configuration.isIntakeUrl(`https://api.openobserve.ai/rum/v2/rum?xxx`)).toBe(
             true
           )
         })

@@ -4,7 +4,7 @@ import { normalizeUrl } from '../../tools/utils/urlPolyfill'
 import { ExperimentalFeature, isExperimentalFeatureEnabled } from '../../tools/experimentalFeatures'
 import { generateUUID } from '../../tools/utils/stringUtils'
 import type { InitConfiguration } from './configuration'
-import { INTAKE_SITE_US1, INTAKE_SITE_FED_STAGING } from './intakeSites'
+import { INTAKE_SITE_US1 } from './intakeSites'
 
 // replaced at build time
 declare const __BUILD_ENV__SDK_VERSION__: string
@@ -46,11 +46,13 @@ function createEndpointUrlWithParametersBuilder(
   initConfiguration: InitConfiguration,
   trackType: TrackType
 ): (parameters: string) => string {
-  const path = `/api/v2/${trackType}`
-  const proxy = initConfiguration.proxy
-  if (typeof proxy === 'string') {
+  const { proxy, version, organizationIdentifier } = initConfiguration
+
+  const path = `/rum/${version}/${organizationIdentifier}/${trackType}`
+
+  if (proxy) {
     const normalizedProxyUrl = normalizeUrl(proxy)
-    return (parameters) => `${normalizedProxyUrl}?ddforward=${encodeURIComponent(`${path}?${parameters}`)}`
+    return (parameters) => `${normalizedProxyUrl}?ooforward=${encodeURIComponent(`${path}?${parameters}`)}`
   }
   if (typeof proxy === 'function') {
     return (parameters) => proxy({ path, parameters })

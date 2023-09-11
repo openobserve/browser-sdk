@@ -195,17 +195,19 @@ export function html(parts: readonly string[], ...vars: string[]) {
 function setupEventBridge(servers: Servers) {
   const baseHostname = new URL(servers.base.url).hostname
 
+  const version =
+
   // Send EventBridge events to the intake so we can inspect them in our E2E test cases. The URL
   // needs to be similar to the normal Openobserve intake (through proxy) to make the SDK completely
   // ignore them.
   const eventBridgeIntake = `${servers.intake.url}/?${new URLSearchParams({
-    ddforward: '/api/v2/rum?',
+    ooforward: '/rum/v2/rum?',
     bridge: 'true',
   }).toString()}`
 
   return html`
     <script type="text/javascript">
-      window.DatadogEventBridge = {
+      window.OpenobserveEventBridge = {
         getAllowedWebViewHosts() {
           return '["${baseHostname}"]'
         },

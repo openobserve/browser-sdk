@@ -19,6 +19,7 @@ import type { PropagatorType, TracingOption } from './tracing/tracer.types'
 export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext', 'openobserve']
 
 export interface RumInitConfiguration extends InitConfiguration {
+  [x: string]: any
   // global options
   applicationId: string
   beforeSend?: ((event: RumEvent, context: RumEventDomainContext) => boolean) | undefined
@@ -67,6 +68,7 @@ export interface RumConfiguration extends Configuration {
   trackLongTasks: boolean
   version?: string
   subdomain?: string
+  organizationIdentifier?: string
   customerDataTelemetrySampleRate: number
 }
 
@@ -127,6 +129,7 @@ export function validateAndBuildRumConfiguration(
         ? initConfiguration.defaultPrivacyLevel
         : DefaultPrivacyLevel.MASK,
       customerDataTelemetrySampleRate: 1,
+      organizationIdentifier: initConfiguration.organizationIdentifier,
     },
     baseConfiguration
   )
