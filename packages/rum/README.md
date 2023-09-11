@@ -23,6 +23,8 @@ openobserveRum.init({
   trackResources: true,
   trackLongTasks: true,
   trackUserInteractions: true,
+  apiVersion: 'v1',
+  organizationIdentifier: '<OPENOBSERVE_ORGANIZATION_IDENTIFIER>',
 })
 ```
 
