@@ -39,9 +39,6 @@ export interface InitConfiguration {
   service?: string | undefined
   env?: string | undefined
   version?: string | undefined
-  apiVersion: string
-  organizationIdentifier: string | undefined
-  insecureHTTP: boolean
 
   // cookie options
   /**
@@ -60,6 +57,10 @@ export interface InitConfiguration {
   internalAnalyticsSubdomain?: string
 
   telemetryConfigurationSampleRate?: number
+
+  apiVersion: string
+  organizationIdentifier: string
+  insecureHTTP: boolean
 }
 
 // This type is only used to build the core configuration. Logs and RUM SDKs are using a proper type
@@ -164,6 +165,10 @@ export function validateAndBuildConfiguration(initConfiguration: InitConfigurati
        */
       batchMessagesLimit: 50,
       messageBytesLimit: 256 * ONE_KIBI_BYTE,
+
+      apiVersion: initConfiguration.apiVersion ?? 'v1',
+      organizationIdentifier: initConfiguration.organizationIdentifier,
+      insecureHTTP: initConfiguration.insecureHTTP,
     },
     computeTransportConfiguration(initConfiguration)
   )

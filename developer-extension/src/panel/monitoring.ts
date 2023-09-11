@@ -20,6 +20,9 @@ export function initMonitoring() {
     trackResources: true,
     trackLongTasks: true,
     defaultPrivacyLevel: 'mask',
+    apiVersion: 'v1',
+    organizationIdentifier: '',
+    insecureHTTP: false,
   })
   openobserveRum.startSessionReplayRecording()
   openobserveRum.startView(DEFAULT_PANEL_TAB)
@@ -36,5 +39,8 @@ export function initMonitoring() {
     forwardReports: 'all',
     sessionSampleRate: 100,
     telemetrySampleRate: 100,
+    apiVersion: '',
+    organizationIdentifier: '',
+    insecureHTTP: false,
   })
 }

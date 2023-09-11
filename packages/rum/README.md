@@ -15,6 +15,7 @@ openobserveRum.init({
   applicationId: '<OPENOBSERVE_APPLICATION_ID>',
   clientToken: '<OPENOBSERVE_CLIENT_TOKEN>',
   site: '<OPENOBSERVE_SITE>',
+  organizationIdentifier: '<OPENOBSERVE_ORGANIZATION_IDENTIFIER>',
   //  service: 'my-web-application',
   //  env: 'production',
   //  version: '1.0.0',
@@ -24,7 +25,6 @@ openobserveRum.init({
   trackLongTasks: true,
   trackUserInteractions: true,
   apiVersion: 'v1',
-  organizationIdentifier: '<OPENOBSERVE_ORGANIZATION_IDENTIFIER>',
   insecureHTTP: false,
 })
 ```
