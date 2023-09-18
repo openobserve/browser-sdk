@@ -46,19 +46,21 @@ function createEndpointUrlWithParametersBuilder(
   initConfiguration: InitConfiguration,
   trackType: TrackType
 ): (parameters: string) => string {
-  const { proxy, version, organizationIdentifier } = initConfiguration
+  const { proxy, apiVersion, organizationIdentifier, insecureHTTP } = initConfiguration
 
-  const path = `/rum/${version}/${organizationIdentifier}/${trackType}`
+  const path = `/rum/${apiVersion}/${organizationIdentifier}/${trackType}`
 
   if (proxy) {
     const normalizedProxyUrl = normalizeUrl(proxy)
-    return (parameters) => `${normalizedProxyUrl}?ooforward=${encodeURIComponent(`${path}?${parameters}`)}`
+    return (parameters) => `${normalizedProxyUrl}?o2forward=${encodeURIComponent(`${path}?${parameters}`)}`
   }
   if (typeof proxy === 'function') {
     return (parameters) => proxy({ path, parameters })
   }
   const host = buildEndpointHost(initConfiguration)
-  return (parameters) => `https://${host}${path}?${parameters}`
+  const protocol = insecureHTTP ? 'http' : 'https'
+
+  return (parameters) => `${protocol}://${host}${path}?${parameters}`
 }
 
 function buildEndpointHost(initConfiguration: InitConfiguration) {
@@ -95,16 +97,16 @@ function buildEndpointParameters(
   }
 
   const parameters = [
-    'oosource=browser',
-    `ootags=${encodeURIComponent(tags.join(','))}`,
-    `oo-api-key=${clientToken}`,
-    `oo-evp-origin-version=${encodeURIComponent(__BUILD_ENV__SDK_VERSION__)}`,
-    'oo-evp-origin=browser',
-    `oo-request-id=${generateUUID()}`,
+    'o2source=browser',
+    `o2tags=${encodeURIComponent(tags.join(','))}`,
+    `o2-api-key=${clientToken}`,
+    `o2-evp-origin-version=${encodeURIComponent(__BUILD_ENV__SDK_VERSION__)}`,
+    'o2-evp-origin=browser',
+    `o2-request-id=${generateUUID()}`,
   ]
 
   if (encoding) {
-    parameters.push(`dd-evp-encoding=${encoding}`)
+    parameters.push(`o2-evp-encoding=${encoding}`)
   }
 
   if (trackType === 'rum') {
