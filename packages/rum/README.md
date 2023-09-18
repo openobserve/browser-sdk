@@ -2,11 +2,9 @@
 
 Openobserve Real User Monitoring (RUM) enables you to visualize and analyze the real-time performance and user journeys of your application's individual users.
 
-See the [dedicated openobserve documentation][1] for more details.
-
 ## Usage
 
-To start collecting events, add [`@openobserve/browser-rum`][2] to your `package.json` file, then initialize it with:
+To start collecting events, add [`@openobserve/browser-rum`][1] to your `package.json` file, then initialize it with:
 
 ```javascript
 import { openobserveRum } from '@openobserve/browser-rum'
@@ -33,5 +31,4 @@ openobserveRum.init({
 
 <!-- Note: all URLs should be absolute -->
 
-[1]: https://docs.datadoghq.com/real_user_monitoring/browser
-[2]: https://www.npmjs.com/package/@openobserve/browser-rum
+[1]: https://www.npmjs.com/package/@openobserve/browser-rum
