@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-core",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "license": "Apache-2.0",
   "main": "cjs/index.js",
   "module": "esm/index.js",
