@@ -180,7 +180,7 @@ export type TelemetryConfigurationEvent = CommonTelemetryProperties & {
       /**
        * A list of selected tracing propagators
        */
-      selected_tracing_propagators?: ('openobserve' | 'datadog' | 'b3' | 'b3multi' | 'tracecontext')[]
+      selected_tracing_propagators?: ('tracecontext' | 'b3' | 'b3multi')[]
       /**
        * Session replay default privacy level
        */

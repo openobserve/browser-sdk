@@ -146,15 +146,6 @@ function makeTracingHeaders(
 
   propagatorTypes.forEach((propagatorType) => {
     switch (propagatorType) {
-      case 'openobserve': {
-        assign(tracingHeaders, {
-          'x-openobserve-origin': 'rum',
-          'x-openobserve-parent-id': spanId.toDecimalString(),
-          'x-openobserve-sampling-priority': traceSampled ? '1' : '0',
-          'x-openobserve-trace-id': traceId.toDecimalString(),
-        })
-        break
-      }
       // https://www.w3.org/TR/trace-context/
       case 'tracecontext': {
         assign(tracingHeaders, {

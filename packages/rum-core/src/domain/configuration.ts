@@ -150,7 +150,7 @@ function validateAndBuildTracingOptions(initConfiguration: RumInitConfiguration)
     const tracingOptions: TracingOption[] = []
     initConfiguration.allowedTracingUrls.forEach((option) => {
       if (isMatchOption(option)) {
-        tracingOptions.push({ match: option, propagatorTypes: ['openobserve'] })
+        tracingOptions.push({ match: option, propagatorTypes: ['tracecontext'] })
       } else if (isTracingOption(option)) {
         tracingOptions.push(option)
       } else {

@@ -21,7 +21,7 @@ describe('tracer', () => {
     clientToken: 'xxx',
     applicationId: 'xxx',
     service: 'service',
-    allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['openobserve'] }],
+    allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['tracecontext'] }],
   }
 
   beforeEach(() => {
