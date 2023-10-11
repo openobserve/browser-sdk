@@ -12,6 +12,7 @@ import {
   isExperimentalFeatureEnabled,
   ExperimentalFeature,
   getConnectivity,
+  dateNow,
 } from '@openobserve/browser-core'
 import type { RumEventDomainContext } from '../domainContext.types'
 import type {
@@ -148,6 +149,7 @@ export function startRumAssembly(
           session: {
             id: session.id,
             type: syntheticsContext ? SessionType.SYNTHETICS : ciTestContext ? SessionType.CI_TEST : SessionType.USER,
+            start_time: session.start_time ?? dateNow,
           },
           view: {
             id: viewContext.id,

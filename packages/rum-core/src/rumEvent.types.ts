@@ -946,6 +946,11 @@ export interface CommonProperties {
      */
     readonly has_replay?: boolean
     [k: string]: unknown
+
+    /**
+     * UUID of the session
+     */
+    readonly start_time: number
   }
   /**
    * The source of this event
