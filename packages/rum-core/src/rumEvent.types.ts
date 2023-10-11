@@ -950,7 +950,7 @@ export interface CommonProperties {
     /**
      * UUID of the session
      */
-    readonly start_time: number
+    readonly start_time?: number
   }
   /**
    * The source of this event

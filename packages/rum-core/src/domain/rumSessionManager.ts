@@ -13,7 +13,7 @@ export interface RumSessionManager {
 }
 
 export type RumSession = {
-  start_time: number
+  start_time?: number
   id: string
   sessionReplayAllowed: boolean
 }
