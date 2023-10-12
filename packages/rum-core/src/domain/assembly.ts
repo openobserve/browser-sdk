@@ -149,7 +149,7 @@ export function startRumAssembly(
           session: {
             id: session.id,
             type: syntheticsContext ? SessionType.SYNTHETICS : ciTestContext ? SessionType.CI_TEST : SessionType.USER,
-            start_time: session.start_time ?? dateNow,
+            start_time: startTime ?? dateNow,
           },
           view: {
             id: viewContext.id,
