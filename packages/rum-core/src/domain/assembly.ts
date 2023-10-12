@@ -124,11 +124,15 @@ export function startRumAssembly(
       const viewContext = viewContexts.findView(startTime)
       const urlContext = urlContexts.findUrl(startTime)
       const session = sessionManager.findTrackedSession(startTime)
-      let sessionStartTime = sessionStorage.getItem('oo_rum_session_starttime');
-      if((sessionStorage.getItem('oo_rum_session_id') && sessionStorage.getItem('oo_rum_session_id') !== session?.id) || sessionStorage.getItem('oo_rum_session_starttime') === null){
-        sessionStartTime = (new Date().getTime()).toString();
-        sessionStorage.setItem('oo_rum_session_id', session?.id || '');
-        sessionStorage.setItem('oo_rum_session_starttime', sessionStartTime);
+
+      const sessionId = sessionStorage.getItem('oo_rum_session_id');
+      const sessionStartTimeFromStorage = sessionStorage.getItem('oo_rum_session_starttime');
+
+      console.log('sessionId: ', sessionId, ' ==> sessionStartTimeFromStorage: ', sessionStartTimeFromStorage, ' ==> session: ', session);
+      if (!sessionId || sessionId !== session?.id || !sessionStartTimeFromStorage) {
+          const sessionStartTime = (new Date().getTime()).toString();
+          sessionStorage.setItem('oo_rum_session_id', session?.id || '');
+          sessionStorage.setItem('oo_rum_session_starttime', sessionStartTime);
       }
       
       if (session && viewContext && urlContext) {
@@ -155,7 +159,7 @@ export function startRumAssembly(
           session: {
             id: session.id,
             type: syntheticsContext ? SessionType.SYNTHETICS : ciTestContext ? SessionType.CI_TEST : SessionType.USER,
-            start_time: parseInt(sessionStartTime || dateNow.toString(), 10),
+            start_time: parseInt(sessionStorage.getItem('oo_rum_session_starttime') || dateNow.toString(), 10),
           },
           view: {
             id: viewContext.id,
