@@ -124,6 +124,12 @@ export function startRumAssembly(
       const viewContext = viewContexts.findView(startTime)
       const urlContext = urlContexts.findUrl(startTime)
       const session = sessionManager.findTrackedSession(startTime)
+      let sessionStartTime = sessionStorage.getItem('oo_rum_session_starttime');
+      if((sessionStorage.getItem('oo_rum_session_id') && sessionStorage.getItem('oo_rum_session_id') !== session?.id) || sessionStorage.getItem('oo_rum_session_starttime') === null){
+        sessionStartTime = dateNow.toString();
+        sessionStorage.setItem('oo_rum_session_starttime', sessionStartTime);
+      }
+      
       if (session && viewContext && urlContext) {
         const commonContext = savedCommonContext || getCommonContext()
         const actionId = actionContexts.findActionId(startTime)
@@ -148,7 +154,7 @@ export function startRumAssembly(
           session: {
             id: session.id,
             type: syntheticsContext ? SessionType.SYNTHETICS : ciTestContext ? SessionType.CI_TEST : SessionType.USER,
-            start_time: startTime ?? dateNow,
+            start_time: parseInt(sessionStartTime || dateNow.toString(), 10),
           },
           view: {
             id: viewContext.id,
