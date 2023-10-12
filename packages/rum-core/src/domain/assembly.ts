@@ -126,7 +126,7 @@ export function startRumAssembly(
       const session = sessionManager.findTrackedSession(startTime)
       let sessionStartTime = sessionStorage.getItem('oo_rum_session_starttime');
       if((sessionStorage.getItem('oo_rum_session_id') && sessionStorage.getItem('oo_rum_session_id') !== session?.id) || sessionStorage.getItem('oo_rum_session_starttime') === null){
-        sessionStartTime = dateNow.toString();
+        sessionStartTime = (new Date().getTime()).toString();
         sessionStorage.setItem('oo_rum_session_id', session?.id || '');
         sessionStorage.setItem('oo_rum_session_starttime', sessionStartTime);
       }
