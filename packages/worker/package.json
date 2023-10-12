@@ -1,13 +1,13 @@
 {
   "name": "@openobserve/browser-worker",
-  "version": "0.2.6-beta.2",
+  "version": "0.2.6-beta.3",
   "license": "Apache-2.0",
   "main": "bundle/worker.js",
   "scripts": {
     "build": "rm -rf bundle && webpack --mode=production"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.2.6-beta.2"
+    "@openobserve/browser-core": "0.2.6-beta.3"
   },
   "repository": {
     "type": "git",
