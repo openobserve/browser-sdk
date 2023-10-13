@@ -238,13 +238,14 @@ function cleanupOldSessions(): void {
     const cleanedStartTimes: StartTimeObject = {};
 
     // Iterate through the sessions and keep the ones from today onwards
-    for (const [sessionId, sessionStartStr] of Object.entries(objStartTime)) {
-        const sessionStartTime = parseInt(sessionStartStr, 10);
+    Object.keys(objStartTime).forEach((sessionId) => {
+      const sessionStartStr = objStartTime[sessionId];
+      const sessionStartTime = parseInt(sessionStartStr, 10);
 
-        if (sessionStartTime >= startOfToday) {
-            cleanedStartTimes[sessionId] = sessionStartStr;
-        }
-    }
+      if (sessionStartTime >= startOfToday) {
+          cleanedStartTimes[sessionId] = sessionStartStr;
+      }
+    });
 
     // Store the cleaned object back into sessionStorage
     sessionStorage.setItem('oo_rum_session_starttime', JSON.stringify(cleanedStartTimes));
