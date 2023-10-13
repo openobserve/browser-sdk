@@ -60,6 +60,8 @@ let modifiableFieldPathsByEvent: { [key in RumEventType]: ModifiableFieldPaths }
 
 type Mutable<T> = { -readonly [P in keyof T]: T[P] }
 
+type StartTimeObject = { [key: string]: string };
+
 export function startRumAssembly(
   configuration: RumConfiguration,
   lifeCycle: LifeCycle,
@@ -125,16 +127,35 @@ export function startRumAssembly(
       const urlContext = urlContexts.findUrl(startTime)
       const session = sessionManager.findTrackedSession(startTime)
 
-      const sessionId = sessionStorage.getItem('oo_rum_session_id');
-      const sessionStartTimeFromStorage = sessionStorage.getItem('oo_rum_session_starttime');
+      let objStartTime: StartTimeObject = {};
+      const strStartTime = sessionStorage.getItem('oo_rum_session_starttime');
 
-      console.log('sessionId: ', sessionId, ' ==> sessionStartTimeFromStorage: ', sessionStartTimeFromStorage, ' ==> session: ', session);
-      if (!sessionId || sessionId !== session?.id || !sessionStartTimeFromStorage) {
-          const sessionStartTime = (new Date().getTime()).toString();
-          sessionStorage.setItem('oo_rum_session_id', session?.id || '');
-          sessionStorage.setItem('oo_rum_session_starttime', sessionStartTime);
+      if (strStartTime) {
+          try {
+              // Safely parsing the JSON string without using eval
+              objStartTime = JSON.parse(strStartTime);
+          } catch (error) {
+            console.log('Error parsing session start time:', error);
+          }
       }
-      
+
+      let sessionStartTime = '';
+
+      // Check if 'session' and 'session.id' are defined
+      if (session && session.id) {
+          // Use nullish coalescing operator (??) to provide a default object if objStartTime[session.id] is undefined
+          sessionStartTime = objStartTime[session.id] ?? '';
+
+          // Check if a new session start time needs to be created
+          if (sessionStartTime === '') {
+              objStartTime[session.id] = (new Date().getTime()).toString();
+              sessionStorage.setItem('oo_rum_session_starttime', JSON.stringify(objStartTime));
+              sessionStartTime = objStartTime[session.id];
+              // Invoke the cleanup function
+              cleanupOldSessions();
+          }
+      }
+
       if (session && viewContext && urlContext) {
         const commonContext = savedCommonContext || getCommonContext()
         const actionId = actionContexts.findActionId(startTime)
@@ -159,7 +180,7 @@ export function startRumAssembly(
           session: {
             id: session.id,
             type: syntheticsContext ? SessionType.SYNTHETICS : ciTestContext ? SessionType.CI_TEST : SessionType.USER,
-            start_time: parseInt(sessionStorage.getItem('oo_rum_session_starttime') || dateNow.toString(), 10),
+            start_time: sessionStartTime,
           },
           view: {
             id: viewContext.id,
@@ -197,6 +218,36 @@ export function startRumAssembly(
       }
     }
   )
+}
+
+function cleanupOldSessions(): void {
+    const strStartTime = sessionStorage.getItem('oo_rum_session_starttime');
+    let objStartTime: StartTimeObject = {};
+
+    if (strStartTime) {
+        try {
+            objStartTime = JSON.parse(strStartTime);
+        } catch (error) {
+            console.error("Error parsing session start time:", error);
+            return;
+        }
+    }
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const cleanedStartTimes: StartTimeObject = {};
+
+    // Iterate through the sessions and keep the ones from today onwards
+    for (const [sessionId, sessionStartStr] of Object.entries(objStartTime)) {
+        const sessionStartTime = parseInt(sessionStartStr, 10);
+
+        if (sessionStartTime >= startOfToday) {
+            cleanedStartTimes[sessionId] = sessionStartStr;
+        }
+    }
+
+    // Store the cleaned object back into sessionStorage
+    sessionStorage.setItem('oo_rum_session_starttime', JSON.stringify(cleanedStartTimes));
 }
 
 function shouldSend(
