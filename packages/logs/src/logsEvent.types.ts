@@ -22,7 +22,7 @@ export interface LogsEvent {
   /**
    * The service name
    */
-  service?: string
+  service: string
   /**
    * UUID of the session
    */

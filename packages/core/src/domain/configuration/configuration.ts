@@ -36,9 +36,9 @@ export interface InitConfiguration {
   site?: string | undefined
 
   // tag and context options
-  service?: string | undefined
-  env?: string | undefined
-  version?: string | undefined
+  service: string | undefined
+  env: string | undefined
+  version: string | undefined
 
   // cookie options
   /**
