@@ -17,7 +17,7 @@ describe('endpointBuilder', () => {
 
   beforeEach(() => {
     initConfiguration = { clientToken }
-      ; (window as unknown as BuildEnvWindow).__BUILD_ENV__SDK_VERSION__ = 'some_version'
+    ;(window as unknown as BuildEnvWindow).__BUILD_ENV__SDK_VERSION__ = 'some_version'
     resetExperimentalFeatures()
   })
 
@@ -49,13 +49,13 @@ describe('endpointBuilder', () => {
       ).toContain('&dd-evp-encoding=deflate')
     })
 
-    it('should not start with oosource for internal analytics mode', () => {
+    it('should not start with o2source for internal analytics mode', () => {
       const url = createEndpointBuilder({ ...initConfiguration, internalAnalyticsSubdomain: 'foo' }, 'rum', []).build(
         'xhr',
         DEFAULT_PAYLOAD
       )
-      expect(url).not.toContain('/rum?oosource')
-      expect(url).toContain('oosource=browser')
+      expect(url).not.toContain('/rum?o2source')
+      expect(url).toContain('o2source=browser')
     })
   })
 
@@ -68,8 +68,8 @@ describe('endpointBuilder', () => {
         )
       ).toMatch(
         `https://proxy.io/path\\?ooforward=${encodeURIComponent(
-          `/rum/v2/xyz/rum?oosource=(.*)&ddtags=(.*)&oo-api-key=${clientToken}` +
-          '&oo-evp-origin-version=(.*)&oo-evp-origin=browser&oo-request-id=(.*)&batch_time=(.*)'
+          `/rum/v2/xyz/rum?o2source=(.*)&o2tags=(.*)&o2-api-key=${clientToken}` +
+            '&o2-evp-origin-version=(.*)&o2-evp-origin=browser&o2-request-id=(.*)&batch_time=(.*)'
         )}`
       )
     })
