@@ -19,8 +19,8 @@ describe('logs', () => {
     .withLogs()
     .run(async ({ intakeRegistry }) => {
       await browserExecute(() => {
-        window.DD_LOGS!.logger.setHandler('console')
-        window.DD_LOGS!.logger.warn('hello')
+        window.OO_LOGS!.logger.setHandler('console')
+        window.OO_LOGS!.logger.warn('hello')
       })
       await flushEvents()
       expect(intakeRegistry.logsEvents.length).toBe(0)

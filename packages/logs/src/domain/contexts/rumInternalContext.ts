@@ -11,8 +11,8 @@ interface Rum {
 }
 
 interface BrowserWindow {
-  DD_RUM?: Rum
-  DD_RUM_SYNTHETICS?: Rum
+  OO_RUM?: Rum
+  OO_RUM_SYNTHETICS?: Rum
 }
 
 let logsSentBeforeRumInjectionTelemetryAdded = false
@@ -21,7 +21,7 @@ export function getRUMInternalContext(startTime?: RelativeTime): Context | undef
   const browserWindow = window as BrowserWindow
 
   if (willSyntheticsInjectRum()) {
-    const context = getInternalContextFromRumGlobal(browserWindow.DD_RUM_SYNTHETICS)
+    const context = getInternalContextFromRumGlobal(browserWindow.OO_RUM_SYNTHETICS)
     if (!context && !logsSentBeforeRumInjectionTelemetryAdded) {
       logsSentBeforeRumInjectionTelemetryAdded = true
       addTelemetryDebug('Logs sent before RUM is injected by the synthetics worker', {
@@ -32,7 +32,7 @@ export function getRUMInternalContext(startTime?: RelativeTime): Context | undef
     return context
   }
 
-  return getInternalContextFromRumGlobal(browserWindow.DD_RUM)
+  return getInternalContextFromRumGlobal(browserWindow.OO_RUM)
 
   function getInternalContextFromRumGlobal(rumGlobal?: Rum): Context | undefined {
     if (rumGlobal && rumGlobal.getInternalContext) {

@@ -5,7 +5,7 @@ import { combine } from '../../tools/mergeInto'
 import type { ContextManager } from './contextManager'
 import type { CustomerDataType } from './contextConstants'
 
-const CONTEXT_STORE_KEY_PREFIX = '_dd_c'
+const CONTEXT_STORE_KEY_PREFIX = '_oo_c'
 
 const storageListeners: Array<{ stop: () => void }> = []
 
