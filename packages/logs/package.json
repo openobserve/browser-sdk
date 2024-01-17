@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-logs",
-  "version": "0.2.11",
+  "version": "0.2.11-rc1",
   "license": "Apache-2.0",
   "main": "cjs/entries/main.js",
   "module": "esm/entries/main.js",
@@ -13,10 +13,10 @@
     "replace-build-env": "node ../../scripts/build/replace-build-env.js"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.2.11"
+    "@openobserve/browser-core": "0.2.11-rc1"
   },
   "peerDependencies": {
-    "@openobserve/browser-rum": "0.2.11"
+    "@openobserve/browser-rum": "0.2.11-rc1"
   },
   "peerDependenciesMeta": {
     "@openobserve/browser-rum": {
