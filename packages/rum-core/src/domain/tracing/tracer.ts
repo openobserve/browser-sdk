@@ -1,13 +1,11 @@
+import type { ContextManager } from '@openobserve/browser-core'
 import {
   objectEntries,
   shallowClone,
-  performDraw,
-  isNumber,
-  assign,
-  find,
   getType,
   isMatchOption,
   matchList,
+  TraceContextInjection,
 } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../configuration'
 import type {
@@ -17,7 +15,10 @@ import type {
   RumXhrStartContext,
 } from '../requestCollection'
 import type { RumSessionManager } from '../rumSessionManager'
+import { isSampled } from '../sampler/sampler'
 import type { PropagatorType, TracingOption } from './tracer.types'
+import type { SpanIdentifier, TraceIdentifier } from './identifier'
+import { createSpanIdentifier, createTraceIdentifier, toPaddedHexadecimalString } from './identifier'
 
 export interface Tracer {
   traceFetch: (context: Partial<RumFetchStartContext>) => void
@@ -63,41 +64,60 @@ export function clearTracingIfNeeded(context: RumFetchResolveContext | RumXhrCom
   }
 }
 
-export function startTracer(configuration: RumConfiguration, sessionManager: RumSessionManager): Tracer {
+export function startTracer(
+  configuration: RumConfiguration,
+  sessionManager: RumSessionManager,
+  userContext: ContextManager,
+  accountContext: ContextManager
+): Tracer {
   return {
     clearTracingIfNeeded,
     traceFetch: (context) =>
-      injectHeadersIfTracingAllowed(configuration, context, sessionManager, (tracingHeaders: TracingHeaders) => {
-        if (context.input instanceof Request && !context.init?.headers) {
-          context.input = new Request(context.input)
-          Object.keys(tracingHeaders).forEach((key) => {
-            ; (context.input as Request).headers.append(key, tracingHeaders[key])
-          })
-        } else {
-          context.init = shallowClone(context.init)
-          const headers: Array<[string, string]> = []
-          if (context.init.headers instanceof Headers) {
-            context.init.headers.forEach((value, key) => {
-              headers.push([key, value])
+      injectHeadersIfTracingAllowed(
+        configuration,
+        context,
+        sessionManager,
+        userContext,
+        accountContext,
+        (tracingHeaders: TracingHeaders) => {
+          if (context.input instanceof Request && !context.init?.headers) {
+            context.input = new Request(context.input)
+            Object.keys(tracingHeaders).forEach((key) => {
+              ;(context.input as Request).headers.append(key, tracingHeaders[key])
             })
-          } else if (Array.isArray(context.init.headers)) {
-            context.init.headers.forEach((header) => {
-              headers.push(header)
-            })
-          } else if (context.init.headers) {
-            Object.keys(context.init.headers).forEach((key) => {
-              headers.push([key, (context.init!.headers as Record<string, string>)[key]])
-            })
+          } else {
+            context.init = shallowClone(context.init)
+            const headers: Array<[string, string]> = []
+            if (context.init.headers instanceof Headers) {
+              context.init.headers.forEach((value, key) => {
+                headers.push([key, value])
+              })
+            } else if (Array.isArray(context.init.headers)) {
+              context.init.headers.forEach((header) => {
+                headers.push(header)
+              })
+            } else if (context.init.headers) {
+              Object.keys(context.init.headers).forEach((key) => {
+                headers.push([key, (context.init!.headers as Record<string, string>)[key]])
+              })
+            }
+            context.init.headers = headers.concat(objectEntries(tracingHeaders))
           }
-          context.init.headers = headers.concat(objectEntries(tracingHeaders))
         }
-      }),
+      ),
     traceXhr: (context, xhr) =>
-      injectHeadersIfTracingAllowed(configuration, context, sessionManager, (tracingHeaders: TracingHeaders) => {
-        Object.keys(tracingHeaders).forEach((name) => {
-          xhr.setRequestHeader(name, tracingHeaders[name])
-        })
-      }),
+      injectHeadersIfTracingAllowed(
+        configuration,
+        context,
+        sessionManager,
+        userContext,
+        accountContext,
+        (tracingHeaders: TracingHeaders) => {
+          Object.keys(tracingHeaders).forEach((name) => {
+            xhr.setRequestHeader(name, tracingHeaders[name])
+          })
+        }
+      ),
   }
 }
 
@@ -105,31 +125,45 @@ function injectHeadersIfTracingAllowed(
   configuration: RumConfiguration,
   context: Partial<RumFetchStartContext | RumXhrStartContext>,
   sessionManager: RumSessionManager,
+  userContext: ContextManager,
+  accountContext: ContextManager,
   inject: (tracingHeaders: TracingHeaders) => void
 ) {
-  if (!isTracingSupported() || !sessionManager.findTrackedSession()) {
+  const session = sessionManager.findTrackedSession()
+  if (!session) {
     return
   }
 
-  const tracingOption = find(configuration.allowedTracingUrls, (tracingOption: TracingOption) =>
+  const tracingOption = configuration.allowedTracingUrls.find((tracingOption) =>
     matchList([tracingOption.match], context.url!, true)
   )
   if (!tracingOption) {
     return
   }
 
-  context.traceId = new TraceIdentifier()
-  context.spanId = new TraceIdentifier()
-  context.traceSampled = !isNumber(configuration.traceSampleRate) || performDraw(configuration.traceSampleRate)
-  inject(makeTracingHeaders(context.traceId, context.spanId, context.traceSampled, tracingOption.propagatorTypes))
-}
+  const traceSampled = isSampled(session.id, configuration.traceSampleRate)
 
-export function isTracingSupported() {
-  return getCrypto() !== undefined
-}
+  const shouldInjectHeaders = traceSampled || configuration.traceContextInjection === TraceContextInjection.ALL
+  if (!shouldInjectHeaders) {
+    return
+  }
 
-function getCrypto() {
-  return window.crypto || (window as any).msCrypto
+  context.traceSampled = traceSampled
+  context.traceId = createTraceIdentifier()
+  context.spanId = createSpanIdentifier()
+
+  inject(
+    makeTracingHeaders(
+      context.traceId,
+      context.spanId,
+      context.traceSampled,
+      session.id,
+      tracingOption.propagatorTypes,
+      userContext,
+      accountContext,
+      configuration
+    )
+  )
 }
 
 /**
@@ -138,9 +172,13 @@ function getCrypto() {
  */
 function makeTracingHeaders(
   traceId: TraceIdentifier,
-  spanId: TraceIdentifier,
+  spanId: SpanIdentifier,
   traceSampled: boolean,
-  propagatorTypes: PropagatorType[]
+  sessionId: string,
+  propagatorTypes: PropagatorType[],
+  userContext: ContextManager,
+  accountContext: ContextManager,
+  configuration: RumConfiguration
 ): TracingHeaders {
   const tracingHeaders: TracingHeaders = {}
 
@@ -148,79 +186,54 @@ function makeTracingHeaders(
     switch (propagatorType) {
       // https://www.w3.org/TR/trace-context/
       case 'tracecontext': {
-        assign(tracingHeaders, {
-          traceparent: `00-0000000000000000${traceId.toPaddedHexadecimalString()}-${spanId.toPaddedHexadecimalString()}-0${traceSampled ? '1' : '0'
-            }`,
+        Object.assign(tracingHeaders, {
+          traceparent: `00-0000000000000000${toPaddedHexadecimalString(traceId)}-${toPaddedHexadecimalString(spanId)}-0${
+            traceSampled ? '1' : '0'
+          }`,
+          tracestate: `oo=s:${traceSampled ? '1' : '0'};o:rum`,
         })
         break
       }
       // https://github.com/openzipkin/b3-propagation
       case 'b3': {
-        assign(tracingHeaders, {
-          b3: `${traceId.toPaddedHexadecimalString()}-${spanId.toPaddedHexadecimalString()}-${traceSampled ? '1' : '0'
-            }`,
+        Object.assign(tracingHeaders, {
+          b3: `${toPaddedHexadecimalString(traceId)}-${toPaddedHexadecimalString(spanId)}-${traceSampled ? '1' : '0'}`,
         })
         break
       }
       case 'b3multi': {
-        assign(tracingHeaders, {
-          'X-B3-TraceId': traceId.toPaddedHexadecimalString(),
-          'X-B3-SpanId': spanId.toPaddedHexadecimalString(),
+        Object.assign(tracingHeaders, {
+          'X-B3-TraceId': toPaddedHexadecimalString(traceId),
+          'X-B3-SpanId': toPaddedHexadecimalString(spanId),
           'X-B3-Sampled': traceSampled ? '1' : '0',
         })
         break
       }
     }
   })
+
+  if (configuration.propagateTraceBaggage) {
+    const baggageItems: Record<string, string> = {
+      'session.id': sessionId,
+    }
+
+    const userId = userContext.getContext().id
+    if (typeof userId === 'string') {
+      baggageItems['user.id'] = userId
+    }
+
+    const accountId = accountContext.getContext().id
+    if (typeof accountId === 'string') {
+      baggageItems['account.id'] = accountId
+    }
+
+    const baggageHeader = Object.entries(baggageItems)
+      .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+      .join(',')
+    if (baggageHeader) {
+      tracingHeaders['baggage'] = baggageHeader
+    }
+  }
+
   return tracingHeaders
 }
-
-/* eslint-disable no-bitwise */
-export class TraceIdentifier {
-  private buffer: Uint8Array = new Uint8Array(8)
-
-  constructor() {
-    getCrypto().getRandomValues(this.buffer)
-    this.buffer[0] = this.buffer[0] & 0x7f // force 63-bit
-  }
-
-  toString(radix: number) {
-    let high = this.readInt32(0)
-    let low = this.readInt32(4)
-    let str = ''
-
-    do {
-      const mod = (high % radix) * 4294967296 + low
-      high = Math.floor(high / radix)
-      low = Math.floor(mod / radix)
-      str = (mod % radix).toString(radix) + str
-    } while (high || low)
-
-    return str
-  }
-
-  /**
-   * Format used everywhere except the trace intake
-   */
-  toDecimalString() {
-    return this.toString(10)
-  }
-
-  /**
-   * Format used by OTel headers
-   */
-  toPaddedHexadecimalString() {
-    const traceId = this.toString(16)
-    return Array(17 - traceId.length).join('0') + traceId
-  }
-
-  private readInt32(offset: number) {
-    return (
-      this.buffer[offset] * 16777216 +
-      (this.buffer[offset + 1] << 16) +
-      (this.buffer[offset + 2] << 8) +
-      this.buffer[offset + 3]
-    )
-  }
-}
-/* eslint-enable no-bitwise */

@@ -4,58 +4,58 @@
 
 import type { RumEventType } from './rawRumEvent.types'
 
-export type RumEventDomainContext<T extends RumEventType = any> = T extends RumEventType.VIEW
+export type RumEventDomainContext<T extends RumEventType = any> = T extends typeof RumEventType.VIEW
   ? RumViewEventDomainContext
-  : T extends RumEventType.ACTION
-  ? RumActionEventDomainContext
-  : T extends RumEventType.RESOURCE
-  ? RumFetchResourceEventDomainContext | RumXhrResourceEventDomainContext | RumOtherResourceEventDomainContext
-  : T extends RumEventType.ERROR
-  ? RumErrorEventDomainContext
-  : T extends RumEventType.LONG_TASK
-  ? RumLongTaskEventDomainContext
-  : never
+  : T extends typeof RumEventType.ACTION
+    ? RumActionEventDomainContext
+    : T extends typeof RumEventType.RESOURCE
+      ? RumFetchResourceEventDomainContext | RumXhrResourceEventDomainContext | RumOtherResourceEventDomainContext
+      : T extends typeof RumEventType.ERROR
+        ? RumErrorEventDomainContext
+        : T extends typeof RumEventType.LONG_TASK
+          ? RumLongTaskEventDomainContext
+          : T extends typeof RumEventType.VITAL
+            ? RumVitalEventDomainContext
+            : never
 
 export interface RumViewEventDomainContext {
   location: Readonly<Location>
 }
 
 export interface RumActionEventDomainContext {
-  /**
-   * @deprecated use events array instead
-   */
-  event?: Event
   events?: Event[]
+  handlingStack?: string
 }
 
 export interface RumFetchResourceEventDomainContext {
-  requestInit?: RequestInit
+  requestInit: RequestInit | undefined
   requestInput: RequestInfo
-  response?: Response
-  error?: Error
-  performanceEntry?: PerformanceEntryRepresentation
+  response: Response | undefined
+  error: Error | undefined
+  performanceEntry: PerformanceEntry | undefined
+  isAborted: boolean
+  handlingStack: string | undefined
 }
 
 export interface RumXhrResourceEventDomainContext {
   xhr: XMLHttpRequest
-  performanceEntry?: PerformanceEntryRepresentation
+  performanceEntry: PerformanceEntry | undefined
+  isAborted: boolean
+  handlingStack: string | undefined
 }
 
 export interface RumOtherResourceEventDomainContext {
-  performanceEntry: PerformanceEntryRepresentation
+  performanceEntry: PerformanceEntry
 }
 
 export interface RumErrorEventDomainContext {
   error: unknown
+  handlingStack?: string
 }
 
 export interface RumLongTaskEventDomainContext {
-  performanceEntry: PerformanceEntryRepresentation
+  performanceEntry: PerformanceEntry
 }
 
-/**
- * Symbolizes the type of the value returned by performanceEntry.toJSON(). Can also be built
- * manually to represent other kind of performance entries (ex: initial_document) or polyfilled
- * based on `performance.timing`.
- */
-export type PerformanceEntryRepresentation = Omit<PerformanceEntry, 'toJSON'>
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface RumVitalEventDomainContext {}

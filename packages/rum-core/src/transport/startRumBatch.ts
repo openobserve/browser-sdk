@@ -1,44 +1,40 @@
-import type { Context, TelemetryEvent, Observable, RawError, PageExitEvent } from '@openobserve/browser-core'
-import { combine, isTelemetryReplicationAllowed, startBatchWithReplica } from '@openobserve/browser-core'
+import type { Observable, RawError, PageMayExitEvent, Encoder } from '@openobserve/browser-core'
+import { createBatch, createFlushController, createHttpRequest, DeflateEncoderStreamId } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../domain/configuration'
 import type { LifeCycle } from '../domain/lifeCycle'
 import { LifeCycleEventType } from '../domain/lifeCycle'
+import type { AssembledRumEvent } from '../rawRumEvent.types'
 import { RumEventType } from '../rawRumEvent.types'
-import type { RumEvent } from '../rumEvent.types'
 
 export function startRumBatch(
   configuration: RumConfiguration,
   lifeCycle: LifeCycle,
-  telemetryEventObservable: Observable<TelemetryEvent & Context>,
   reportError: (error: RawError) => void,
-  pageExitObservable: Observable<PageExitEvent>,
-  sessionExpireObservable: Observable<void>
+  pageMayExitObservable: Observable<PageMayExitEvent>,
+  sessionExpireObservable: Observable<void>,
+  createEncoder: (streamId: DeflateEncoderStreamId) => Encoder
 ) {
-  const replica = configuration.replica
+  const endpoints = [configuration.rumEndpointBuilder]
+  if (configuration.replica) {
+    endpoints.push(configuration.replica.rumEndpointBuilder)
+  }
 
-  const batch = startBatchWithReplica(
-    configuration,
-    {
-      endpoint: configuration.rumEndpointBuilder,
-    },
-    replica && {
-      endpoint: replica.rumEndpointBuilder,
-      transformMessage: (message) => combine(message, { application: { id: replica.applicationId } }),
-    },
-    reportError,
-    pageExitObservable,
-    sessionExpireObservable
-  )
+  const batch = createBatch({
+    encoder: createEncoder(DeflateEncoderStreamId.RUM),
+    request: createHttpRequest(endpoints, reportError),
+    flushController: createFlushController({
+      pageMayExitObservable,
+      sessionExpireObservable,
+    }),
+  })
 
-  lifeCycle.subscribe(LifeCycleEventType.RUM_EVENT_COLLECTED, (serverRumEvent: RumEvent & Context) => {
+  lifeCycle.subscribe(LifeCycleEventType.RUM_EVENT_COLLECTED, (serverRumEvent: AssembledRumEvent) => {
     if (serverRumEvent.type === RumEventType.VIEW) {
       batch.upsert(serverRumEvent, serverRumEvent.view.id)
     } else {
       batch.add(serverRumEvent)
     }
   })
-
-  telemetryEventObservable.subscribe((event) => batch.add(event, isTelemetryReplicationAllowed(configuration)))
 
   return batch
 }

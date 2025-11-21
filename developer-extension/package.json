@@ -3,27 +3,37 @@
   "version": "0.2.11",
   "private": true,
   "scripts": {
-    "build": "rm -rf dist && webpack --mode production",
-    "dev": "webpack --mode development --watch"
+    "build": "rm -rf dist && webpack --disable-interpret --mode production",
+    "dev": "rm -rf dist && webpack --disable-interpret --mode development && webpack serve --disable-interpret --mode development --config-name=panel --hot"
   },
   "devDependencies": {
-    "@types/chrome": "0.0.243",
-    "@types/react": "18.2.24",
-    "@types/react-dom": "18.2.8",
-    "@webextension-toolbox/webpack-webextension-plugin": "3.1.0",
-    "copy-webpack-plugin": "11.0.0",
-    "html-webpack-plugin": "5.5.3",
-    "webpack": "5.88.2"
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.6.0",
+    "@types/chrome": "0.1.27",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@types/webpack-env": "^1.18.4",
+    "@webextension-toolbox/webpack-webextension-plugin": "3.3.1",
+    "copy-webpack-plugin": "13.0.1",
+    "css-loader": "7.1.2",
+    "html-webpack-plugin": "5.6.4",
+    "react-refresh": "^0.18.0",
+    "react-refresh-typescript": "^2.0.9",
+    "style-loader": "4.0.0",
+    "typescript": "5.9.3",
+    "webpack": "5.102.1",
+    "webpack-cli": "^6.0.0",
+    "webpack-dev-server": "^5.0.4"
   },
   "dependencies": {
-    "@emotion/react": "11.11.1",
-    "@mantine/core": "6.0.19",
-    "@mantine/hooks": "6.0.19",
-    "@openobserve/browser-logs": "workspace:*",
-    "@openobserve/browser-rum": "workspace:*",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "react-json-view": "1.21.3"
+    "@datadog/browser-core": "workspace:*",
+    "@datadog/browser-logs": "workspace:*",
+    "@datadog/browser-rum": "workspace:*",
+    "@mantine/core": "8.3.7",
+    "@mantine/hooks": "8.3.7",
+    "@tabler/icons-react": "3.35.0",
+    "clsx": "2.1.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
   },
   "volta": {
     "extends": "../package.json"

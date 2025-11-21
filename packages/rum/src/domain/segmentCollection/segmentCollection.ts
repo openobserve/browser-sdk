@@ -1,14 +1,15 @@
-import type { HttpRequest, TimeoutId } from '@openobserve/browser-core'
+import type { DeflateEncoder, HttpRequest, TimeoutId } from '@openobserve/browser-core'
 import { isPageExitReason, ONE_SECOND, clearTimeout, setTimeout } from '@openobserve/browser-core'
-import type { LifeCycle, ViewContexts, RumSessionManager, RumConfiguration } from '@openobserve/browser-rum-core'
+import type { LifeCycle, ViewHistory, RumSessionManager, RumConfiguration } from '@openobserve/browser-rum-core'
 import { LifeCycleEventType } from '@openobserve/browser-rum-core'
 import type { BrowserRecord, CreationReason, SegmentContext } from '../../types'
-import type { DeflateEncoder } from '../deflate'
+import type { SerializationStats } from '../record'
+import type { ReplayPayload } from './buildReplayPayload'
 import { buildReplayPayload } from './buildReplayPayload'
-import type { FlushReason } from './segment'
-import { Segment } from './segment'
+import type { FlushReason, Segment } from './segment'
+import { createSegment } from './segment'
 
-export const SEGMENT_DURATION_LIMIT = 30 * ONE_SECOND
+export const SEGMENT_DURATION_LIMIT = 5 * ONE_SECOND
 /**
  * beacon payload max queue size implementation is 64kb
  * ensure that we leave room for logs, rum and potential other users
@@ -40,17 +41,22 @@ export let SEGMENT_BYTES_LIMIT = 60_000
 // To help investigate session replays issues, each segment is created with a "creation reason",
 // indicating why the session has been created.
 
+interface SegmentCollector {
+  addRecord(this: void, record: BrowserRecord, stats?: SerializationStats): void
+  stop(this: void): void
+}
+
 export function startSegmentCollection(
   lifeCycle: LifeCycle,
   configuration: RumConfiguration,
   sessionManager: RumSessionManager,
-  viewContexts: ViewContexts,
-  httpRequest: HttpRequest,
+  viewHistory: ViewHistory,
+  httpRequest: HttpRequest<ReplayPayload>,
   encoder: DeflateEncoder
-) {
+): SegmentCollector {
   return doStartSegmentCollection(
     lifeCycle,
-    () => computeSegmentContext(configuration.applicationId, sessionManager, viewContexts),
+    () => computeSegmentContext(configuration.applicationId, sessionManager, viewHistory),
     httpRequest,
     encoder
   )
@@ -78,9 +84,9 @@ type SegmentCollectionState =
 export function doStartSegmentCollection(
   lifeCycle: LifeCycle,
   getSegmentContext: () => SegmentContext | undefined,
-  httpRequest: HttpRequest,
+  httpRequest: HttpRequest<ReplayPayload>,
   encoder: DeflateEncoder
-) {
+): SegmentCollector {
   let state: SegmentCollectionState = {
     status: SegmentCollectionStatus.WaitingForInitialRecord,
     nextSegmentCreationReason: 'init',
@@ -90,17 +96,17 @@ export function doStartSegmentCollection(
     flushSegment('view_change')
   })
 
-  const { unsubscribe: unsubscribePageExited } = lifeCycle.subscribe(
-    LifeCycleEventType.PAGE_EXITED,
-    (pageExitEvent) => {
-      flushSegment(pageExitEvent.reason as FlushReason)
+  const { unsubscribe: unsubscribePageMayExit } = lifeCycle.subscribe(
+    LifeCycleEventType.PAGE_MAY_EXIT,
+    (pageMayExitEvent) => {
+      flushSegment(pageMayExitEvent.reason as FlushReason)
     }
   )
 
   function flushSegment(flushReason: FlushReason) {
     if (state.status === SegmentCollectionStatus.SegmentPending) {
-      state.segment.flush((metadata) => {
-        const payload = buildReplayPayload(encoder.encodedBytes, metadata, encoder.rawBytesCount)
+      state.segment.flush((metadata, stats, encoderResult) => {
+        const payload = buildReplayPayload(encoderResult.output, metadata, stats, encoderResult.rawBytesCount)
 
         if (isPageExitReason(flushReason)) {
           httpRequest.sendOnExit(payload)
@@ -124,7 +130,7 @@ export function doStartSegmentCollection(
   }
 
   return {
-    addRecord: (record: BrowserRecord) => {
+    addRecord: (record: BrowserRecord, stats?: SerializationStats) => {
       if (state.status === SegmentCollectionStatus.Stopped) {
         return
       }
@@ -137,22 +143,15 @@ export function doStartSegmentCollection(
 
         state = {
           status: SegmentCollectionStatus.SegmentPending,
-          segment: new Segment(encoder, context, state.nextSegmentCreationReason),
+          segment: createSegment({ encoder, context, creationReason: state.nextSegmentCreationReason }),
           expirationTimeoutId: setTimeout(() => {
             flushSegment('segment_duration_limit')
           }, SEGMENT_DURATION_LIMIT),
         }
       }
 
-      const segment = state.segment
-
-      segment.addRecord(record, () => {
-        if (
-          // the written segment is still pending
-          state.status === SegmentCollectionStatus.SegmentPending &&
-          state.segment === segment &&
-          encoder.encodedBytesCount > SEGMENT_BYTES_LIMIT
-        ) {
+      state.segment.addRecord(record, stats, (encodedBytesCount) => {
+        if (encodedBytesCount > SEGMENT_BYTES_LIMIT) {
           flushSegment('segment_bytes_limit')
         }
       })
@@ -161,7 +160,7 @@ export function doStartSegmentCollection(
     stop: () => {
       flushSegment('stop')
       unsubscribeViewCreated()
-      unsubscribePageExited()
+      unsubscribePageMayExit()
     },
   }
 }
@@ -169,10 +168,10 @@ export function doStartSegmentCollection(
 export function computeSegmentContext(
   applicationId: string,
   sessionManager: RumSessionManager,
-  viewContexts: ViewContexts
+  viewHistory: ViewHistory
 ) {
   const session = sessionManager.findTrackedSession()
-  const viewContext = viewContexts.findView()
+  const viewContext = viewHistory.findView()
   if (!session || !viewContext) {
     return undefined
   }

@@ -6,7 +6,12 @@
  * changes.
  */
 export type { TimeStamp } from '@openobserve/browser-core'
-export { PRIVACY_ATTR_NAME, PRIVACY_ATTR_VALUE_HIDDEN, PRIVACY_CLASS_HIDDEN, NodePrivacyLevel } from '../constants'
+export {
+  PRIVACY_ATTR_NAME,
+  PRIVACY_ATTR_VALUE_HIDDEN,
+  PRIVACY_CLASS_PREFIX,
+  NodePrivacyLevel,
+} from '@openobserve/browser-rum-core'
 
 export * from '../types'
 

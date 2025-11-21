@@ -1,75 +1,66 @@
-import type { RawError, HttpRequest } from '@openobserve/browser-core'
-import { timeStampNow, createHttpRequest, addTelemetryDebug } from '@openobserve/browser-core'
-import type {
-  LifeCycle,
-  ViewContexts,
-  RumConfiguration,
-  RumSessionManager,
-  ViewCreatedEvent,
-} from '@openobserve/browser-rum-core'
+import type { RawError, HttpRequest, DeflateEncoder, Telemetry } from '@openobserve/browser-core'
+import { createHttpRequest, addTelemetryDebug, canUseEventBridge } from '@openobserve/browser-core'
+import type { LifeCycle, ViewHistory, RumConfiguration, RumSessionManager } from '@openobserve/browser-rum-core'
 import { LifeCycleEventType } from '@openobserve/browser-rum-core'
 
+import type { SerializationStats } from '../domain/record'
 import { record } from '../domain/record'
-import type { DeflateEncoder } from '../domain/deflate'
-import { startSegmentCollection, SEGMENT_BYTES_LIMIT } from '../domain/segmentCollection'
-import { RecordType } from '../types'
+import type { ReplayPayload } from '../domain/segmentCollection'
+import { startSegmentCollection, SEGMENT_BYTES_LIMIT, startSegmentTelemetry } from '../domain/segmentCollection'
+import type { BrowserRecord } from '../types'
+import { startRecordBridge } from '../domain/startRecordBridge'
 
 export function startRecording(
   lifeCycle: LifeCycle,
   configuration: RumConfiguration,
   sessionManager: RumSessionManager,
-  viewContexts: ViewContexts,
+  viewHistory: ViewHistory,
   encoder: DeflateEncoder,
-  httpRequest?: HttpRequest
+  telemetry: Telemetry,
+  httpRequest?: HttpRequest<ReplayPayload>
 ) {
+  const cleanupTasks: Array<() => void> = []
+
   const reportError = (error: RawError) => {
     lifeCycle.notify(LifeCycleEventType.RAW_ERROR_COLLECTED, { error })
+    // monitor-until: forever, to keep an eye on the errors reported to customers
     addTelemetryDebug('Error reported to customer', { 'error.message': error.message })
   }
 
   const replayRequest =
-    httpRequest ||
-    createHttpRequest(configuration, configuration.sessionReplayEndpointBuilder, SEGMENT_BYTES_LIMIT, reportError)
+    httpRequest || createHttpRequest([configuration.sessionReplayEndpointBuilder], reportError, SEGMENT_BYTES_LIMIT)
 
-  const { addRecord, stop: stopSegmentCollection } = startSegmentCollection(
-    lifeCycle,
-    configuration,
-    sessionManager,
-    viewContexts,
-    replayRequest,
-    encoder
-  )
+  let addRecord: (record: BrowserRecord, stats?: SerializationStats) => void
 
-  const {
-    stop: stopRecording,
-    takeSubsequentFullSnapshot,
-    flushMutations,
-  } = record({
+  if (!canUseEventBridge()) {
+    const segmentCollection = startSegmentCollection(
+      lifeCycle,
+      configuration,
+      sessionManager,
+      viewHistory,
+      replayRequest,
+      encoder
+    )
+    addRecord = segmentCollection.addRecord
+    cleanupTasks.push(segmentCollection.stop)
+
+    const segmentTelemetry = startSegmentTelemetry(telemetry, replayRequest.observable)
+    cleanupTasks.push(segmentTelemetry.stop)
+  } else {
+    ;({ addRecord } = startRecordBridge(viewHistory))
+  }
+
+  const { stop: stopRecording } = record({
     emit: addRecord,
     configuration,
     lifeCycle,
+    viewHistory,
   })
-
-  const { unsubscribe: unsubscribeViewEnded } = lifeCycle.subscribe(LifeCycleEventType.VIEW_ENDED, () => {
-    flushMutations()
-    addRecord({
-      timestamp: timeStampNow(),
-      type: RecordType.ViewEnd,
-    })
-  })
-  const { unsubscribe: unsubscribeViewCreated } = lifeCycle.subscribe(
-    LifeCycleEventType.VIEW_CREATED,
-    (view: ViewCreatedEvent) => {
-      takeSubsequentFullSnapshot(view.startClocks.timeStamp)
-    }
-  )
+  cleanupTasks.push(stopRecording)
 
   return {
     stop: () => {
-      unsubscribeViewEnded()
-      unsubscribeViewCreated()
-      stopRecording()
-      stopSegmentCollection()
+      cleanupTasks.forEach((task) => task())
     },
   }
 }

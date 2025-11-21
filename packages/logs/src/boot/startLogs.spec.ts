@@ -1,18 +1,34 @@
-import { ErrorSource, display, stopSessionManager, getCookie, SESSION_STORE_KEY } from '@openobserve/browser-core'
-import type { Request } from '@openobserve/browser-core/test'
+import type { BufferedData, Payload } from '@openobserve/browser-core'
+import {
+  ErrorSource,
+  display,
+  stopSessionManager,
+  getCookie,
+  SESSION_STORE_KEY,
+  createTrackingConsentState,
+  TrackingConsent,
+  setCookie,
+  STORAGE_POLL_DELAY,
+  ONE_MINUTE,
+  BufferedObservable,
+  FLUSH_DURATION_LIMIT,
+} from '@openobserve/browser-core'
+import type { Clock, Request } from '@openobserve/browser-core/test'
 import {
   interceptRequests,
-  stubEndpointBuilder,
-  deleteEventBridgeStub,
-  initEventBridgeStub,
-  cleanupSyntheticsWorkerValues,
+  mockEndpointBuilder,
+  mockEventBridge,
   mockSyntheticsWorkerValues,
+  registerCleanupTask,
+  mockClock,
+  expireCookie,
+  DEFAULT_FETCH_MOCK,
 } from '@openobserve/browser-core/test'
 
 import type { LogsConfiguration } from '../domain/configuration'
 import { validateAndBuildLogsConfiguration } from '../domain/configuration'
-import { HandlerType, Logger, StatusType } from '../domain/logger'
-import type { startLoggerCollection } from '../domain/logsCollection/logger/loggerCollection'
+import { Logger } from '../domain/logger'
+import { StatusType } from '../domain/logger/isAuthorized'
 import type { LogsEvent } from '../logsEvent.types'
 import { startLogs } from './startLogs'
 
@@ -21,7 +37,7 @@ function getLoggedMessage(requests: Request[], index: number) {
 }
 
 interface Rum {
-  getInternalContext(startTime?: number): any | undefined
+  getInternalContext(startTime?: number): any
 }
 declare global {
   interface Window {
@@ -33,83 +49,106 @@ declare global {
 const DEFAULT_MESSAGE = { status: StatusType.info, message: 'message' }
 const COMMON_CONTEXT = {
   view: { referrer: 'common_referrer', url: 'common_url' },
-  context: {},
-  user: {},
+}
+const DEFAULT_PAYLOAD = {} as Payload
+
+function startLogsWithDefaults(
+  { configuration }: { configuration?: Partial<LogsConfiguration> } = {},
+  trackingConsentState = createTrackingConsentState(TrackingConsent.GRANTED)
+) {
+  const endpointBuilder = mockEndpointBuilder('https://localhost/v1/input/log')
+  const { handleLog, stop, globalContext, accountContext, userContext } = startLogs(
+    {
+      ...validateAndBuildLogsConfiguration({ clientToken: 'xxx', service: 'service', telemetrySampleRate: 0 })!,
+      logsEndpointBuilder: endpointBuilder,
+      ...configuration,
+    },
+    () => COMMON_CONTEXT,
+    trackingConsentState,
+    new BufferedObservable<BufferedData>(100)
+  )
+
+  registerCleanupTask(stop)
+
+  const logger = new Logger(handleLog)
+
+  return { handleLog, logger, endpointBuilder, globalContext, accountContext, userContext }
 }
 
 describe('logs', () => {
-  const initConfiguration = { clientToken: 'xxx', service: 'service', telemetrySampleRate: 0 }
-  let baseConfiguration: LogsConfiguration
   let interceptor: ReturnType<typeof interceptRequests>
   let requests: Request[]
-  let handleLog: ReturnType<typeof startLoggerCollection>['handleLog']
-  let logger: Logger
-  let consoleLogSpy: jasmine.Spy
-  let displayLogSpy: jasmine.Spy
+  let clock: Clock
 
   beforeEach(() => {
-    baseConfiguration = {
-      ...validateAndBuildLogsConfiguration(initConfiguration)!,
-      logsEndpointBuilder: stubEndpointBuilder('https://localhost/v1/input/log'),
-      batchMessagesLimit: 1,
-    }
-    logger = new Logger((...params) => handleLog(...params))
+    clock = mockClock()
     interceptor = interceptRequests()
     requests = interceptor.requests
-    consoleLogSpy = spyOn(console, 'log')
-    displayLogSpy = spyOn(display, 'log')
   })
 
   afterEach(() => {
     delete window.OO_RUM
-    deleteEventBridgeStub()
     stopSessionManager()
-    interceptor.restore()
   })
 
   describe('request', () => {
-    it('should send the needed data', () => {
-      ; ({ handleLog: handleLog } = startLogs(initConfiguration, baseConfiguration, () => COMMON_CONTEXT, logger))
+    it('should send the needed data', async () => {
+      const { handleLog, logger, endpointBuilder } = startLogsWithDefaults()
 
-      handleLog({ message: 'message', status: StatusType.warn, context: { foo: 'bar' } }, logger, COMMON_CONTEXT)
+      handleLog(
+        { message: 'message', status: StatusType.warn, context: { foo: 'bar' } },
+        logger,
+        'fake-handling-stack',
+        COMMON_CONTEXT
+      )
+
+      clock.tick(FLUSH_DURATION_LIMIT)
+      await interceptor.waitForAllFetchCalls()
 
       expect(requests.length).toEqual(1)
-      expect(requests[0].url).toContain(baseConfiguration.logsEndpointBuilder.build('xhr'))
+      expect(requests[0].url).toContain(endpointBuilder.build('fetch', DEFAULT_PAYLOAD))
       expect(getLoggedMessage(requests, 0)).toEqual({
         date: jasmine.any(Number),
         foo: 'bar',
         message: 'message',
         service: 'service',
+        ddtags: 'sdk_version:test,service:service',
         session_id: jasmine.any(String),
+        session: {
+          id: jasmine.any(String),
+        },
         status: StatusType.warn,
         view: {
           referrer: 'common_referrer',
           url: 'common_url',
         },
         origin: ErrorSource.LOGGER,
+        usr: {
+          anonymous_id: jasmine.any(String),
+        },
       })
     })
 
-    it('should all use the same batch', () => {
-      ; ({ handleLog } = startLogs(
-        initConfiguration,
-        { ...baseConfiguration, batchMessagesLimit: 3 },
-        () => COMMON_CONTEXT,
-        logger
-      ))
+    it('should all use the same batch', async () => {
+      const { handleLog, logger } = startLogsWithDefaults()
 
       handleLog(DEFAULT_MESSAGE, logger)
       handleLog(DEFAULT_MESSAGE, logger)
       handleLog(DEFAULT_MESSAGE, logger)
+
+      clock.tick(FLUSH_DURATION_LIMIT)
+      await interceptor.waitForAllFetchCalls()
 
       expect(requests.length).toEqual(1)
     })
 
     it('should send bridge event when bridge is present', () => {
-      const sendSpy = spyOn(initEventBridgeStub(), 'send')
-        ; ({ handleLog: handleLog } = startLogs(initConfiguration, baseConfiguration, () => COMMON_CONTEXT, logger))
+      const sendSpy = spyOn(mockEventBridge(), 'send')
+      const { handleLog, logger } = startLogsWithDefaults()
 
       handleLog(DEFAULT_MESSAGE, logger)
+
+      clock.tick(FLUSH_DURATION_LIMIT)
 
       expect(requests.length).toEqual(0)
       const [message] = sendSpy.calls.mostRecent().args
@@ -122,17 +161,23 @@ describe('logs', () => {
   })
 
   describe('sampling', () => {
-    it('should be applied when event bridge is present', () => {
-      const sendSpy = spyOn(initEventBridgeStub(), 'send')
+    it('should be applied when event bridge is present (rate 0)', () => {
+      const sendSpy = spyOn(mockEventBridge(), 'send')
 
-      let configuration = { ...baseConfiguration, sessionSampleRate: 0 }
-        ; ({ handleLog } = startLogs(initConfiguration, configuration, () => COMMON_CONTEXT, logger))
+      const { handleLog, logger } = startLogsWithDefaults({
+        configuration: { sessionSampleRate: 0 },
+      })
       handleLog(DEFAULT_MESSAGE, logger)
 
       expect(sendSpy).not.toHaveBeenCalled()
+    })
 
-      configuration = { ...baseConfiguration, sessionSampleRate: 100 }
-        ; ({ handleLog } = startLogs(initConfiguration, configuration, () => COMMON_CONTEXT, logger))
+    it('should be applied when event bridge is present (rate 100)', () => {
+      const sendSpy = spyOn(mockEventBridge(), 'send')
+
+      const { handleLog, logger } = startLogsWithDefaults({
+        configuration: { sessionSampleRate: 100 },
+      })
       handleLog(DEFAULT_MESSAGE, logger)
 
       expect(sendSpy).toHaveBeenCalled()
@@ -140,13 +185,11 @@ describe('logs', () => {
   })
 
   it('should not print the log twice when console handler is enabled', () => {
-    logger.setHandler([HandlerType.console])
-      ; ({ handleLog } = startLogs(
-        initConfiguration,
-        { ...baseConfiguration, forwardConsoleLogs: ['log'] },
-        () => COMMON_CONTEXT,
-        logger
-      ))
+    const consoleLogSpy = spyOn(console, 'log')
+    const displayLogSpy = spyOn(display, 'log')
+    startLogsWithDefaults({
+      configuration: { forwardConsoleLogs: ['log'] },
+    })
 
     /* eslint-disable-next-line no-console */
     console.log('foo', 'bar')
@@ -156,28 +199,131 @@ describe('logs', () => {
   })
 
   describe('logs session creation', () => {
-    afterEach(() => {
-      cleanupSyntheticsWorkerValues()
-    })
-
     it('creates a session on normal conditions', () => {
-      ; ({ handleLog } = startLogs(initConfiguration, baseConfiguration, () => COMMON_CONTEXT, logger))
-
-      expect(getCookie(SESSION_STORE_KEY)).not.toBeUndefined()
+      startLogsWithDefaults()
+      expect(getCookie(SESSION_STORE_KEY)).toBeDefined()
     })
 
     it('does not create a session if event bridge is present', () => {
-      initEventBridgeStub()
-        ; ({ handleLog } = startLogs(initConfiguration, baseConfiguration, () => COMMON_CONTEXT, logger))
-
+      mockEventBridge()
+      startLogsWithDefaults()
       expect(getCookie(SESSION_STORE_KEY)).toBeUndefined()
     })
 
     it('does not create a session if synthetics worker will inject RUM', () => {
       mockSyntheticsWorkerValues({ injectsRum: true })
-        ; ({ handleLog } = startLogs(initConfiguration, baseConfiguration, () => COMMON_CONTEXT, logger))
-
+      startLogsWithDefaults()
       expect(getCookie(SESSION_STORE_KEY)).toBeUndefined()
+    })
+  })
+
+  describe('session lifecycle', () => {
+    it('sends logs without session id when the session expires ', async () => {
+      setCookie(SESSION_STORE_KEY, 'id=foo&logs=1', ONE_MINUTE)
+      const { handleLog, logger } = startLogsWithDefaults()
+
+      interceptor.withFetch(DEFAULT_FETCH_MOCK, DEFAULT_FETCH_MOCK)
+
+      handleLog({ status: StatusType.info, message: 'message 1' }, logger)
+
+      expireCookie()
+      clock.tick(STORAGE_POLL_DELAY * 2)
+
+      handleLog({ status: StatusType.info, message: 'message 2' }, logger)
+
+      clock.tick(FLUSH_DURATION_LIMIT)
+      await interceptor.waitForAllFetchCalls()
+
+      const firstRequest = getLoggedMessage(requests, 0)
+      const secondRequest = getLoggedMessage(requests, 1)
+
+      expect(requests.length).toEqual(2)
+      expect(firstRequest.message).toEqual('message 1')
+      expect(firstRequest.session_id).toEqual('foo')
+
+      expect(secondRequest.message).toEqual('message 2')
+      expect(secondRequest.session_id).toBeUndefined()
+    })
+  })
+
+  describe('contexts precedence', () => {
+    it('global context should take precedence over session', () => {
+      const { handleLog, logger, globalContext } = startLogsWithDefaults()
+      globalContext.setContext({ session_id: 'from-global-context' })
+
+      handleLog({ status: StatusType.info, message: 'message 1' }, logger)
+
+      clock.tick(FLUSH_DURATION_LIMIT)
+
+      const firstRequest = getLoggedMessage(requests, 0)
+      expect(firstRequest.session_id).toEqual('from-global-context')
+    })
+
+    it('global context should take precedence over account', () => {
+      const { handleLog, logger, globalContext, accountContext } = startLogsWithDefaults()
+      globalContext.setContext({ account: { id: 'from-global-context' } })
+      accountContext.setContext({ id: 'from-account-context' })
+
+      handleLog({ status: StatusType.info, message: 'message 1' }, logger)
+
+      clock.tick(FLUSH_DURATION_LIMIT)
+
+      const firstRequest = getLoggedMessage(requests, 0)
+      expect(firstRequest.account).toEqual({ id: 'from-global-context' })
+    })
+
+    it('global context should take precedence over usr', () => {
+      const { handleLog, logger, globalContext, userContext } = startLogsWithDefaults()
+      globalContext.setContext({ usr: { id: 'from-global-context' } })
+      userContext.setContext({ id: 'from-user-context' })
+
+      handleLog({ status: StatusType.info, message: 'message 1' }, logger)
+
+      clock.tick(FLUSH_DURATION_LIMIT)
+
+      const firstRequest = getLoggedMessage(requests, 0)
+      expect(firstRequest.usr).toEqual(jasmine.objectContaining({ id: 'from-global-context' }))
+    })
+
+    it('RUM context should take precedence over global context', () => {
+      const { handleLog, logger, globalContext } = startLogsWithDefaults()
+      window.DD_RUM = {
+        getInternalContext: () => ({ view: { url: 'from-rum-context' } }),
+      }
+      globalContext.setContext({ view: { url: 'from-global-context' } })
+
+      handleLog({ status: StatusType.info, message: 'message 1' }, logger)
+
+      clock.tick(FLUSH_DURATION_LIMIT)
+
+      const firstRequest = getLoggedMessage(requests, 0)
+      expect(firstRequest.view.url).toEqual('from-rum-context')
+    })
+  })
+
+  describe('tracking consent', () => {
+    it('should not send logs after tracking consent is revoked', async () => {
+      const trackingConsentState = createTrackingConsentState(TrackingConsent.GRANTED)
+      const { handleLog, logger } = startLogsWithDefaults({}, trackingConsentState)
+
+      // Log a message with consent granted - should be sent
+      handleLog({ status: StatusType.info, message: 'message before revocation' }, logger)
+
+      clock.tick(FLUSH_DURATION_LIMIT)
+      await interceptor.waitForAllFetchCalls()
+      expect(requests.length).toEqual(1)
+      expect(getLoggedMessage(requests, 0).message).toBe('message before revocation')
+
+      // Revoke consent
+      trackingConsentState.update(TrackingConsent.NOT_GRANTED)
+
+      // Log another message - should not be sent
+      handleLog({ status: StatusType.info, message: 'message after revocation' }, logger)
+
+      clock.tick(FLUSH_DURATION_LIMIT)
+      await interceptor.waitForAllFetchCalls()
+      // Should still only have the first request
+      expect(requests.length).toEqual(1)
     })
   })
 })

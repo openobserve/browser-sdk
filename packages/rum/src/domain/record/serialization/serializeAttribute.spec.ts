@@ -1,30 +1,28 @@
-import { isIE } from '@openobserve/browser-core'
-
 import type { RumConfiguration } from '@openobserve/browser-rum-core'
-import { STABLE_ATTRIBUTES, DEFAULT_PROGRAMMATIC_ACTION_NAME_ATTRIBUTE } from '@openobserve/browser-rum-core'
-import { NodePrivacyLevel, PRIVACY_ATTR_NAME } from '../../../constants'
-import { MAX_ATTRIBUTE_VALUE_CHAR_LENGTH } from '../privacy'
-import { serializeAttribute } from './serializeAttribute'
+import {
+  STABLE_ATTRIBUTES,
+  DEFAULT_PROGRAMMATIC_ACTION_NAME_ATTRIBUTE,
+  NodePrivacyLevel,
+  PRIVACY_ATTR_NAME,
+} from '@openobserve/browser-rum-core'
+import { serializeAttribute, MAX_ATTRIBUTE_VALUE_CHAR_LENGTH } from './serializeAttribute'
 
 const DEFAULT_CONFIGURATION = {} as RumConfiguration
 
 describe('serializeAttribute', () => {
-  beforeEach(() => {
-    if (isIE()) {
-      pending('IE not supported')
-    }
-  })
-
   it('truncates "data:" URIs after long string length', () => {
     const node = document.createElement('p')
 
-    const longString = new Array(MAX_ATTRIBUTE_VALUE_CHAR_LENGTH + 1 - 5).join('a')
-    const maxAttributeValue = `data:${longString}`
-    const exceededAttributeValue = `data:${longString}1`
-    const ignoredAttributeValue = `foos:${longString}`
+    const longString = new Array(MAX_ATTRIBUTE_VALUE_CHAR_LENGTH - 5).join('a')
+    const maxAttributeValue = `data:,${longString}`
+    const exceededAttributeValue = `data:,${longString}aa`
+    const dataUrlAttributeValue = `data:,${longString}a`
+    const truncatedValue = 'data:,[...]'
+    const ignoredAttributeValue = `foos:,${longString}`
 
     node.setAttribute('test-okay', maxAttributeValue)
     node.setAttribute('test-truncate', exceededAttributeValue)
+    node.setAttribute('test-truncate', dataUrlAttributeValue)
     node.setAttribute('test-ignored', ignoredAttributeValue)
 
     expect(serializeAttribute(node, NodePrivacyLevel.ALLOW, 'test-okay', DEFAULT_CONFIGURATION)).toBe(maxAttributeValue)
@@ -35,11 +33,10 @@ describe('serializeAttribute', () => {
     )
 
     expect(serializeAttribute(node, NodePrivacyLevel.ALLOW, 'test-truncate', DEFAULT_CONFIGURATION)).toBe(
-      'data:truncated'
+      truncatedValue
     )
-    expect(serializeAttribute(node, NodePrivacyLevel.MASK, 'test-truncate', DEFAULT_CONFIGURATION)).toBe(
-      'data:truncated'
-    )
+    expect(serializeAttribute(node, NodePrivacyLevel.MASK, 'test-truncate', DEFAULT_CONFIGURATION)).toBe(truncatedValue)
+    expect(serializeAttribute(node, NodePrivacyLevel.MASK, 'test-truncate', DEFAULT_CONFIGURATION)).toBe(truncatedValue)
   })
 
   it('does not mask the privacy attribute', () => {
@@ -94,6 +91,57 @@ describe('serializeAttribute', () => {
       const node = document.createElement('div')
       node.setAttribute(STABLE_ATTRIBUTES[0], 'foo')
       expect(serializeAttribute(node, NodePrivacyLevel.MASK, STABLE_ATTRIBUTES[0], DEFAULT_CONFIGURATION)).toBe('foo')
+    })
+  })
+
+  describe('image masking', () => {
+    let image: Partial<Element> & { width: number; height: number; naturalWidth: number; naturalHeight: number }
+
+    beforeEach(() => {
+      image = {
+        width: 0,
+        height: 0,
+        naturalWidth: 0,
+        naturalHeight: 0,
+        tagName: 'IMG',
+        getAttribute() {
+          return 'http://foo.bar/image.png'
+        },
+        getBoundingClientRect() {
+          return { width: this.width, height: this.height } as DOMRect
+        },
+      }
+    })
+
+    it('should use an image with same natural dimension than the original one', () => {
+      image.naturalWidth = 2000
+      image.naturalHeight = 1000
+      expect(serializeAttribute(image as Element, NodePrivacyLevel.MASK, 'src', DEFAULT_CONFIGURATION)).toBe(
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2000' height='1000' style='background-color:silver'%3E%3C/svg%3E"
+      )
+    })
+
+    it('should use an image with same rendering dimension than the original one', () => {
+      image.width = 200
+      image.height = 100
+      expect(serializeAttribute(image as Element, NodePrivacyLevel.MASK, 'src', DEFAULT_CONFIGURATION)).toBe(
+        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='100' style='background-color:silver'%3E%3C/svg%3E"
+      )
+    })
+
+    it("should use the censored image when original image size can't be computed", () => {
+      expect(serializeAttribute(image as Element, NodePrivacyLevel.MASK, 'src', DEFAULT_CONFIGURATION)).toBe(
+        'data:image/gif;base64,R0lGODlhAQABAIAAAMLCwgAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw=='
+      )
+    })
+  })
+
+  describe('iframe srcdoc masking', () => {
+    it('should mask the srcdoc when privacy override set to mask', () => {
+      const node = document.createElement('iframe')
+      node.srcdoc = '<html><body>data-foo</body></html>">'
+      node.setAttribute(PRIVACY_ATTR_NAME, 'mask')
+      expect(serializeAttribute(node, NodePrivacyLevel.MASK, 'srcdoc', DEFAULT_CONFIGURATION)).toBe('***')
     })
   })
 })

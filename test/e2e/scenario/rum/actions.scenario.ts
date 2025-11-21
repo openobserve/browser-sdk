@@ -1,7 +1,7 @@
-import { getBrowserName, withBrowserLogs } from '../../lib/helpers/browser'
-import { createTest, flushEvents, html, waitForServersIdle } from '../../lib/framework'
+import { test, expect } from '@playwright/test'
+import { createTest, html, waitForServersIdle } from '../../lib/framework'
 
-describe('action collection', () => {
+test.describe('action collection', () => {
   createTest('track a click action')
     .withRum({ trackUserInteractions: true })
     .withBody(html`
@@ -13,23 +13,23 @@ describe('action collection', () => {
         })
       </script>
     `)
-    .run(async ({ serverEvents }) => {
-      const button = await $('button')
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const button = page.locator('button')
       await button.click()
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
+      const actionEvents = intakeRegistry.rumActionEvents
 
-      expect(actionEvents.length).toBe(1)
+      expect(actionEvents).toHaveLength(1)
       expect(actionEvents[0]).toEqual(
-        jasmine.objectContaining({
+        expect.objectContaining({
           action: {
             error: {
               count: 0,
             },
-            id: jasmine.any(String),
-            loading_time: jasmine.any(Number),
+            id: expect.any(String),
+            loading_time: expect.any(Number),
             long_task: {
-              count: jasmine.any(Number),
+              count: expect.any(Number),
             },
             resource: {
               count: 0,
@@ -42,16 +42,17 @@ describe('action collection', () => {
               type: [],
             },
           },
-          _oo: jasmine.objectContaining({
+          _oo: expect.objectContaining({
             action: {
-              target: jasmine.objectContaining({
-                selector: jasmine.any(String),
-                width: jasmine.any(Number),
-                height: jasmine.any(Number),
+              target: expect.objectContaining({
+                selector: expect.any(String),
+                width: expect.any(Number),
+                height: expect.any(Number),
               }),
+              name_source: 'text_content',
               position: {
-                x: jasmine.any(Number),
-                y: jasmine.any(Number),
+                x: expect.any(Number),
+                y: expect.any(Number),
               },
             },
           }),
@@ -60,7 +61,7 @@ describe('action collection', () => {
     })
 
   createTest('compute action target information before the UI changes')
-    .withRum({ trackFrustrations: true })
+    .withRum({ trackUserInteractions: true })
     .withBody(html`
       <button style="position: relative">click me</button>
       <script>
@@ -72,43 +73,39 @@ describe('action collection', () => {
         })
       </script>
     `)
-    .run(async ({ serverEvents }) => {
-      const button = await $('button')
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const button = page.locator('button')
       await button.click()
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
+      const actionEvents = intakeRegistry.rumActionEvents
 
-      expect(actionEvents.length).toBe(1)
+      expect(actionEvents).toHaveLength(1)
       expect(actionEvents[0].action?.target?.name).toBe('click me')
       expect(actionEvents[0]._oo.action?.target?.selector).toBe('BODY>BUTTON')
     })
 
-  // When the target element changes between mousedown and mouseup, Firefox does not dispatch a
-  // click event. Skip this test.
-  if (getBrowserName() !== 'firefox') {
-    createTest('does not report a click on the body when the target element changes between mousedown and mouseup')
-      .withRum({ trackFrustrations: true })
-      .withBody(html`
-        <button style="position: relative">click me</button>
-        <script>
-          const button = document.querySelector('button')
-          button.addEventListener('pointerdown', () => {
-            // Move the button to the right, so the mouseup/pointerup event target is different
-            // than the <button> element and click event target gets set to <body>
-            button.style.left = '1000px'
-          })
-        </script>
-      `)
-      .run(async ({ serverEvents }) => {
-        const button = await $('button')
-        await button.click()
-        await flushEvents()
-        const actionEvents = serverEvents.rumActions
+  createTest('does not report a click on the body when the target element changes between mousedown and mouseup')
+    .withRum({ trackUserInteractions: true })
+    .withBody(html`
+      <button style="position: relative">click me</button>
+      <script>
+        const button = document.querySelector('button')
+        button.addEventListener('pointerdown', () => {
+          // Move the button to the right, so the mouseup/pointerup event target is different
+          // than the <button> element and click event target gets set to <body>
+          button.style.left = '1000px'
+        })
+      </script>
+    `)
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const button = page.locator('button')
+      await button.click()
+      await flushEvents()
+      const actionEvents = intakeRegistry.rumActionEvents
 
-        expect(actionEvents.length).toBe(1)
-        expect(actionEvents[0].action?.target?.name).toBe('click me')
-      })
-  }
+      expect(actionEvents).toHaveLength(1)
+      expect(actionEvents[0].action?.target?.name).toBe('click me')
+    })
 
   createTest('associate a request to its action')
     .withRum({ trackUserInteractions: true })
@@ -121,23 +118,23 @@ describe('action collection', () => {
         })
       </script>
     `)
-    .run(async ({ serverEvents }) => {
-      const button = await $('button')
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const button = page.locator('button')
       await button.click()
       await waitForServersIdle()
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
-      const resourceEvents = serverEvents.rumResources.filter((event) => event.resource.type === 'fetch')
+      const actionEvents = intakeRegistry.rumActionEvents
+      const resourceEvents = intakeRegistry.rumResourceEvents.filter((event) => event.resource.type === 'fetch')
 
-      expect(actionEvents.length).toBe(1)
+      expect(actionEvents).toHaveLength(1)
       expect(actionEvents[0].action).toEqual({
         error: {
           count: 0,
         },
-        id: jasmine.any(String) as unknown as string,
-        loading_time: jasmine.any(Number) as unknown as number,
+        id: expect.any(String) as unknown as string,
+        loading_time: expect.any(Number) as unknown as number,
         long_task: {
-          count: jasmine.any(Number) as unknown as number,
+          count: expect.any(Number) as unknown as number,
         },
         resource: {
           count: 1,
@@ -151,16 +148,14 @@ describe('action collection', () => {
         },
       })
 
-      expect(resourceEvents.length).toBe(1)
-      expect(resourceEvents[0].action!.id).toBe(actionEvents[0].action.id!)
+      expect(resourceEvents).toHaveLength(1)
+      // resource action id should contain the collected action id + the discarded rage click id
+      expect(resourceEvents[0].action!.id).toHaveLength(2)
+      expect(resourceEvents[0].action!.id).toContain(actionEvents[0].action.id!)
     })
 
   createTest('increment the view.action.count of the view active when the action started')
-    .withRum({
-      // Frustrations need to be collected for this test case, else actions leading to a new view
-      // are ignored
-      trackFrustrations: true,
-    })
+    .withRum({ trackUserInteractions: true })
     .withBody(html`
       <button>click me</button>
       <script>
@@ -170,14 +165,14 @@ describe('action collection', () => {
         })
       </script>
     `)
-    .run(async ({ serverEvents }) => {
-      const button = await $('button')
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const button = page.locator('button')
       await button.click()
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
-      expect(actionEvents.length).toBe(1)
+      const actionEvents = intakeRegistry.rumActionEvents
+      expect(actionEvents).toHaveLength(1)
 
-      const viewEvents = serverEvents.rumViews
+      const viewEvents = intakeRegistry.rumViewEvents
       const originalViewEvent = viewEvents.find((view) => view.view.url.endsWith('/'))!
       const otherViewEvent = viewEvents.find((view) => view.view.url.endsWith('/other-view'))!
       expect(originalViewEvent.view.action.count).toBe(1)
@@ -185,7 +180,7 @@ describe('action collection', () => {
     })
 
   createTest('collect an "error click"')
-    .withRum({ trackFrustrations: true })
+    .withRum({ trackUserInteractions: true })
     .withBody(html`
       <button>click me</button>
       <script>
@@ -196,92 +191,155 @@ describe('action collection', () => {
         })
       </script>
     `)
-    .run(async ({ serverEvents }) => {
-      const button = await $('button')
+    .run(async ({ intakeRegistry, flushEvents, withBrowserLogs, page }) => {
+      const button = page.locator('button')
       await button.click()
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
+      const actionEvents = intakeRegistry.rumActionEvents
 
-      expect(actionEvents.length).toBe(1)
+      expect(actionEvents).toHaveLength(1)
       expect(actionEvents[0].action.frustration!.type).toEqual(['error_click'])
       expect(actionEvents[0].action.error!.count).toBe(1)
 
-      expect(serverEvents.rumViews[0].view.frustration!.count).toBe(1)
+      expect(intakeRegistry.rumViewEvents[0].view.frustration!.count).toBe(1)
 
-      await withBrowserLogs((browserLogs) => {
-        expect(browserLogs.length).toEqual(1)
+      withBrowserLogs((browserLogs) => {
+        expect(browserLogs).toHaveLength(1)
       })
     })
 
   createTest('collect a "dead click"')
-    .withRum({ trackFrustrations: true })
+    .withRum({ trackUserInteractions: true })
     .withBody(html` <button>click me</button> `)
-    .run(async ({ serverEvents }) => {
-      const button = await $('button')
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const button = page.locator('button')
       await button.click()
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
+      const actionEvents = intakeRegistry.rumActionEvents
 
-      expect(actionEvents.length).toBe(1)
+      expect(actionEvents).toHaveLength(1)
       expect(actionEvents[0].action.frustration!.type).toEqual(['dead_click'])
 
-      expect(serverEvents.rumViews[0].view.frustration!.count).toBe(1)
+      expect(intakeRegistry.rumViewEvents[0].view.frustration!.count).toBe(1)
     })
 
   createTest('do not consider a click on a checkbox as "dead_click"')
-    .withRum({ trackFrustrations: true })
+    .withRum({ trackUserInteractions: true })
     .withBody(html` <input type="checkbox" /> `)
-    .run(async ({ serverEvents }) => {
-      const input = await $('input')
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const input = page.locator('input')
       await input.click()
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
+      const actionEvents = intakeRegistry.rumActionEvents
 
-      expect(actionEvents.length).toBe(1)
-      expect(actionEvents[0].action.frustration!.type).toEqual([])
+      expect(actionEvents).toHaveLength(1)
+      expect(actionEvents[0].action.frustration!.type).toHaveLength(0)
     })
 
   createTest('do not consider a click to change the value of a "range" input as "dead_click"')
-    .withRum({ trackFrustrations: true })
+    .withRum({ trackUserInteractions: true })
     .withBody(html` <input type="range" /> `)
-    .run(async ({ serverEvents }) => {
-      const input = await $('input')
-      await input.click({ x: 10 })
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const input = page.locator('input')
+      await input.click({ position: { x: 10, y: 0 } })
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
+      const actionEvents = intakeRegistry.rumActionEvents
 
-      expect(actionEvents.length).toBe(1)
-      expect(actionEvents[0].action.frustration!.type).toEqual([])
+      expect(actionEvents).toHaveLength(1)
+      expect(actionEvents[0].action.frustration!.type).toHaveLength(0)
     })
 
   createTest('consider a click on an already checked "radio" input as "dead_click"')
-    .withRum({ trackFrustrations: true })
+    .withRum({ trackUserInteractions: true })
     .withBody(html` <input type="radio" checked /> `)
-    .run(async ({ serverEvents }) => {
-      const input = await $('input')
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const input = page.locator('input')
       await input.click()
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
+      const actionEvents = intakeRegistry.rumActionEvents
 
-      expect(actionEvents.length).toBe(1)
+      expect(actionEvents).toHaveLength(1)
       expect(actionEvents[0].action.frustration!.type).toEqual(['dead_click'])
     })
 
   createTest('do not consider a click on text input as "dead_click"')
-    .withRum({ trackFrustrations: true })
+    .withRum({ trackUserInteractions: true })
     .withBody(html` <input type="text" /> `)
-    .run(async ({ serverEvents }) => {
-      const input = await $('input')
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const input = page.locator('input')
       await input.click()
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
+      const actionEvents = intakeRegistry.rumActionEvents
 
-      expect(actionEvents.length).toBe(1)
-      expect(actionEvents[0].action.frustration!.type).toEqual([])
+      expect(actionEvents).toHaveLength(1)
+      expect(actionEvents[0].action.frustration!.type).toHaveLength(0)
+    })
+
+  createTest('do not consider a click on a label referring to a text input as "dead_click"')
+    .withRum({ trackUserInteractions: true })
+    .withBody(html` <input type="text" id="my-input" /><label for="my-input">Click me</label> `)
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const label = page.locator('label')
+      await label.click()
+      await flushEvents()
+      const actionEvents = intakeRegistry.rumActionEvents
+
+      expect(actionEvents).toHaveLength(1)
+      expect(actionEvents[0].action.frustration!.type).toHaveLength(0)
+    })
+
+  createTest('do not consider clicks leading to scrolls as "dead_click"')
+    .withRum({ trackUserInteractions: true })
+    .withBody(html`
+      <div style="height: 200vh;">
+        <button>click me</button>
+        <script>
+          const button = document.querySelector('button')
+          button.addEventListener('click', () => {
+            window.scrollTo(0, 200)
+          })
+        </script>
+      </div>
+    `)
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const button = page.locator('button')
+      await button.click()
+
+      await flushEvents()
+      const actionEvents = intakeRegistry.rumActionEvents
+
+      expect(actionEvents).toHaveLength(1)
+      expect(actionEvents[0].action.frustration!.type).toHaveLength(0)
+    })
+
+  createTest('do not consider clicks leading to scrolls as "rage_click"')
+    .withRum({ trackUserInteractions: true })
+    .withBody(html`
+      <div style="height: 200vh;">
+        <button>click me</button>
+        <script>
+          const button = document.querySelector('button')
+          button.addEventListener('click', () => {
+            window.scrollTo(0, 200)
+          })
+        </script>
+      </div>
+    `)
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const button = page.locator('button')
+      await button.click()
+      await button.click()
+      await button.click()
+
+      await flushEvents()
+      const actionEvents = intakeRegistry.rumActionEvents
+
+      expect(actionEvents).toHaveLength(3)
+      expect(actionEvents[0].action.frustration!.type).toHaveLength(0)
     })
 
   createTest('do not consider a click that open a new window as "dead_click"')
-    .withRum({ trackFrustrations: true })
+    .withRum({ trackUserInteractions: true })
     .withBody(html`
       <button>click me</button>
       <script>
@@ -291,24 +349,19 @@ describe('action collection', () => {
         })
       </script>
     `)
-    .run(async ({ serverEvents }) => {
-      const windowHandle = await browser.getWindowHandle()
-      const button = await $('button')
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      const button = page.locator('button')
       await button.click()
-      // Ideally, we would close the newly created window. But on Safari desktop (at least), it is
-      // not possible to do so: calling `browser.closeWindow()` is failing with "no such window:
-      // unknown error". Instead, just switch back to the original window.
-      await browser.switchToWindow(windowHandle)
 
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
+      const actionEvents = intakeRegistry.rumActionEvents
 
-      expect(actionEvents.length).toBe(1)
-      expect(actionEvents[0].action.frustration!.type).toEqual([])
+      expect(actionEvents).toHaveLength(1)
+      expect(actionEvents[0].action.frustration!.type).toHaveLength(0)
     })
 
   createTest('collect a "rage click"')
-    .withRum({ trackFrustrations: true })
+    .withRum({ trackUserInteractions: true })
     .withBody(html`
       <button>click me</button>
       <script>
@@ -318,18 +371,33 @@ describe('action collection', () => {
         })
       </script>
     `)
-    .run(async ({ serverEvents }) => {
-      const button = await $('button')
-      await Promise.all([button.click(), button.click(), button.click()])
-      await flushEvents()
-      const actionEvents = serverEvents.rumActions
+    .run(async ({ intakeRegistry, page, flushEvents }) => {
+      // We don't use the playwright's `page.locator('button').click()` here because the latency of the command is
+      // too high and the clicks won't be recognised as rage clicks.
+      await page.evaluate(() => {
+        const button = document.querySelector('button')!
 
-      expect(actionEvents.length).toBe(1)
+        function click() {
+          button.dispatchEvent(new PointerEvent('pointerdown', { isPrimary: true }))
+          button.dispatchEvent(new PointerEvent('pointerup', { isPrimary: true }))
+          button.dispatchEvent(new PointerEvent('click', { isPrimary: true }))
+        }
+
+        // Simulate a rage click
+        click()
+        click()
+        click()
+      })
+
+      await flushEvents()
+      const actionEvents = intakeRegistry.rumActionEvents
+
+      expect(actionEvents).toHaveLength(1)
       expect(actionEvents[0].action.frustration!.type).toEqual(['rage_click'])
     })
 
   createTest('collect multiple frustrations in one action')
-    .withRum({ trackFrustrations: true })
+    .withRum({ trackUserInteractions: true })
     .withBody(html`
       <button>click me</button>
       <script>
@@ -339,21 +407,51 @@ describe('action collection', () => {
         })
       </script>
     `)
-    .run(async ({ serverEvents }) => {
-      const button = await $('button')
+    .run(async ({ intakeRegistry, flushEvents, withBrowserLogs, page }) => {
+      const button = page.locator('button')
       await button.click()
       await flushEvents()
-      const actionEvents = serverEvents.rumActions
+      const actionEvents = intakeRegistry.rumActionEvents
 
-      expect(actionEvents.length).toBe(1)
-      expect(actionEvents[0].action.frustration!.type).toEqual(
-        jasmine.arrayWithExactContents(['error_click', 'dead_click'])
-      )
+      expect(actionEvents).toHaveLength(1)
+      expect(actionEvents[0].action.frustration!.type).toStrictEqual(['error_click', 'dead_click'])
 
-      expect(serverEvents.rumViews[0].view.frustration!.count).toBe(2)
+      expect(intakeRegistry.rumViewEvents[0].view.frustration!.count).toBe(2)
 
-      await withBrowserLogs((browserLogs) => {
-        expect(browserLogs.length).toEqual(1)
+      withBrowserLogs((browserLogs) => {
+        expect(browserLogs).toHaveLength(1)
+      })
+    })
+
+  // We don't use the playwright's `page.locator('button').click()` here because it makes the test slower
+  createTest('dont crash when clicking on a button')
+    .withRum({ trackUserInteractions: true })
+    .withBody(html`
+      <button>click me</button>
+      <script>
+        const button = document.querySelector('button')
+        function click() {
+          const down = new PointerEvent('pointerdown', { isPrimary: true })
+          down.__ddIsTrusted = true
+
+          const up = new PointerEvent('pointerup', { isPrimary: true })
+          up.__ddIsTrusted = true
+
+          button.dispatchEvent(down)
+          button.dispatchEvent(up)
+        }
+
+        for (let i = 0; i < 2_500; i++) {
+          click()
+        }
+
+        window.open('/empty')
+      </script>
+    `)
+    .run(({ withBrowserLogs }) => {
+      withBrowserLogs((logs) => {
+        // A failing test would have a log with message "Uncaught RangeError: Maximum call stack size exceeded"
+        expect(logs).toHaveLength(0)
       })
     })
 })

@@ -1,6 +1,5 @@
-import type { Context } from '@openobserve/browser-core'
 import { objectValues } from '@openobserve/browser-core'
-import type { RumEvent } from '../rumEvent.types'
+import type { AssembledRumEvent } from '../rawRumEvent.types'
 import { FrustrationType, RumEventType } from '../rawRumEvent.types'
 import { LifeCycle, LifeCycleEventType } from './lifeCycle'
 import { trackEventCounts } from './trackEventCounts'
@@ -12,8 +11,8 @@ describe('trackEventCounts', () => {
     lifeCycle = new LifeCycle()
   })
 
-  function notifyCollectedRawRumEvent(partialEvent: Partial<RumEvent>) {
-    lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, partialEvent as RumEvent & Context)
+  function notifyCollectedRawRumEvent(partialEvent: Partial<AssembledRumEvent>) {
+    lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, partialEvent as AssembledRumEvent)
   }
 
   it('tracks errors', () => {
@@ -27,11 +26,12 @@ describe('trackEventCounts', () => {
     notifyCollectedRawRumEvent({ type: RumEventType.LONG_TASK })
     expect(eventCounts.longTaskCount).toBe(1)
   })
-
-  it("doesn't track views", () => {
-    const { eventCounts } = trackEventCounts({ lifeCycle, isChildEvent: () => true })
-    notifyCollectedRawRumEvent({ type: RumEventType.VIEW })
-    expect(objectValues(eventCounts as unknown as { [key: string]: number }).every((value) => value === 0)).toBe(true)
+  ;[RumEventType.VIEW, RumEventType.VITAL].forEach((eventType) => {
+    it(`doesn't track ${eventType} events`, () => {
+      const { eventCounts } = trackEventCounts({ lifeCycle, isChildEvent: () => true })
+      notifyCollectedRawRumEvent({ type: eventType })
+      expect(objectValues(eventCounts as unknown as { [key: string]: number }).every((value) => value === 0)).toBe(true)
+    })
   })
 
   it('tracks actions', () => {
@@ -40,10 +40,16 @@ describe('trackEventCounts', () => {
     expect(eventCounts.actionCount).toBe(1)
   })
 
-  it('tracks resources', () => {
+  it('tracks non-discarded resources', () => {
     const { eventCounts } = trackEventCounts({ lifeCycle, isChildEvent: () => true })
     notifyCollectedRawRumEvent({ type: RumEventType.RESOURCE })
     expect(eventCounts.resourceCount).toBe(1)
+  })
+
+  it('does not track discarded resources', () => {
+    const { eventCounts } = trackEventCounts({ lifeCycle, isChildEvent: () => true })
+    notifyCollectedRawRumEvent({ type: RumEventType.RESOURCE, _dd: { discarded: true, format_version: 2 } })
+    expect(eventCounts.resourceCount).toBe(0)
   })
 
   it('tracks frustration counts', () => {

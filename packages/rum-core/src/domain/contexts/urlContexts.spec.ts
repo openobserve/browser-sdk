@@ -1,48 +1,46 @@
+import { mockClock, registerCleanupTask } from '@openobserve/browser-core/test'
+import type { Clock } from '@openobserve/browser-core/test'
 import type { RelativeTime } from '@openobserve/browser-core'
-import { relativeToClocks } from '@openobserve/browser-core'
-import type { TestSetupBuilder } from '../../../test'
-import { setup } from '../../../test'
-import { LifeCycleEventType } from '../lifeCycle'
-import type { ViewCreatedEvent, ViewEndedEvent } from '../rumEventsCollection/view/trackViews'
-import type { UrlContexts } from './urlContexts'
-import { startUrlContexts } from './urlContexts'
+import { clocksNow, DISCARDED, HookNames, relativeToClocks } from '@openobserve/browser-core'
+import { setupLocationObserver } from '../../../test'
+import { LifeCycle, LifeCycleEventType } from '../lifeCycle'
+import type { ViewCreatedEvent, ViewEndedEvent } from '../view/trackViews'
+import type { Hooks } from '../hooks'
+import { createHooks } from '../hooks'
+import { startUrlContexts, type UrlContexts } from './urlContexts'
 
 describe('urlContexts', () => {
-  let setupBuilder: TestSetupBuilder
+  const lifeCycle = new LifeCycle()
+  let changeLocation: (to: string) => void
   let urlContexts: UrlContexts
+  let clock: Clock
+  let hooks: Hooks
 
   beforeEach(() => {
-    setupBuilder = setup()
-      .withFakeLocation('http://fake-url.com')
-      .withFakeClock()
-      .beforeBuild(({ lifeCycle, locationChangeObservable, location }) => {
-        urlContexts = startUrlContexts(lifeCycle, locationChangeObservable, location)
-        return urlContexts
-      })
-  })
+    clock = mockClock()
+    hooks = createHooks()
+    const setupResult = setupLocationObserver('http://fake-url.com')
 
-  afterEach(() => {
-    setupBuilder.cleanup()
+    changeLocation = setupResult.changeLocation
+    urlContexts = startUrlContexts(lifeCycle, hooks, setupResult.locationChangeObservable, setupResult.fakeLocation)
+
+    registerCleanupTask(() => {
+      urlContexts.stop()
+    })
   })
 
   it('should return undefined before the initial view', () => {
-    setupBuilder.build()
-
     expect(urlContexts.findUrl()).toBeUndefined()
   })
 
   it('should not create url context on location change before the initial view', () => {
-    const { changeLocation } = setupBuilder.build()
-
     changeLocation('/foo')
 
     expect(urlContexts.findUrl()).toBeUndefined()
   })
 
   it('should return current url and document referrer for initial view', () => {
-    const { lifeCycle } = setupBuilder.build()
-
-    lifeCycle.notify(LifeCycleEventType.VIEW_CREATED, {
+    lifeCycle.notify(LifeCycleEventType.BEFORE_VIEW_CREATED, {
       startClocks: relativeToClocks(0 as RelativeTime),
     } as ViewCreatedEvent)
 
@@ -52,9 +50,7 @@ describe('urlContexts', () => {
   })
 
   it('should update url context on location change', () => {
-    const { lifeCycle, changeLocation } = setupBuilder.build()
-
-    lifeCycle.notify(LifeCycleEventType.VIEW_CREATED, {
+    lifeCycle.notify(LifeCycleEventType.BEFORE_VIEW_CREATED, {
       startClocks: relativeToClocks(0 as RelativeTime),
     } as ViewCreatedEvent)
     changeLocation('/foo')
@@ -65,16 +61,14 @@ describe('urlContexts', () => {
   })
 
   it('should update url context on new view', () => {
-    const { lifeCycle, changeLocation } = setupBuilder.build()
-
-    lifeCycle.notify(LifeCycleEventType.VIEW_CREATED, {
+    lifeCycle.notify(LifeCycleEventType.BEFORE_VIEW_CREATED, {
       startClocks: relativeToClocks(0 as RelativeTime),
     } as ViewCreatedEvent)
     changeLocation('/foo')
-    lifeCycle.notify(LifeCycleEventType.VIEW_ENDED, {
+    lifeCycle.notify(LifeCycleEventType.AFTER_VIEW_ENDED, {
       endClocks: relativeToClocks(10 as RelativeTime),
     } as ViewEndedEvent)
-    lifeCycle.notify(LifeCycleEventType.VIEW_CREATED, {
+    lifeCycle.notify(LifeCycleEventType.BEFORE_VIEW_CREATED, {
       startClocks: relativeToClocks(10 as RelativeTime),
     } as ViewCreatedEvent)
 
@@ -84,19 +78,17 @@ describe('urlContexts', () => {
   })
 
   it('should return the url context corresponding to the start time', () => {
-    const { lifeCycle, changeLocation, clock } = setupBuilder.build()
-
-    lifeCycle.notify(LifeCycleEventType.VIEW_CREATED, {
-      startClocks: relativeToClocks(0 as RelativeTime),
+    lifeCycle.notify(LifeCycleEventType.BEFORE_VIEW_CREATED, {
+      startClocks: clocksNow(),
     } as ViewCreatedEvent)
 
     clock.tick(10)
     changeLocation('/foo')
-    lifeCycle.notify(LifeCycleEventType.VIEW_ENDED, {
-      endClocks: relativeToClocks(10 as RelativeTime),
+    lifeCycle.notify(LifeCycleEventType.AFTER_VIEW_ENDED, {
+      endClocks: clocksNow(),
     } as ViewEndedEvent)
-    lifeCycle.notify(LifeCycleEventType.VIEW_CREATED, {
-      startClocks: relativeToClocks(10 as RelativeTime),
+    lifeCycle.notify(LifeCycleEventType.BEFORE_VIEW_CREATED, {
+      startClocks: clocksNow(),
     } as ViewCreatedEvent)
 
     clock.tick(10)
@@ -104,26 +96,26 @@ describe('urlContexts', () => {
 
     clock.tick(10)
     changeLocation('/qux')
-    lifeCycle.notify(LifeCycleEventType.VIEW_ENDED, {
-      endClocks: relativeToClocks(30 as RelativeTime),
+    lifeCycle.notify(LifeCycleEventType.AFTER_VIEW_ENDED, {
+      endClocks: clocksNow(),
     } as ViewEndedEvent)
-    lifeCycle.notify(LifeCycleEventType.VIEW_CREATED, {
-      startClocks: relativeToClocks(30 as RelativeTime),
+    lifeCycle.notify(LifeCycleEventType.BEFORE_VIEW_CREATED, {
+      startClocks: clocksNow(),
     } as ViewCreatedEvent)
 
-    expect(urlContexts.findUrl(5 as RelativeTime)).toEqual({
+    expect(urlContexts.findUrl(clock.relative(5))).toEqual({
       url: 'http://fake-url.com/',
       referrer: document.referrer,
     })
-    expect(urlContexts.findUrl(15 as RelativeTime)).toEqual({
+    expect(urlContexts.findUrl(clock.relative(15))).toEqual({
       url: 'http://fake-url.com/foo',
       referrer: 'http://fake-url.com/',
     })
-    expect(urlContexts.findUrl(25 as RelativeTime)).toEqual({
+    expect(urlContexts.findUrl(clock.relative(25))).toEqual({
       url: 'http://fake-url.com/foo#bar',
       referrer: 'http://fake-url.com/',
     })
-    expect(urlContexts.findUrl(35 as RelativeTime)).toEqual({
+    expect(urlContexts.findUrl(clock.relative(35))).toEqual({
       url: 'http://fake-url.com/qux',
       referrer: 'http://fake-url.com/foo',
     })
@@ -134,15 +126,44 @@ describe('urlContexts', () => {
    * (which seems unlikely) and this event would anyway be rejected by lack of view id
    */
   it('should return undefined when no current view', () => {
-    const { lifeCycle } = setupBuilder.build()
-
-    lifeCycle.notify(LifeCycleEventType.VIEW_CREATED, {
+    lifeCycle.notify(LifeCycleEventType.BEFORE_VIEW_CREATED, {
       startClocks: relativeToClocks(0 as RelativeTime),
     } as ViewCreatedEvent)
-    lifeCycle.notify(LifeCycleEventType.VIEW_ENDED, {
+    lifeCycle.notify(LifeCycleEventType.AFTER_VIEW_ENDED, {
       endClocks: relativeToClocks(10 as RelativeTime),
     } as ViewEndedEvent)
 
     expect(urlContexts.findUrl()).toBeUndefined()
+  })
+
+  describe('assemble hook', () => {
+    it('should add url properties from the history', () => {
+      lifeCycle.notify(LifeCycleEventType.BEFORE_VIEW_CREATED, {
+        startClocks: relativeToClocks(0 as RelativeTime),
+      } as ViewCreatedEvent)
+
+      const defaultRumEventAttributes = hooks.triggerHook(HookNames.Assemble, {
+        eventType: 'view',
+        startTime: 0 as RelativeTime,
+      })
+
+      expect(defaultRumEventAttributes).toEqual(
+        jasmine.objectContaining({
+          view: {
+            url: jasmine.any(String),
+            referrer: jasmine.any(String),
+          },
+        })
+      )
+    })
+
+    it('should discard the event if no URL', () => {
+      const defaultRumEventAttributes = hooks.triggerHook(HookNames.Assemble, {
+        eventType: 'view',
+        startTime: 0 as RelativeTime,
+      })
+
+      expect(defaultRumEventAttributes).toBe(DISCARDED)
+    })
   })
 })

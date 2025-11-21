@@ -111,7 +111,6 @@ var extra_blbits =
   /* extra bits for each bit length code */
   new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7])
 var bl_order = new Uint8Array([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15])
-/* eslint-enable comma-spacing,array-bracket-spacing */
 
 /* The lengths of the bit length codes are sent in order of decreasing
  * probability, to avoid transmitting the lengths for unused bit length codes.
@@ -2413,8 +2412,10 @@ var deflate_fast = function deflate_fast(s, flush) {
     if (s.match_length >= MIN_MATCH$1) {
       // check_match(s, s.strstart, s.match_start, s.match_length); // for debug only
 
-      /** * _tr_tally_dist(s, s.strstart - s.match_start,
-                       s.match_length - MIN_MATCH, bflush); ** */
+      /**
+       * _tr_tally_dist(s, s.strstart - s.match_start,
+                       s.match_length - MIN_MATCH, bflush); **
+       */
       bflush = _tr_tally$1(s, s.strstart - s.match_start, s.match_length - MIN_MATCH$1)
       s.lookahead -= s.match_length
       /* Insert new strings in the hash table only if the match length
@@ -2594,8 +2595,10 @@ var deflate_slow = function deflate_slow(s, flush) {
       /* Do not insert strings in hash table beyond this. */
       // check_match(s, s.strstart-1, s.prev_match, s.prev_length);
 
-      /** *_tr_tally_dist(s, s.strstart - 1 - s.prev_match,
-                       s.prev_length - MIN_MATCH, bflush);** */
+      /**
+       *_tr_tally_dist(s, s.strstart - 1 - s.prev_match,
+                       s.prev_length - MIN_MATCH, bflush);**
+       */
 
       bflush = _tr_tally$1(s, s.strstart - 1 - s.prev_match, s.prev_length - MIN_MATCH$1)
       /* Insert in hash table all strings up to the end of the match.
@@ -3631,8 +3634,8 @@ var deflate = function deflate(strm, flush) {
       s.strategy === Z_HUFFMAN_ONLY
         ? deflate_huff(s, flush)
         : s.strategy === Z_RLE
-        ? deflate_rle(s, flush)
-        : configuration_table[s.level].func(s, flush)
+          ? deflate_rle(s, flush)
+          : configuration_table[s.level].func(s, flush)
 
     if (bstate === BS_FINISH_STARTED || bstate === BS_FINISH_DONE) {
       s.status = FINISH_STATE

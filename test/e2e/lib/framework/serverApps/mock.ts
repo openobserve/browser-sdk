@@ -2,12 +2,19 @@ import type { ServerResponse } from 'http'
 import * as url from 'url'
 import cors from 'cors'
 import express from 'express'
-import * as sdkBuilds from '../sdkBuilds'
+import type { RemoteConfiguration } from '@datadog/browser-rum-core'
+import { getSdkBundlePath, getTestAppBundlePath } from '../sdkBuilds'
 import type { MockServerApp, Servers } from '../httpServers'
+import { DEV_SERVER_BASE_URL } from '../../helpers/playwright'
+import { workerSetup } from '../pageSetups'
 
 export const LARGE_RESPONSE_MIN_BYTE_SIZE = 100_000
 
-export function createMockServerApp(servers: Servers, setup: string): MockServerApp {
+export function createMockServerApp(
+  servers: Servers,
+  setup: string,
+  remoteConfiguration?: RemoteConfiguration
+): MockServerApp {
   const app = express()
   let largeResponseBytesWritten = 0
 
@@ -36,6 +43,14 @@ export function createMockServerApp(servers: Servers, setup: string): MockServer
   app.get('/large-response', (_req, res) => {
     const chunkText = 'foofoobarbar\n'.repeat(50)
     generateLargeResponse(res, chunkText)
+  })
+
+  app.get('/sw.js', (_req, res) => {
+    const query = _req.query
+
+    res
+      .contentType('application/javascript')
+      .send(workerSetup({ importScripts: Boolean(query.importScripts), nativeLog: Boolean(query.nativeLog) }, servers))
   })
 
   function generateLargeResponse(res: ServerResponse, chunkText: string) {
@@ -74,11 +89,42 @@ export function createMockServerApp(servers: Servers, setup: string): MockServer
   })
 
   app.get('/ok', (req, res) => {
+    res.header('Content-Type', 'text/plain')
     if (req.query['timing-allow-origin'] === 'true') {
       res.set('Timing-Allow-Origin', '*')
     }
     const timeoutDuration = req.query.duration ? Number(req.query.duration) : 0
     setTimeout(() => res.send('ok'), timeoutDuration)
+  })
+
+  app.post('/graphql', (req, res) => {
+    res.header('Content-Type', 'application/json')
+
+    const scenario = req.query.scenario as string | undefined
+
+    if (scenario === 'validation-error') {
+      res.json({
+        data: null,
+        errors: [
+          {
+            message: 'Field "unknownField" does not exist',
+            extensions: { code: 'GRAPHQL_VALIDATION_FAILED' },
+            locations: [{ line: 2, column: 5 }],
+            path: ['user', 'unknownField'],
+          },
+        ],
+      })
+    } else if (scenario === 'multiple-errors') {
+      res.json({
+        data: { user: null },
+        errors: [
+          { message: 'User not found' },
+          { message: 'Insufficient permissions', extensions: { code: 'UNAUTHORIZED' } },
+        ],
+      })
+    } else {
+      res.json({ data: { result: 'success' } })
+    }
   })
 
   app.get('/redirect', (req, res) => {
@@ -94,9 +140,9 @@ export function createMockServerApp(servers: Servers, setup: string): MockServer
     res.header(
       'Content-Security-Policy',
       [
-        `connect-src ${servers.intake.url} ${servers.base.url} ${servers.crossOrigin.url}`,
-        "script-src 'self' 'unsafe-inline'",
-        'worker-src blob:',
+        `connect-src ${servers.intake.origin} ${servers.base.origin} ${servers.crossOrigin.origin}`,
+        `script-src 'self' 'unsafe-inline' ${servers.crossOrigin.origin}`,
+        "worker-src blob: 'self'",
       ].join(';')
     )
     res.send(setup)
@@ -107,32 +153,39 @@ export function createMockServerApp(servers: Servers, setup: string): MockServer
     res.header(
       'Content-Security-Policy',
       [
-        `connect-src ${servers.intake.url} ${servers.base.url} ${servers.crossOrigin.url}`,
-        "script-src 'self' 'unsafe-inline'",
+        `connect-src ${servers.intake.origin} ${servers.base.origin} ${servers.crossOrigin.origin}`,
+        `script-src 'self' 'unsafe-inline' ${servers.crossOrigin.origin}`,
       ].join(';')
     )
     res.send(setup)
     res.end()
   })
 
-  app.get('/openobserve-logs.js', (_req, res) => {
-    res.sendFile(sdkBuilds.LOGS_BUNDLE)
+  app.get(/openobserve-(?<packageName>[a-z-]*)\.js/, (req, res) => {
+    const { originalUrl, params } = req
+
+    if (process.env.CI) {
+      res.sendFile(getSdkBundlePath(params.packageName, originalUrl))
+    } else {
+      forwardToDevServer(req.originalUrl, res)
+    }
   })
 
-  app.get('/openobserve-rum.js', (_req, res) => {
-    res.sendFile(sdkBuilds.RUM_BUNDLE)
+  app.get('/worker.js', (req, res) => {
+    if (process.env.CI) {
+      res.sendFile(getSdkBundlePath('worker', req.originalUrl))
+    } else {
+      forwardToDevServer(req.originalUrl, res)
+    }
   })
 
-  app.get('/openobserve-rum-slim.js', (_req, res) => {
-    res.sendFile(sdkBuilds.RUM_SLIM_BUNDLE)
+  app.get(/(?<appName>app|react-[\w-]+).js$/, (req, res) => {
+    const { originalUrl, params } = req
+    res.sendFile(getTestAppBundlePath(params.appName, originalUrl))
   })
 
-  app.get('/worker.js', (_req, res) => {
-    res.sendFile(sdkBuilds.WORKER_BUNDLE)
-  })
-
-  app.get('/app.js', (_req, res) => {
-    res.sendFile(sdkBuilds.NPM_BUNDLE)
+  app.get('/config', (_req, res) => {
+    res.send(JSON.stringify(remoteConfiguration))
   })
 
   return Object.assign(app, {
@@ -140,4 +193,28 @@ export function createMockServerApp(servers: Servers, setup: string): MockServer
       return largeResponseBytesWritten
     },
   })
+}
+
+// We fetch and pipe the file content instead of redirecting to avoid creating different behavior between CI and local dev
+// This way both environments serve the files from the same origin with the same CSP rules
+function forwardToDevServer(originalUrl: string, res: ServerResponse) {
+  const url = `${DEV_SERVER_BASE_URL}${originalUrl}`
+
+  fetch(url)
+    .then(({ body, headers }) => {
+      void body?.pipeTo(
+        new WritableStream({
+          start() {
+            headers.forEach((value, key) => res.setHeader(key, value))
+          },
+          write(chunk) {
+            res.write(chunk)
+          },
+          close() {
+            res.end()
+          },
+        })
+      )
+    })
+    .catch(() => console.error(`Error fetching ${url}, did you run 'yarn dev'?`))
 }

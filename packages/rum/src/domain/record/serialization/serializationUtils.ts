@@ -1,36 +1,6 @@
 import { buildUrl } from '@openobserve/browser-core'
-import { getParentNode, isNodeShadowRoot } from '@openobserve/browser-rum-core'
-import type { NodePrivacyLevel } from '../../../constants'
-import { CENSORED_STRING_MARK } from '../../../constants'
-import { shouldMaskNode } from '../privacy'
-import type { NodeWithSerializedNode } from './serialization.types'
-
-const serializedNodeIds = new WeakMap<Node, number>()
-
-export function hasSerializedNode(node: Node): node is NodeWithSerializedNode {
-  return serializedNodeIds.has(node)
-}
-
-export function nodeAndAncestorsHaveSerializedNode(node: Node): node is NodeWithSerializedNode {
-  let current: Node | null = node
-  while (current) {
-    if (!hasSerializedNode(current) && !isNodeShadowRoot(current)) {
-      return false
-    }
-    current = getParentNode(current)
-  }
-  return true
-}
-
-export function getSerializedNodeId(node: NodeWithSerializedNode): number
-export function getSerializedNodeId(node: Node): number | undefined
-export function getSerializedNodeId(node: Node) {
-  return serializedNodeIds.get(node)
-}
-
-export function setSerializedNodeId(node: Node, serializeNodeId: number) {
-  serializedNodeIds.set(node, serializeNodeId)
-}
+import { CENSORED_STRING_MARK, shouldMaskNode } from '@openobserve/browser-rum-core'
+import type { NodePrivacyLevel } from '@openobserve/browser-rum-core'
 
 /**
  * Get the element "value" to be serialized as an attribute or an input update record. It respects
@@ -73,7 +43,7 @@ export function getElementInputValue(element: Element, nodePrivacyLevel: NodePri
 
 export const URL_IN_CSS_REF = /url\((?:(')([^']*)'|(")([^"]*)"|([^)]*))\)/gm
 export const ABSOLUTE_URL = /^[A-Za-z]+:|^\/\//
-export const DATA_URI = /^data:.*,/i
+export const DATA_URI = /^["']?data:.*,/i
 
 export function switchToAbsoluteUrl(cssText: string, cssHref: string | null): string {
   return cssText.replace(
@@ -98,10 +68,10 @@ export function switchToAbsoluteUrl(cssText: string, cssHref: string | null): st
   )
 }
 
-export function makeUrlAbsolute(url: string, baseUrl: string): string {
+function makeUrlAbsolute(url: string, baseUrl: string): string {
   try {
     return buildUrl(url, baseUrl).href
-  } catch (_) {
+  } catch {
     return url
   }
 }
@@ -118,4 +88,8 @@ export function getValidTagName(tagName: string): string {
   }
 
   return processedTagName
+}
+
+export function censoredImageForSize(width: number, height: number) {
+  return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}' style='background-color:silver'%3E%3C/svg%3E`
 }

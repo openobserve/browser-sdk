@@ -1,7 +1,22 @@
-import type { EventRegistry } from '../../lib/framework'
-import { flushEvents, createTest } from '../../lib/framework'
+import type { Context } from '@datadog/browser-core'
+import { test, expect } from '@playwright/test'
+import type { IntakeRegistry } from '../../lib/framework'
+import { createTest } from '../../lib/framework'
 
-describe('API calls and events around init', () => {
+test.describe('API calls and events around init', () => {
+  createTest('should display a console log when calling init without configuration')
+    .withRum()
+    .withRumInit(() => {
+      ;(window.DD_RUM! as unknown as { init(): void }).init()
+    })
+    .run(({ withBrowserLogs }) => {
+      withBrowserLogs((logs) => {
+        expect(logs).toHaveLength(1)
+        expect(logs[0].message).toEqual(expect.stringContaining('Datadog Browser SDK'))
+        expect(logs[0].message).toEqual(expect.stringContaining('Missing configuration'))
+      })
+    })
+
   createTest('should be associated to corresponding views when views are automatically tracked')
     .withRum()
     .withRumSlim()
@@ -20,32 +35,32 @@ describe('API calls and events around init', () => {
 
       setTimeout(() => window.OO_RUM!.init(configuration), 30)
     })
-    .run(async ({ serverEvents }) => {
+    .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()
 
-      const initialView = serverEvents.rumViews[0]
+      const initialView = intakeRegistry.rumViewEvents[0]
       expect(initialView.view.name).toBeUndefined()
       expect(initialView.view.custom_timings).toEqual({
-        before_manual_view: jasmine.any(Number),
+        before_manual_view: expect.any(Number),
       })
 
-      const manualView = serverEvents.rumViews[1]
+      const manualView = intakeRegistry.rumViewEvents[1]
       expect(manualView.view.name).toBe('manual view')
       expect(manualView.view.custom_timings).toEqual({
-        after_manual_view: jasmine.any(Number),
+        after_manual_view: expect.any(Number),
       })
 
-      const documentEvent = serverEvents.rumResources.find((event) => event.resource.type === 'document')!
+      const documentEvent = intakeRegistry.rumResourceEvents.find((event) => event.resource.type === 'document')!
       expect(documentEvent.view.id).toBe(initialView.view.id)
 
       expectToHaveErrors(
-        serverEvents,
+        intakeRegistry,
         { message: 'Provided "before manual view"', viewId: initialView.view.id },
         { message: 'Provided "after manual view"', viewId: manualView.view.id }
       )
 
       expectToHaveActions(
-        serverEvents,
+        intakeRegistry,
         { name: 'before manual view', viewId: initialView.view.id },
         { name: 'after manual view', viewId: manualView.view.id }
       )
@@ -60,7 +75,6 @@ describe('API calls and events around init', () => {
       window.OO_RUM!.addTiming('before init')
 
       setTimeout(() => window.OO_RUM!.init(configuration), 10)
-
       setTimeout(() => {
         window.OO_RUM!.addError('before manual view')
         window.OO_RUM!.addAction('before manual view')
@@ -73,93 +87,266 @@ describe('API calls and events around init', () => {
         window.OO_RUM!.addError('after manual view')
         window.OO_RUM!.addAction('after manual view')
         window.OO_RUM!.addTiming('after manual view')
+        window.OO_RUM!.setViewName('after manual view')
       }, 40)
     })
-    .run(async ({ serverEvents }) => {
+    .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()
 
-      const initialView = serverEvents.rumViews[0]
-      expect(initialView.view.name).toBe('manual view')
+      const initialView = intakeRegistry.rumViewEvents[0]
+      expect(initialView.view.name).toBe('after manual view')
       expect(initialView.view.custom_timings).toEqual({
-        before_init: jasmine.any(Number),
-        before_manual_view: jasmine.any(Number),
-        after_manual_view: jasmine.any(Number),
+        before_init: expect.any(Number),
+        before_manual_view: expect.any(Number),
+        after_manual_view: expect.any(Number),
       })
 
-      const documentEvent = serverEvents.rumResources.find((event) => event.resource.type === 'document')!
+      const documentEvent = intakeRegistry.rumResourceEvents.find((event) => event.resource.type === 'document')!
       expect(documentEvent.view.id).toBe(initialView.view.id)
 
       expectToHaveErrors(
-        serverEvents,
+        intakeRegistry,
         { message: 'Provided "before init"', viewId: initialView.view.id },
         { message: 'Provided "before manual view"', viewId: initialView.view.id },
         { message: 'Provided "after manual view"', viewId: initialView.view.id }
       )
 
       expectToHaveActions(
-        serverEvents,
+        intakeRegistry,
         { name: 'before init', viewId: initialView.view.id },
         { name: 'before manual view', viewId: initialView.view.id },
-        { name: 'after manual view', viewId: initialView.view.id }
+        { name: 'after manual view', viewId: initialView.view.id, viewName: 'after manual view' }
       )
+    })
+
+  createTest('should be able to set view context')
+    .withRum()
+    .withRumSlim()
+    .withRumInit((configuration) => {
+      window.DD_RUM!.init(configuration)
+      window.DD_RUM!.setViewContext({ foo: 'bar' })
+      window.DD_RUM!.setViewContextProperty('bar', 'foo')
+
+      // context should populate the context of the children events
+      window.DD_RUM!.addAction('custom action')
+      window.DD_RUM!.addError('custom error')
+
+      // context should not populate the context of the next view
+      setTimeout(() => window.DD_RUM!.startView('manual view'), 10)
+      setTimeout(() => {
+        window.DD_RUM!.addAction('after manual view')
+        window.DD_RUM!.addError('after manual view')
+      }, 20)
+    })
+    .run(async ({ intakeRegistry, flushEvents }) => {
+      await flushEvents()
+
+      const initialView = intakeRegistry.rumViewEvents[0]
+      const nextView = intakeRegistry.rumViewEvents[1]
+
+      expect(initialView.context).toEqual(expect.objectContaining({ foo: 'bar', bar: 'foo' }))
+      expect(nextView.context!.foo).toBeUndefined()
+
+      expectToHaveActions(
+        intakeRegistry,
+        {
+          name: 'custom action',
+          viewId: initialView.view.id,
+          context: { foo: 'bar', bar: 'foo' },
+        },
+        {
+          name: 'after manual view',
+          viewId: nextView.view.id,
+        }
+      )
+      expectToHaveErrors(
+        intakeRegistry,
+        {
+          message: 'Provided "custom error"',
+          viewId: initialView.view.id,
+          context: { foo: 'bar', bar: 'foo' },
+        },
+        {
+          message: 'Provided "after manual view"',
+          viewId: nextView.view.id,
+        }
+      )
+    })
+
+  createTest('get the view context')
+    .withRum()
+    .withRumInit((configuration) => {
+      window.DD_RUM!.init(configuration)
+      window.DD_RUM!.setViewContext({ foo: 'bar' })
+    })
+    .run(async ({ page }) => {
+      const viewContext = await page.evaluate(() => window.DD_RUM?.getViewContext())
+      expect(viewContext).toEqual({ foo: 'bar' })
     })
 })
 
-describe('beforeSend', () => {
-  createTest('allows to edit non-view events context')
+test.describe('beforeSend', () => {
+  createTest('allows to edit events context with feature flag')
     .withRum({
       beforeSend: (event: any) => {
         event.context!.foo = 'bar'
+        return true
       },
     })
     .withRumSlim()
-    .run(async ({ serverEvents }) => {
+    .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()
 
-      const initialView = serverEvents.rumViews[0]
-      expect(initialView.context).not.toEqual(jasmine.objectContaining({ foo: 'bar' }))
-      const initialDocument = serverEvents.rumResources[0]
-      expect(initialDocument.context).toEqual(jasmine.objectContaining({ foo: 'bar' }))
+      const initialView = intakeRegistry.rumViewEvents[0]
+      expect(initialView.context).toEqual(expect.objectContaining({ foo: 'bar' }))
+      const initialDocument = intakeRegistry.rumResourceEvents[0]
+      expect(initialDocument.context).toEqual(expect.objectContaining({ foo: 'bar' }))
     })
 
-  createTest('allows to replace non-view events context')
+  createTest('allows to replace events context')
     .withRum({
       beforeSend: (event) => {
         event.context = { foo: 'bar' }
+        return true
       },
     })
     .withRumSlim()
     .withRumInit((configuration) => {
       window.OO_RUM!.init(configuration)
-      window.OO_RUM!.addRumGlobalContext('foo', 'baz')
-      window.OO_RUM!.addRumGlobalContext('zig', 'zag')
+      window.OO_RUM!.setGlobalContextProperty('foo', 'baz')
+      window.OO_RUM!.setGlobalContextProperty('zig', 'zag')
     })
-    .run(async ({ serverEvents }) => {
+    .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()
 
-      const initialView = serverEvents.rumViews[0]
-      expect(initialView.context).toEqual(jasmine.objectContaining({ foo: 'baz', zig: 'zag' }))
-      const initialDocument = serverEvents.rumResources[0]
-      expect(initialDocument.context).toEqual(jasmine.objectContaining({ foo: 'bar' }))
+      const initialView = intakeRegistry.rumViewEvents[0]
+      expect(initialView.context).toEqual(expect.objectContaining({ foo: 'bar' }))
+      const initialDocument = intakeRegistry.rumResourceEvents[0]
+      expect(initialDocument.context).toEqual(expect.objectContaining({ foo: 'bar' }))
     })
 })
 
-function expectToHaveErrors(events: EventRegistry, ...errors: Array<{ message: string; viewId: string }>) {
-  expect(events.rumErrors.length).toBe(errors.length)
+test.describe('allowedTrackingOrigins', () => {
+  createTest('should not warn when allowedTrackingOrigins matches current domain')
+    .withRum()
+    .withRumInit((configuration) => {
+      const currentOrigin = window.location.origin
+      window.DD_RUM!.init({
+        ...configuration,
+        allowedTrackingOrigins: [currentOrigin],
+      })
+    })
+    .run(({ withBrowserLogs }) => {
+      withBrowserLogs((logs) => {
+        expect(logs).toHaveLength(0)
+      })
+    })
+
+  createTest('should not warn when allowedTrackingOrigins matches current domain with regex')
+    .withRum()
+    .withRumInit((configuration) => {
+      const currentOrigin = window.location.origin
+      const escapedOrigin = currentOrigin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      window.DD_RUM!.init({
+        ...configuration,
+        allowedTrackingOrigins: [new RegExp(`^${escapedOrigin}$`)],
+      })
+    })
+    .run(({ withBrowserLogs }) => {
+      withBrowserLogs((logs) => {
+        expect(logs).toHaveLength(0)
+      })
+    })
+
+  createTest('should not warn when allowedTrackingOrigins matches current domain with function')
+    .withRum()
+    .withRumInit((configuration) => {
+      const currentOrigin = window.location.origin
+      window.DD_RUM!.init({
+        ...configuration,
+        allowedTrackingOrigins: [(origin: string) => origin === currentOrigin],
+      })
+    })
+    .run(({ withBrowserLogs }) => {
+      withBrowserLogs((logs) => {
+        expect(logs).toHaveLength(0)
+      })
+    })
+
+  createTest('initializing RUM should not produce logs')
+    .withRum()
+    .run(({ withBrowserLogs }) => {
+      withBrowserLogs((logs) => {
+        expect(logs).toHaveLength(0)
+      })
+    })
+
+  createTest('should warn when allowedTrackingOrigins does not match current domain')
+    .withRum()
+    .withRumInit((configuration) => {
+      window.DD_RUM!.init({
+        ...configuration,
+        allowedTrackingOrigins: ['https://different-domain.com'],
+      })
+    })
+    .run(async ({ withBrowserLogs, intakeRegistry, flushEvents }) => {
+      await flushEvents()
+
+      withBrowserLogs((logs) => {
+        const errorLogs = logs.filter(
+          (log) => log.message.includes('SDK initialized on a non-allowed domain') && log.level === 'error'
+        )
+        expect(errorLogs).toHaveLength(1)
+      })
+
+      expect(intakeRegistry.rumViewEvents.length).toBe(0)
+    })
+})
+
+test.describe('Synthetics Browser Test', () => {
+  createTest('ignores init() call if Synthetics will inject its own instance of RUM')
+    .withRum()
+    .withRumInit((configuration) => {
+      ;(window as any)._DATADOG_SYNTHETICS_INJECTS_RUM = true
+      window.DD_RUM!.init(configuration)
+    })
+    .run(async ({ intakeRegistry, flushEvents }) => {
+      await flushEvents()
+      expect(intakeRegistry.rumViewEvents).toHaveLength(0)
+    })
+})
+
+function expectToHaveErrors(
+  events: IntakeRegistry,
+  ...errors: Array<{ message: string; viewId: string; context?: Context }>
+) {
+  expect(events.rumErrorEvents).toHaveLength(errors.length)
   for (let i = 0; i < errors.length; i++) {
-    const registryError = events.rumErrors[i]
+    const registryError = events.rumErrorEvents[i]
     const expectedError = errors[i]
     expect(registryError.error.message).toBe(expectedError.message)
     expect(registryError.view.id).toBe(expectedError.viewId)
+    if (expectedError.context) {
+      expect(registryError.context).toEqual(expect.objectContaining(expectedError.context))
+    }
   }
 }
 
-function expectToHaveActions(events: EventRegistry, ...actions: Array<{ name: string; viewId: string }>) {
-  expect(events.rumActions.length).toBe(actions.length)
+function expectToHaveActions(
+  events: IntakeRegistry,
+  ...actions: Array<{ name: string; viewId: string; viewName?: string; context?: Context }>
+) {
+  expect(events.rumActionEvents).toHaveLength(actions.length)
   for (let i = 0; i < actions.length; i++) {
-    const registryAction = events.rumActions[i]
+    const registryAction = events.rumActionEvents[i]
     const expectedAction = actions[i]
     expect(registryAction.action.target!.name).toBe(expectedAction.name)
     expect(registryAction.view.id).toBe(expectedAction.viewId)
+    if (i === 0 && expectedAction.viewName) {
+      expect(registryAction.view.name).toBe(expectedAction.viewName)
+    }
+    if (expectedAction.context) {
+      expect(registryAction.context).toEqual(expect.objectContaining(expectedAction.context))
+    }
   }
 }

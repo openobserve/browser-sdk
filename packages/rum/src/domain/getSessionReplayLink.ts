@@ -1,16 +1,16 @@
-import type { RumConfiguration, RumSessionManager, ViewContexts, RumSession } from '@openobserve/browser-rum-core'
-import { getSessionReplayUrl } from '@openobserve/browser-rum-core'
+import type { RumConfiguration, RumSessionManager, ViewHistory, RumSession } from '@openobserve/browser-rum-core'
+import { getSessionReplayUrl, SessionReplayState } from '@openobserve/browser-rum-core'
 import { isBrowserSupported } from '../boot/isBrowserSupported'
 
 export function getSessionReplayLink(
   configuration: RumConfiguration,
   sessionManager: RumSessionManager,
-  viewContexts: ViewContexts,
+  viewHistory: ViewHistory,
   isRecordingStarted: boolean
 ): string | undefined {
   const session = sessionManager.findTrackedSession()
   const errorType = getErrorType(session, isRecordingStarted)
-  const viewContext = viewContexts.findView()
+  const viewContext = viewHistory.findView()
 
   return getSessionReplayUrl(configuration, {
     viewContext,
@@ -29,7 +29,7 @@ function getErrorType(session: RumSession | undefined, isRecordingStarted: boole
     // - session expired (edge case)
     return 'rum-not-tracked'
   }
-  if (!session.sessionReplayAllowed) {
+  if (session.sessionReplay === SessionReplayState.OFF) {
     // possibilities
     // - replay sampled out
     return 'incorrect-session-plan'

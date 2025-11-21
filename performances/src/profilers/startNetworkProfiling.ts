@@ -1,5 +1,5 @@
 import type { CDPSession, Protocol } from 'puppeteer'
-import type { ProfilingOptions } from '../types'
+import type { ProfilingOptions } from '../profiling.types'
 import { isSdkBundleUrl } from './profilingUtils'
 
 export async function startNetworkProfiling(options: ProfilingOptions, client: CDPSession) {
@@ -27,7 +27,7 @@ export async function startNetworkProfiling(options: ProfilingOptions, client: C
   client.on('Network.loadingFinished', loadingFinishedListener)
   return () => {
     client.off('Network.requestWillBeSent', requestListener)
-    client.off('Network.loadingFinishedListener', loadingFinishedListener)
+    client.off('Network.loadingFinished', loadingFinishedListener)
 
     return {
       upload: options.proxy.stats.getStatsByHost(),

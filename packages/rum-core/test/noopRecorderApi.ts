@@ -1,6 +1,5 @@
 import type { RecorderApi } from '@openobserve/browser-rum-core'
-import type { RelativeTime } from '@openobserve/browser-core'
-import { Observable, noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/browser-core'
 
 export const noopRecorderApi: RecorderApi = {
   start: noop,
@@ -9,6 +8,4 @@ export const noopRecorderApi: RecorderApi = {
   onRumStart: noop,
   getReplayStats: () => undefined,
   getSessionReplayLink: () => undefined,
-  recorderStartObservable: new Observable<RelativeTime>(),
-  getSerializedNodeId: () => undefined,
 }

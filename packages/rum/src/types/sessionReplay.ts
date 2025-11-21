@@ -1,6 +1,6 @@
 /* eslint-disable */
 /**
- * DO NOT MODIFY IT BY HAND. Run `yarn rum-events-format:sync` instead.
+ * DO NOT MODIFY IT BY HAND. Run `yarn json-schemas:sync` instead.
  */
 
 /**
@@ -48,12 +48,21 @@ export type BrowserRecord =
 /**
  * Browser-specific. Schema of a Record type which contains the full snapshot of a screen.
  */
-export type BrowserFullSnapshotRecord = CommonRecordSchema & {
+export type BrowserFullSnapshotRecord = SlotSupportedCommonRecordSchema & {
   /**
    * The type of this Record.
    */
   readonly type: 2
   data: BrowserNode
+}
+/**
+ * Schema of common properties for a Record event type that is supported by slots.
+ */
+export type SlotSupportedCommonRecordSchema = CommonRecordSchema & {
+  /**
+   * Unique ID of the slot that generated this record.
+   */
+  readonly slotId?: string
 }
 /**
  * Serialized node contained by this Record.
@@ -68,7 +77,7 @@ export type SerializedNode = DocumentNode | DocumentFragmentNode | DocumentTypeN
 /**
  * Browser-specific. Schema of a Record type which contains mutations of a screen.
  */
-export type BrowserIncrementalSnapshotRecord = CommonRecordSchema & {
+export type BrowserIncrementalSnapshotRecord = SlotSupportedCommonRecordSchema & {
   /**
    * The type of this Record.
    */
@@ -237,7 +246,7 @@ export type PointerInteractionData = {
 /**
  * Schema of a Record which contains the screen properties.
  */
-export type MetaRecord = CommonRecordSchema & {
+export type MetaRecord = SlotSupportedCommonRecordSchema & {
   /**
    * The type of this Record.
    */
@@ -263,7 +272,7 @@ export type MetaRecord = CommonRecordSchema & {
 /**
  * Schema of a Record type which contains focus information.
  */
-export type FocusRecord = CommonRecordSchema & {
+export type FocusRecord = SlotSupportedCommonRecordSchema & {
   /**
    * The type of this Record.
    */
@@ -278,7 +287,7 @@ export type FocusRecord = CommonRecordSchema & {
 /**
  * Schema of a Record which signifies that view lifecycle ended.
  */
-export type ViewEndRecord = CommonRecordSchema & {
+export type ViewEndRecord = SlotSupportedCommonRecordSchema & {
   /**
    * The type of this Record.
    */
@@ -287,7 +296,7 @@ export type ViewEndRecord = CommonRecordSchema & {
 /**
  * Schema of a Record which signifies that the viewport properties have changed.
  */
-export type VisualViewportRecord = CommonRecordSchema & {
+export type VisualViewportRecord = SlotSupportedCommonRecordSchema & {
   data: {
     height: number
     offsetLeft: number
@@ -305,7 +314,7 @@ export type VisualViewportRecord = CommonRecordSchema & {
 /**
  * Schema of a Record which signifies a collection of frustration signals.
  */
-export type FrustrationRecord = CommonRecordSchema & {
+export type FrustrationRecord = SlotSupportedCommonRecordSchema & {
   /**
    * The type of this Record.
    */

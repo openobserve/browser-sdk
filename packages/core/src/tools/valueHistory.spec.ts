@@ -2,7 +2,7 @@ import type { Clock } from '../../test'
 import { mockClock } from '../../test'
 import type { Duration, RelativeTime } from './utils/timeUtils'
 import { addDuration, ONE_MINUTE } from './utils/timeUtils'
-import { CLEAR_OLD_VALUES_INTERVAL, ValueHistory } from './valueHistory'
+import { CLEAR_OLD_VALUES_INTERVAL, type ValueHistory, createValueHistory } from './valueHistory'
 
 const EXPIRE_DELAY = 10 * ONE_MINUTE
 const MAX_ENTRIES = 5
@@ -13,12 +13,11 @@ describe('valueHistory', () => {
 
   beforeEach(() => {
     clock = mockClock()
-    valueHistory = new ValueHistory(EXPIRE_DELAY, MAX_ENTRIES)
+    valueHistory = createValueHistory({ expireDelay: EXPIRE_DELAY, maxEntries: MAX_ENTRIES })
   })
 
   afterEach(() => {
     valueHistory.stop()
-    clock.cleanup()
   })
 
   describe('find', () => {
@@ -53,6 +52,14 @@ describe('valueHistory', () => {
       valueHistory.add('bar', 20 as RelativeTime)
 
       expect(valueHistory.find(15 as RelativeTime)).toBeUndefined()
+    })
+
+    describe('with `option.returnInactive` true', () => {
+      it('should return the value of the closest entry regardless of the being closed', () => {
+        valueHistory.add('foo', 0 as RelativeTime).close(10 as RelativeTime)
+        valueHistory.add('bar', 20 as RelativeTime)
+        expect(valueHistory.find(15 as RelativeTime, { returnInactive: true })).toEqual('foo')
+      })
     })
   })
 
@@ -125,16 +132,41 @@ describe('valueHistory', () => {
     expect(valueHistory.find(0 as RelativeTime)).toBeUndefined()
   })
 
-  it('should clear old values', () => {
-    const originalTime = performance.now() as RelativeTime
-    valueHistory.add('foo', originalTime).close(addDuration(originalTime, 10 as Duration))
-    clock.tick(10)
+  describe('clearing old values', () => {
+    it('should clear old values after expiration', () => {
+      const originalTime = performance.now() as RelativeTime
+      valueHistory.add('foo', originalTime).close(addDuration(originalTime, 10 as Duration))
+      clock.tick(10)
 
-    expect(valueHistory.find(originalTime)).toBeDefined()
+      expect(valueHistory.find(originalTime)).toBeDefined()
 
-    clock.tick(EXPIRE_DELAY + CLEAR_OLD_VALUES_INTERVAL)
+      clock.tick(EXPIRE_DELAY + CLEAR_OLD_VALUES_INTERVAL)
 
-    expect(valueHistory.find(originalTime)).toBeUndefined()
+      expect(valueHistory.find(originalTime)).toBeUndefined()
+    })
+
+    it('should clear multiple histories at the same time to avoid race condition', () => {
+      const delay = 5
+      const originalTime = performance.now() as RelativeTime
+
+      const valueHistory1 = createValueHistory({ expireDelay: EXPIRE_DELAY })
+      clock.tick(delay)
+      const valueHistory2 = createValueHistory({ expireDelay: EXPIRE_DELAY })
+
+      valueHistory1.add('foo', originalTime).close(addDuration(originalTime, 10 as Duration))
+      valueHistory2.add('bar', originalTime).close(addDuration(originalTime, 10 as Duration))
+
+      expect(valueHistory1.find(originalTime)).toBeDefined()
+      expect(valueHistory2.find(originalTime)).toBeDefined()
+
+      clock.tick(EXPIRE_DELAY + CLEAR_OLD_VALUES_INTERVAL - delay)
+
+      expect(valueHistory1.find(originalTime)).toBeUndefined()
+      expect(valueHistory2.find(originalTime)).toBeUndefined()
+
+      valueHistory1.stop()
+      valueHistory2.stop()
+    })
   })
 
   it('should limit the number of entries', () => {

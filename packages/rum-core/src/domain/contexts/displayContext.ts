@@ -1,25 +1,38 @@
+import { HookNames, monitor } from '@datadog/browser-core'
 import type { RumConfiguration } from '../configuration'
+import type { ViewportDimension } from '../../browser/viewportObservable'
 import { getViewportDimension, initViewportObservable } from '../../browser/viewportObservable'
+import type { DefaultRumEventAttributes, Hooks } from '../hooks'
 
-let viewport: { width: number; height: number } | undefined
-let stopListeners: (() => void) | undefined
+export type DisplayContext = ReturnType<typeof startDisplayContext>
 
-export function getDisplayContext(configuration: RumConfiguration) {
-  if (!viewport) {
-    viewport = getViewportDimension()
-    stopListeners = initViewportObservable(configuration).subscribe((viewportDimension) => {
-      viewport = viewportDimension
-    }).unsubscribe
-  }
+export function startDisplayContext(hooks: Hooks, configuration: RumConfiguration) {
+  let viewport: ViewportDimension | undefined
+  // Use requestAnimationFrame to delay the calculation of viewport dimensions until after SDK initialization, preventing long tasks.
+  const animationFrameId = requestAnimationFrame(
+    monitor(() => {
+      viewport = getViewportDimension()
+    })
+  )
+
+  const unsubscribeViewport = initViewportObservable(configuration).subscribe((viewportDimension) => {
+    viewport = viewportDimension
+  }).unsubscribe
+
+  hooks.register(
+    HookNames.Assemble,
+    ({ eventType }): DefaultRumEventAttributes => ({
+      type: eventType,
+      display: viewport ? { viewport } : undefined,
+    })
+  )
 
   return {
-    viewport,
+    stop: () => {
+      unsubscribeViewport()
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId)
+      }
+    },
   }
-}
-
-export function resetDisplayContext() {
-  if (stopListeners) {
-    stopListeners()
-  }
-  viewport = undefined
 }

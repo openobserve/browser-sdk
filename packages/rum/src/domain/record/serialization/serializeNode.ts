@@ -1,5 +1,14 @@
-import { isNodeShadowRoot, isNodeShadowHost } from '@openobserve/browser-rum-core'
-import { assign } from '@openobserve/browser-core'
+import {
+  reducePrivacyLevel,
+  getNodeSelfPrivacyLevel,
+  getTextContent,
+  isNodeShadowRoot,
+  hasChildNodes,
+  forEachChildNodes,
+  NodePrivacyLevel,
+  PRIVACY_ATTR_NAME,
+  PRIVACY_ATTR_VALUE_HIDDEN,
+} from '@openobserve/browser-rum-core'
 import type {
   DocumentFragmentNode,
   DocumentNode,
@@ -11,39 +20,38 @@ import type {
   TextNode,
 } from '../../../types'
 import { NodeType } from '../../../types'
-import { NodePrivacyLevel, PRIVACY_ATTR_NAME, PRIVACY_ATTR_VALUE_HIDDEN } from '../../../constants'
-import { reducePrivacyLevel, getNodeSelfPrivacyLevel, getTextContent } from '../privacy'
-import { getSerializedNodeId, getValidTagName, setSerializedNodeId } from './serializationUtils'
-import type { SerializeOptions } from './serialization.types'
+import { getValidTagName } from './serializationUtils'
+import type { ParentNodePrivacyLevel, SerializeOptions } from './serialization.types'
 import { serializeStyleSheets } from './serializeStyleSheets'
 import { serializeAttributes } from './serializeAttributes'
 
-export function serializeNodeWithId(node: Node, options: SerializeOptions): SerializedNodeWithId | null {
-  const serializedNode = serializeNode(node, options)
+export function serializeNodeWithId(
+  node: Node,
+  parentNodePrivacyLevel: ParentNodePrivacyLevel,
+  options: SerializeOptions
+): SerializedNodeWithId | null {
+  const serializedNode = serializeNode(node, parentNodePrivacyLevel, options)
   if (!serializedNode) {
     return null
   }
 
-  // Try to reuse the previous id
-  const id = getSerializedNodeId(node) || generateNextId()
+  const id = options.scope.nodeIds.assign(node)
   const serializedNodeWithId = serializedNode as SerializedNodeWithId
   serializedNodeWithId.id = id
-  setSerializedNodeId(node, id)
   if (options.serializedNodeIds) {
     options.serializedNodeIds.add(id)
   }
   return serializedNodeWithId
 }
 
-let _nextId = 1
-export function generateNextId(): number {
-  return _nextId++
-}
-
-export function serializeChildNodes(node: Node, options: SerializeOptions): SerializedNodeWithId[] {
+export function serializeChildNodes(
+  node: Node,
+  parentNodePrivacyLevel: ParentNodePrivacyLevel,
+  options: SerializeOptions
+): SerializedNodeWithId[] {
   const result: SerializedNodeWithId[] = []
-  node.childNodes.forEach((childNode) => {
-    const serializedChildNode = serializeNodeWithId(childNode, options)
+  forEachChildNodes(node, (childNode) => {
+    const serializedChildNode = serializeNodeWithId(childNode, parentNodePrivacyLevel, options)
     if (serializedChildNode) {
       result.push(serializedChildNode)
     }
@@ -51,40 +59,44 @@ export function serializeChildNodes(node: Node, options: SerializeOptions): Seri
   return result
 }
 
-function serializeNode(node: Node, options: SerializeOptions): SerializedNode | undefined {
+function serializeNode(
+  node: Node,
+  parentNodePrivacyLevel: ParentNodePrivacyLevel,
+  options: SerializeOptions
+): SerializedNode | undefined {
   switch (node.nodeType) {
     case node.DOCUMENT_NODE:
-      return serializeDocumentNode(node as Document, options)
+      return serializeDocumentNode(node as Document, parentNodePrivacyLevel, options)
     case node.DOCUMENT_FRAGMENT_NODE:
-      return serializeDocumentFragmentNode(node as DocumentFragment, options)
+      return serializeDocumentFragmentNode(node as DocumentFragment, parentNodePrivacyLevel, options)
     case node.DOCUMENT_TYPE_NODE:
       return serializeDocumentTypeNode(node as DocumentType)
     case node.ELEMENT_NODE:
-      return serializeElementNode(node as Element, options)
+      return serializeElementNode(node as Element, parentNodePrivacyLevel, options)
     case node.TEXT_NODE:
-      return serializeTextNode(node as Text, options)
+      return serializeTextNode(node as Text, parentNodePrivacyLevel)
     case node.CDATA_SECTION_NODE:
       return serializeCDataNode()
   }
 }
 
-export function serializeDocumentNode(document: Document, options: SerializeOptions): DocumentNode {
+export function serializeDocumentNode(
+  document: Document,
+  parentNodePrivacyLevel: ParentNodePrivacyLevel,
+  options: SerializeOptions
+): DocumentNode {
   return {
     type: NodeType.Document,
-    childNodes: serializeChildNodes(document, options),
+    childNodes: serializeChildNodes(document, parentNodePrivacyLevel, options),
     adoptedStyleSheets: serializeStyleSheets(document.adoptedStyleSheets),
   }
 }
 
 function serializeDocumentFragmentNode(
   element: DocumentFragment,
+  parentNodePrivacyLevel: ParentNodePrivacyLevel,
   options: SerializeOptions
 ): DocumentFragmentNode | undefined {
-  let childNodes: SerializedNodeWithId[] = []
-  if (element.childNodes.length) {
-    childNodes = serializeChildNodes(element, options)
-  }
-
   const isShadowRoot = isNodeShadowRoot(element)
   if (isShadowRoot) {
     options.serializationContext.shadowRootsController.addShadowRoot(element)
@@ -92,7 +104,7 @@ function serializeDocumentFragmentNode(
 
   return {
     type: NodeType.DocumentFragment,
-    childNodes,
+    childNodes: serializeChildNodes(element, parentNodePrivacyLevel, options),
     isShadowRoot,
     adoptedStyleSheets: isShadowRoot ? serializeStyleSheets(element.adoptedStyleSheets) : undefined,
   }
@@ -125,13 +137,17 @@ function serializeDocumentTypeNode(documentType: DocumentType): DocumentTypeNode
  * - fullscreen mode
  */
 
-function serializeElementNode(element: Element, options: SerializeOptions): ElementNode | undefined {
+function serializeElementNode(
+  element: Element,
+  parentNodePrivacyLevel: ParentNodePrivacyLevel,
+  options: SerializeOptions
+): ElementNode | undefined {
   const tagName = getValidTagName(element.tagName)
   const isSVG = isSVGElement(element) || undefined
 
   // For performance reason, we don't use getNodePrivacyLevel directly: we leverage the
   // parentNodePrivacyLevel option to avoid iterating over all parents
-  const nodePrivacyLevel = reducePrivacyLevel(getNodeSelfPrivacyLevel(element), options.parentNodePrivacyLevel)
+  const nodePrivacyLevel = reducePrivacyLevel(getNodeSelfPrivacyLevel(element), parentNodePrivacyLevel)
 
   if (nodePrivacyLevel === NodePrivacyLevel.HIDDEN) {
     const { width, height } = element.getBoundingClientRect()
@@ -156,27 +172,12 @@ function serializeElementNode(element: Element, options: SerializeOptions): Elem
   const attributes = serializeAttributes(element, nodePrivacyLevel, options)
 
   let childNodes: SerializedNodeWithId[] = []
-  if (element.childNodes.length) {
-    // OBJECT POOLING OPTIMIZATION:
-    // We should not create a new object systematically as it could impact performances. Try to reuse
-    // the same object as much as possible, and clone it only if we need to.
-    let childNodesSerializationOptions
-    if (options.parentNodePrivacyLevel === nodePrivacyLevel && options.ignoreWhiteSpace === (tagName === 'head')) {
-      childNodesSerializationOptions = options
-    } else {
-      childNodesSerializationOptions = assign({}, options, {
-        parentNodePrivacyLevel: nodePrivacyLevel,
-        ignoreWhiteSpace: tagName === 'head',
-      })
-    }
-    childNodes = serializeChildNodes(element, childNodesSerializationOptions)
-  }
-
-  if (isNodeShadowHost(element)) {
-    const shadowRoot = serializeNodeWithId(element.shadowRoot, options)
-    if (shadowRoot !== null) {
-      childNodes.push(shadowRoot)
-    }
+  if (
+    hasChildNodes(element) &&
+    // Do not serialize style children as the css rules are already in the _cssText attribute
+    tagName !== 'style'
+  ) {
+    childNodes = serializeChildNodes(element, nodePrivacyLevel, options)
   }
 
   return {
@@ -198,18 +199,14 @@ function isSVGElement(el: Element): boolean {
  * for privacy level.
  */
 
-function serializeTextNode(textNode: Text, options: SerializeOptions): TextNode | undefined {
-  // The parent node may not be a html element which has a tagName attribute.
-  // So just let it be undefined which is ok in this use case.
-  const parentTagName = textNode.parentElement?.tagName
-  const textContent = getTextContent(textNode, options.ignoreWhiteSpace || false, options.parentNodePrivacyLevel)
+function serializeTextNode(textNode: Text, parentNodePrivacyLevel: ParentNodePrivacyLevel): TextNode | undefined {
+  const textContent = getTextContent(textNode, parentNodePrivacyLevel)
   if (textContent === undefined) {
     return
   }
   return {
     type: NodeType.Text,
     textContent,
-    isStyle: parentTagName === 'STYLE' ? true : undefined,
   }
 }
 

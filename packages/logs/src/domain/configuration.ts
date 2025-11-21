@@ -1,23 +1,81 @@
 import type { Configuration, InitConfiguration, RawTelemetryConfiguration } from '@openobserve/browser-core'
 import {
   serializeConfiguration,
-  assign,
   ONE_KIBI_BYTE,
   validateAndBuildConfiguration,
   display,
   removeDuplicates,
   ConsoleApiName,
   RawReportType,
-  includes,
   objectValues,
 } from '@openobserve/browser-core'
 import type { LogsEvent } from '../logsEvent.types'
+import type { LogsEventDomainContext } from '../domainContext.types'
 
+/**
+ * Init Configuration for the Logs browser SDK.
+ *
+ * @category Main
+ * @example NPM
+ * ```ts
+ * import { datadogLogs } from '@datadog/browser-logs'
+ *
+ * datadogLogs.init({
+ *   clientToken: '<DATADOG_CLIENT_TOKEN>',
+ *   site: '<DATADOG_SITE>',
+ *   // ...
+ * })
+ * ```
+ * @example CDN
+ * ```ts
+ * DD_LOGS.init({
+ *   clientToken: '<DATADOG_CLIENT_TOKEN>',
+ *   site: '<DATADOG_SITE>',
+ *   // ...
+ * })
+ * ```
+ */
 export interface LogsInitConfiguration extends InitConfiguration {
-  beforeSend?: ((event: LogsEvent) => void | boolean) | undefined
+  /**
+   * Access to every logs collected by the Logs SDK before they are sent to Datadog.
+   * It allows:
+   * - Enrich your logs with additional context attributes
+   * - Modify your logs to modify their content, or redact sensitive sequences (see the list of editable properties)
+   * - Discard selected logs
+   *
+   * @category Data Collection
+   */
+  beforeSend?: ((event: LogsEvent, context: LogsEventDomainContext) => boolean) | undefined
+
+  /**
+   * Forward console.error logs, uncaught exceptions and network errors to Datadog.
+   *
+   * @category Data Collection
+   * @defaultValue true
+   */
   forwardErrorsToLogs?: boolean | undefined
+
+  /**
+   * Forward logs from console.* to Datadog. Use "all" to forward everything or an array of console API names to forward only a subset.
+   *
+   * @category Data Collection
+   */
   forwardConsoleLogs?: ConsoleApiName[] | 'all' | undefined
+
+  /**
+   * Forward reports from the [Reporting API](https://developer.mozilla.org/en-US/docs/Web/API/Reporting_API) to Datadog. Use "all" to forward everything or an array of report types to forward only a subset.
+   *
+   * @category Data Collection
+   */
   forwardReports?: RawReportType[] | 'all' | undefined
+
+  /**
+   * Use PCI-compliant intake. See [PCI DSS Compliance](https://docs.datadoghq.com/data_security/pci_compliance/?tab=logmanagement) for further information.
+   *
+   * @category Privacy
+   * @defaultValue false
+   */
+  usePciIntake?: boolean
 }
 
 export type HybridInitConfiguration = Omit<LogsInitConfiguration, 'clientToken'>
@@ -35,9 +93,16 @@ export interface LogsConfiguration extends Configuration {
 export const DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT = 32 * ONE_KIBI_BYTE
 
 export function validateAndBuildLogsConfiguration(
-  initConfiguration: LogsInitConfiguration
+  initConfiguration: LogsInitConfiguration,
+  errorStack?: string
 ): LogsConfiguration | undefined {
-  const baseConfiguration = validateAndBuildConfiguration(initConfiguration)
+  if (initConfiguration.usePciIntake === true && initConfiguration.site && initConfiguration.site !== 'datadoghq.com') {
+    display.warn(
+      'PCI compliance for Logs is only available for Datadog organizations in the US1 site. Default intake will be used.'
+    )
+  }
+
+  const baseConfiguration = validateAndBuildConfiguration(initConfiguration, errorStack)
 
   const forwardConsoleLogs = validateAndBuildForwardOption<ConsoleApiName>(
     initConfiguration.forwardConsoleLogs,
@@ -55,19 +120,17 @@ export function validateAndBuildLogsConfiguration(
     return
   }
 
-  if (initConfiguration.forwardErrorsToLogs && !includes(forwardConsoleLogs, ConsoleApiName.error)) {
+  if (initConfiguration.forwardErrorsToLogs && !forwardConsoleLogs.includes(ConsoleApiName.error)) {
     forwardConsoleLogs.push(ConsoleApiName.error)
   }
 
-  return assign(
-    {
-      forwardErrorsToLogs: initConfiguration.forwardErrorsToLogs !== false,
-      forwardConsoleLogs,
-      forwardReports,
-      requestErrorResponseLengthLimit: DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT,
-    },
-    baseConfiguration
-  )
+  return {
+    forwardErrorsToLogs: initConfiguration.forwardErrorsToLogs !== false,
+    forwardConsoleLogs,
+    forwardReports,
+    requestErrorResponseLengthLimit: DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT,
+    ...baseConfiguration,
+  }
 }
 
 export function validateAndBuildForwardOption<T>(
@@ -79,7 +142,7 @@ export function validateAndBuildForwardOption<T>(
     return []
   }
 
-  if (!(option === 'all' || (Array.isArray(option) && option.every((api) => includes(allowedValues, api))))) {
+  if (!(option === 'all' || (Array.isArray(option) && option.every((api) => allowedValues.includes(api))))) {
     display.error(`${label} should be "all" or an array with allowed values "${allowedValues.join('", "')}"`)
     return
   }
@@ -87,15 +150,14 @@ export function validateAndBuildForwardOption<T>(
   return option === 'all' ? allowedValues : removeDuplicates<T>(option)
 }
 
-export function serializeLogsConfiguration(configuration: LogsInitConfiguration): RawTelemetryConfiguration {
+export function serializeLogsConfiguration(configuration: LogsInitConfiguration) {
   const baseSerializedInitConfiguration = serializeConfiguration(configuration)
 
-  return assign(
-    {
-      forward_errors_to_logs: configuration.forwardErrorsToLogs,
-      forward_console_logs: configuration.forwardConsoleLogs,
-      forward_reports: configuration.forwardReports,
-    },
-    baseSerializedInitConfiguration
-  )
+  return {
+    forward_errors_to_logs: configuration.forwardErrorsToLogs,
+    forward_console_logs: configuration.forwardConsoleLogs,
+    forward_reports: configuration.forwardReports,
+    use_pci_intake: configuration.usePciIntake,
+    ...baseSerializedInitConfiguration,
+  } satisfies RawTelemetryConfiguration
 }

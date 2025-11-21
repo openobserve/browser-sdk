@@ -1,14 +1,12 @@
 import { Observable } from '@openobserve/browser-core'
-import type { RumSessionManager } from '../src/domain/rumSessionManager'
-import { RumSessionPlan } from '../src/domain/rumSessionManager'
+import { SessionReplayState, type RumSessionManager } from '../src/domain/rumSessionManager'
 
 export interface RumSessionManagerMock extends RumSessionManager {
   setId(id: string): RumSessionManagerMock
   setNotTracked(): RumSessionManagerMock
-  setPlanWithoutSessionReplay(): RumSessionManagerMock
-  setPlanWithSessionReplay(): RumSessionManagerMock
-  setLongTaskAllowed(longTaskAllowed: boolean): RumSessionManagerMock
-  setResourceAllowed(resourceAllowed: boolean): RumSessionManagerMock
+  setTrackedWithoutSessionReplay(): RumSessionManagerMock
+  setTrackedWithSessionReplay(): RumSessionManagerMock
+  setForcedReplay(): RumSessionManagerMock
 }
 
 const DEFAULT_ID = 'session-id'
@@ -22,8 +20,7 @@ const enum SessionStatus {
 export function createRumSessionManagerMock(): RumSessionManagerMock {
   let id = DEFAULT_ID
   let sessionStatus: SessionStatus = SessionStatus.TRACKED_WITH_SESSION_REPLAY
-  let resourceAllowed = true
-  let longTaskAllowed = true
+  let forcedReplay: boolean = false
   return {
     findTrackedSession() {
       if (
@@ -34,13 +31,13 @@ export function createRumSessionManagerMock(): RumSessionManagerMock {
       }
       return {
         id,
-        plan:
+        sessionReplay:
           sessionStatus === SessionStatus.TRACKED_WITH_SESSION_REPLAY
-            ? RumSessionPlan.WITH_SESSION_REPLAY
-            : RumSessionPlan.WITHOUT_SESSION_REPLAY,
-        sessionReplayAllowed: sessionStatus === SessionStatus.TRACKED_WITH_SESSION_REPLAY,
-        longTaskAllowed,
-        resourceAllowed,
+            ? SessionReplayState.SAMPLED
+            : forcedReplay
+              ? SessionReplayState.FORCED
+              : SessionReplayState.OFF,
+        anonymousId: 'device-123',
       }
     },
     expire() {
@@ -56,20 +53,16 @@ export function createRumSessionManagerMock(): RumSessionManagerMock {
       sessionStatus = SessionStatus.NOT_TRACKED
       return this
     },
-    setPlanWithoutSessionReplay() {
+    setTrackedWithoutSessionReplay() {
       sessionStatus = SessionStatus.TRACKED_WITHOUT_SESSION_REPLAY
       return this
     },
-    setPlanWithSessionReplay() {
+    setTrackedWithSessionReplay() {
       sessionStatus = SessionStatus.TRACKED_WITH_SESSION_REPLAY
       return this
     },
-    setLongTaskAllowed(isAllowed: boolean) {
-      longTaskAllowed = isAllowed
-      return this
-    },
-    setResourceAllowed(isAllowed: boolean) {
-      resourceAllowed = isAllowed
+    setForcedReplay() {
+      forcedReplay = true
       return this
     },
   }

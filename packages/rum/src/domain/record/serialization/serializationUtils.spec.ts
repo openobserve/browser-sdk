@@ -1,48 +1,7 @@
-import { isIE } from '@openobserve/browser-core'
-import { NodePrivacyLevel } from '../../../constants'
-import {
-  getSerializedNodeId,
-  hasSerializedNode,
-  setSerializedNodeId,
-  getElementInputValue,
-  switchToAbsoluteUrl,
-} from './serializationUtils'
-
-describe('serialized Node storage in DOM Nodes', () => {
-  describe('hasSerializedNode', () => {
-    it('returns false for DOM Nodes that are not yet serialized', () => {
-      expect(hasSerializedNode(document.createElement('div'))).toBe(false)
-    })
-
-    it('returns true for DOM Nodes that have been serialized', () => {
-      const node = document.createElement('div')
-      setSerializedNodeId(node, 42)
-
-      expect(hasSerializedNode(node)).toBe(true)
-    })
-  })
-
-  describe('getSerializedNodeId', () => {
-    it('returns undefined for DOM Nodes that are not yet serialized', () => {
-      expect(getSerializedNodeId(document.createElement('div'))).toBe(undefined)
-    })
-
-    it('returns the serialized Node id', () => {
-      const node = document.createElement('div')
-      setSerializedNodeId(node, 42)
-
-      expect(getSerializedNodeId(node)).toBe(42)
-    })
-  })
-})
+import { NodePrivacyLevel } from '@openobserve/browser-rum-core'
+import { getElementInputValue, switchToAbsoluteUrl } from './serializationUtils'
 
 describe('getElementInputValue', () => {
-  beforeEach(() => {
-    if (isIE()) {
-      pending('IE not supported')
-    }
-  })
-
   it('returns "undefined" for a non-input element', () => {
     expect(getElementInputValue(document.createElement('div'), NodePrivacyLevel.ALLOW)).toBeUndefined()
   })
@@ -164,18 +123,32 @@ describe('switchToAbsoluteUrl', () => {
 
       expect(switchToAbsoluteUrl(cssText, cssHref)).toEqual(cssText)
     })
+
     it('should not replace url if data uri: lower case', () => {
       const cssText =
         '{ font-family: FontAwesome; src: url(data:image/png;base64,iVBORNSUhEUgAAVR42mP8z/C/HgwJ/lK3Q6wAkJggg==); }'
 
       expect(switchToAbsoluteUrl(cssText, cssHref)).toEqual(cssText)
     })
+
+    it('should not replace url if data uri contains escaped quotes', () => {
+      const cssText = '{ src: url("data:image/svg+xml;utf8,<svg xmlns=\\"http://www.w3.org/2000/svg\\"></svg>"); }'
+      expect(switchToAbsoluteUrl(cssText, cssHref)).toEqual(cssText)
+    })
+
+    it('should not replace url if data uri contains closing paren', () => {
+      const cssText =
+        '{ src: url("data:image/svg+xml;utf8,<svg xmlns=\\"http://www.w3.org/2000/svg\\" style=\\"color: rgb(0, 0, 0)\\"></svg>"); }'
+      expect(switchToAbsoluteUrl(cssText, cssHref)).toEqual(cssText)
+    })
+
     it('should not replace url if data uri: not lower case', () => {
       const cssText =
         '{ font-family: FontAwesome; src: url(DaTa:image/png;base64,iVBORNSUhEUgAAVR42mP8z/C/HgwJ/lK3Q6wAkJggg==); }'
 
       expect(switchToAbsoluteUrl(cssText, cssHref)).toEqual(cssText)
     })
+
     it('should not replace url if error is thrown when building absolute url', () => {
       const cssText =
         '{ font-family: FontAwesome; src: url(https://site.web/app-name/static/assets/fonts/fontawesome-webfont.eot); }'

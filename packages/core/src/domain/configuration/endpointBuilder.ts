@@ -1,51 +1,37 @@
-import type { RetryInfo, FlushReason } from '../../transport'
+import type { Payload } from '../../transport'
 import { timeStampNow } from '../../tools/utils/timeUtils'
 import { normalizeUrl } from '../../tools/utils/urlPolyfill'
-import { ExperimentalFeature, isExperimentalFeatureEnabled } from '../../tools/experimentalFeatures'
 import { generateUUID } from '../../tools/utils/stringUtils'
+import { INTAKE_SITE_FED_STAGING, INTAKE_SITE_US1, PCI_INTAKE_HOST_US1 } from '../intakeSites'
 import type { InitConfiguration } from './configuration'
-import { INTAKE_SITE_AP1, INTAKE_SITE_US1 } from './intakeSites'
 
 // replaced at build time
 declare const __BUILD_ENV__SDK_VERSION__: string
 
-export const ENDPOINTS = {
-  logs: 'logs',
-  rum: 'rum',
-  sessionReplay: 'session-replay',
-} as const
-
-const INTAKE_TRACKS = {
-  logs: 'logs',
-  rum: 'rum',
-  sessionReplay: 'replay',
-}
-
-export type EndpointType = keyof typeof ENDPOINTS
+export type TrackType = 'logs' | 'rum' | 'replay' | 'profile' | 'exposures'
+export type ApiType =
+  | 'fetch-keepalive'
+  | 'fetch'
+  | 'beacon'
+  // 'manual' reflects that the request have been sent manually, outside of the SDK (ex: via curl or
+  // a Node.js script).
+  | 'manual'
 
 export type EndpointBuilder = ReturnType<typeof createEndpointBuilder>
 
 export function createEndpointBuilder(
   initConfiguration: InitConfiguration,
-  endpointType: EndpointType,
-  configurationTags: string[]
+  trackType: TrackType,
+  extraParameters?: string[]
 ) {
-  const buildUrlWithParameters = createEndpointUrlWithParametersBuilder(initConfiguration, endpointType)
+  const buildUrlWithParameters = createEndpointUrlWithParametersBuilder(initConfiguration, trackType)
 
   return {
-    build(api: 'xhr' | 'fetch' | 'beacon', flushReason?: FlushReason, retry?: RetryInfo) {
-      const parameters = buildEndpointParameters(
-        initConfiguration,
-        endpointType,
-        configurationTags,
-        api,
-        flushReason,
-        retry
-      )
+    build(api: ApiType, payload: Payload) {
+      const parameters = buildEndpointParameters(initConfiguration, trackType, api, payload, extraParameters)
       return buildUrlWithParameters(parameters)
     },
-    urlPrefix: buildUrlWithParameters(''),
-    endpointType,
+    trackType,
   }
 }
 
@@ -56,32 +42,27 @@ export function createEndpointBuilder(
  */
 function createEndpointUrlWithParametersBuilder(
   initConfiguration: InitConfiguration,
-  endpointType: EndpointType
+  trackType: TrackType
 ): (parameters: string) => string {
   const { proxy, proxyUrl, apiVersion, organizationIdentifier, insecureHTTP } = initConfiguration
 
-  const path = `/rum/${apiVersion}/${organizationIdentifier}/${INTAKE_TRACKS[endpointType]}`
+  const path = `/rum/${apiVersion}/${organizationIdentifier}/${INTAKE_TRACKS[trackType]}`
 
   if (proxy) {
     const normalizedProxyUrl = normalizeUrl(proxy)
     return (parameters) => `${normalizedProxyUrl}?ooforward=${encodeURIComponent(`${path}?${parameters}`)}`
   }
-
-  const host = buildEndpointHost(initConfiguration, endpointType)
-
-  if (proxy === undefined && proxyUrl) {
-    // TODO: remove this in a future major.
-    const normalizedProxyUrl = normalizeUrl(proxyUrl)
-    return (parameters) =>
-      `${normalizedProxyUrl}?ooforward=${encodeURIComponent(`https://${host}${path}?${parameters}`)}`
+  if (typeof proxy === 'function') {
+    return (parameters) => proxy({ path, parameters })
   }
-
-  const protocol = insecureHTTP ? 'http' : 'https'
-
-  return (parameters) => `${protocol}://${host}${path}?${parameters}`
+  const host = buildEndpointHost(trackType, initConfiguration)
+  return (parameters) => `https://${host}${path}?${parameters}`
 }
 
-function buildEndpointHost(initConfiguration: InitConfiguration, endpointType: EndpointType) {
+export function buildEndpointHost(
+  trackType: TrackType,
+  initConfiguration: InitConfiguration & { usePciIntake?: boolean }
+) {
   const { site = INTAKE_SITE_US1, internalAnalyticsSubdomain } = initConfiguration
 
   return site
@@ -89,10 +70,13 @@ function buildEndpointHost(initConfiguration: InitConfiguration, endpointType: E
     return `${internalAnalyticsSubdomain}.${INTAKE_SITE_US1}`
   }
 
+  if (site === INTAKE_SITE_FED_STAGING) {
+    return `http-intake.logs.${site}`
+  }
+
   const domainParts = site.split('.')
   const extension = domainParts.pop()
-  const subdomain = site !== INTAKE_SITE_AP1 ? `${ENDPOINTS[endpointType]}.` : ''
-  return `${subdomain}browser-intake-${domainParts.join('-')}.${extension!}`
+  return `browser-intake-${domainParts.join('-')}.${extension!}`
 }
 
 /**
@@ -100,32 +84,32 @@ function buildEndpointHost(initConfiguration: InitConfiguration, endpointType: E
  * request, as they change randomly.
  */
 function buildEndpointParameters(
-  { clientToken, internalAnalyticsSubdomain }: InitConfiguration,
-  endpointType: EndpointType,
-  configurationTags: string[],
-  api: 'xhr' | 'fetch' | 'beacon',
-  flushReason: FlushReason | undefined,
-  retry: RetryInfo | undefined
+  { clientToken, internalAnalyticsSubdomain, source = 'browser' }: InitConfiguration,
+  trackType: TrackType,
+  api: ApiType,
+  { retry, encoding }: Payload,
+  extraParameters: string[] = []
 ) {
-  const tags = [`sdk_version:${__BUILD_ENV__SDK_VERSION__}`, `api:${api}`].concat(configurationTags)
-  if (flushReason && isExperimentalFeatureEnabled(ExperimentalFeature.COLLECT_FLUSH_REASON)) {
-    tags.push(`flush_reason:${flushReason}`)
-  }
-  if (retry) {
-    tags.push(`retry_count:${retry.count}`, `retry_after:${retry.lastFailureStatus}`)
-  }
   const parameters = [
     'o2source=browser',
-    `o2tags=${encodeURIComponent(tags.join(','))}`,
     `o2-api-key=${clientToken}`,
     `o2-evp-origin-version=${encodeURIComponent(__BUILD_ENV__SDK_VERSION__)}`,
     'o2-evp-origin=browser',
     `o2-request-id=${generateUUID()}`,
-  ]
+  ].concat(extraParameters)
 
-  if (endpointType === 'rum') {
-    parameters.push(`batch_time=${timeStampNow()}`)
+  if (encoding) {
+    parameters.push(`dd-evp-encoding=${encoding}`)
   }
+
+  if (trackType === 'rum') {
+    parameters.push(`batch_time=${timeStampNow()}`, `_dd.api=${api}`)
+
+    if (retry) {
+      parameters.push(`_dd.retry_count=${retry.count}`, `_dd.retry_after=${retry.lastFailureStatus}`)
+    }
+  }
+
   if (internalAnalyticsSubdomain) {
     parameters.reverse()
   }

@@ -1,106 +1,267 @@
-import type { RelativeTime, ServerDuration } from '@openobserve/browser-core'
+import type { ServerDuration, Duration, RelativeTime } from '@openobserve/browser-core'
+import { HookNames } from '@openobserve/browser-core'
 import type { Clock } from '../../../../core/test'
-import { mockClock } from '../../../../core/test'
-import type { RumConfiguration } from '../configuration'
+import { mockClock, registerCleanupTask } from '../../../../core/test'
+import { createPerformanceEntry, mockPerformanceObserver, mockRumConfiguration } from '../../../test'
+import { RumEventType } from '../../rawRumEvent.types'
+import * as performanceObservable from '../../browser/performanceObservable'
+import type { Hooks } from '../hooks'
+import { createHooks } from '../hooks'
 import type { PageStateHistory } from './pageStateHistory'
-import { startPageStateHistory, PageState } from './pageStateHistory'
+import { PageState, startPageStateHistory } from './pageStateHistory'
 
 describe('pageStateHistory', () => {
-  let pageStateHistory: PageStateHistory
   let clock: Clock
-  let configuration: RumConfiguration
+  let hooks: Hooks
+  const configuration = mockRumConfiguration()
 
   beforeEach(() => {
-    configuration = {} as RumConfiguration
     clock = mockClock()
-    pageStateHistory = startPageStateHistory(configuration)
+    hooks = createHooks()
   })
 
-  afterEach(() => {
-    pageStateHistory.stop()
-    clock.cleanup()
-  })
+  describe('wasInPageStateDuringPeriod', () => {
+    let pageStateHistory: PageStateHistory
 
-  describe('findAll', () => {
-    it('should have the current state when starting', () => {
-      expect(pageStateHistory.findAll(0 as RelativeTime, 10 as RelativeTime)).toBeDefined()
+    beforeEach(() => {
+      mockPerformanceObserver()
+      pageStateHistory = startPageStateHistory(hooks, configuration)
+      registerCleanupTask(pageStateHistory.stop)
     })
 
-    it('should return undefined if the time period is out of history bounds', () => {
-      expect(pageStateHistory.findAll(-10 as RelativeTime, 0 as RelativeTime)).not.toBeDefined()
-    })
-
-    it('should return the correct page states for the given time period', () => {
+    it('should return true if the page was in the given state during the given period', () => {
       pageStateHistory.addPageState(PageState.ACTIVE)
-
       clock.tick(10)
       pageStateHistory.addPageState(PageState.PASSIVE)
-
       clock.tick(10)
       pageStateHistory.addPageState(PageState.HIDDEN)
-
       clock.tick(10)
-      pageStateHistory.addPageState(PageState.FROZEN)
 
+      expect(pageStateHistory.wasInPageStateDuringPeriod(PageState.PASSIVE, clock.relative(0), 30 as Duration)).toEqual(
+        true
+      )
+    })
+
+    it('should return false if the page was not in the given state during the given period', () => {
+      pageStateHistory.addPageState(PageState.ACTIVE)
       clock.tick(10)
-      pageStateHistory.addPageState(PageState.TERMINATED)
+      pageStateHistory.addPageState(PageState.PASSIVE)
+      clock.tick(10)
+      pageStateHistory.addPageState(PageState.HIDDEN)
+      clock.tick(10)
 
-      /*
+      expect(pageStateHistory.wasInPageStateDuringPeriod(PageState.FROZEN, clock.relative(0), 30 as Duration)).toEqual(
+        false
+      )
+    })
+
+    it('should return false if there was no page state during the given period', () => {
+      // pageStateHistory is initialized with the current page state
+      // look for a period before the initialization to make sure there is no page state
+      expect(
+        pageStateHistory.wasInPageStateDuringPeriod(PageState.ACTIVE, clock.relative(-40), 30 as Duration)
+      ).toEqual(false)
+    })
+  })
+
+  describe('assemble hook', () => {
+    describe('for view events', () => {
+      let pageStateHistory: PageStateHistory
+
+      beforeEach(() => {
+        mockPerformanceObserver()
+        pageStateHistory = startPageStateHistory(hooks, configuration)
+        registerCleanupTask(pageStateHistory.stop)
+      })
+
+      it('should add the correct page states for the given time period', () => {
+        pageStateHistory.addPageState(PageState.ACTIVE)
+
+        clock.tick(10)
+        pageStateHistory.addPageState(PageState.PASSIVE)
+
+        clock.tick(10)
+        pageStateHistory.addPageState(PageState.HIDDEN)
+
+        clock.tick(10)
+        pageStateHistory.addPageState(PageState.FROZEN)
+
+        clock.tick(10)
+        pageStateHistory.addPageState(PageState.TERMINATED)
+
+        /*
       page state time    0     10    20    30    40
       event time                  15<-------->35
       */
-      const event = {
-        startTime: 15 as RelativeTime,
-        duration: 20 as RelativeTime,
-      }
-      expect(pageStateHistory.findAll(event.startTime, event.duration)).toEqual([
-        {
-          state: PageState.PASSIVE,
-          start: -5000000 as ServerDuration,
-        },
-        {
-          state: PageState.HIDDEN,
-          start: 5000000 as ServerDuration,
-        },
-        {
-          state: PageState.FROZEN,
-          start: 15000000 as ServerDuration,
-        },
-      ])
+        const defaultRumEventAttributes = hooks.triggerHook(HookNames.Assemble, {
+          eventType: 'view',
+          startTime: clock.relative(15),
+          duration: 20 as Duration,
+        })
+
+        expect(defaultRumEventAttributes).toEqual({
+          type: 'view',
+          _dd: {
+            page_states: [
+              {
+                state: PageState.PASSIVE,
+                start: -5000000 as ServerDuration,
+              },
+              {
+                state: PageState.HIDDEN,
+                start: 5000000 as ServerDuration,
+              },
+              {
+                state: PageState.FROZEN,
+                start: 15000000 as ServerDuration,
+              },
+            ],
+          },
+        })
+      })
+
+      it('should add the current state when starting', () => {
+        const defaultRumEventAttributes = hooks.triggerHook(HookNames.Assemble, {
+          eventType: 'view',
+          startTime: clock.relative(0),
+          duration: 10 as Duration,
+        })
+        expect(defaultRumEventAttributes).toEqual({
+          type: 'view',
+          _dd: { page_states: jasmine.any(Array) },
+        })
+      })
+
+      it('should not add the page state if the time period is out of history bounds', () => {
+        const defaultRumEventAttributes = hooks.triggerHook(HookNames.Assemble, {
+          eventType: 'view',
+          startTime: clock.relative(-10),
+          duration: 0 as Duration,
+        })
+
+        expect(defaultRumEventAttributes).toEqual({
+          type: 'view',
+          _dd: { page_states: undefined },
+        })
+      })
+
+      it('should limit the number of page states added', () => {
+        pageStateHistory.stop()
+        const maxPageStateEntriesSelectable = 1
+        pageStateHistory = startPageStateHistory(hooks, configuration, maxPageStateEntriesSelectable)
+        registerCleanupTask(pageStateHistory.stop)
+
+        pageStateHistory.addPageState(PageState.ACTIVE)
+        clock.tick(10)
+        pageStateHistory.addPageState(PageState.PASSIVE)
+
+        const defaultRumEventAttributes = hooks.triggerHook(HookNames.Assemble, {
+          eventType: 'view',
+          startTime: clock.relative(0),
+          duration: Infinity as Duration,
+        })
+
+        expect(defaultRumEventAttributes).toEqual({
+          type: 'view',
+          _dd: {
+            page_states: [
+              {
+                state: PageState.PASSIVE,
+                start: 0 as ServerDuration,
+              },
+            ],
+          },
+        })
+      })
     })
+  })
+  ;[RumEventType.ACTION, RumEventType.ERROR].forEach((eventType) => {
+    describe(`for ${eventType} events`, () => {
+      let pageStateHistory: PageStateHistory
 
-    it('should limit the number of selectable entries', () => {
-      const maxPageStateEntriesSelectable = 1
-      pageStateHistory = startPageStateHistory(configuration, maxPageStateEntriesSelectable)
+      beforeEach(() => {
+        mockPerformanceObserver()
+        pageStateHistory = startPageStateHistory(hooks, configuration)
+        registerCleanupTask(pageStateHistory.stop)
+      })
 
-      pageStateHistory.addPageState(PageState.ACTIVE)
-      clock.tick(10)
-      pageStateHistory.addPageState(PageState.PASSIVE)
+      it('should add in_foreground: true when the page is active', () => {
+        pageStateHistory.addPageState(PageState.ACTIVE)
 
-      expect(pageStateHistory.findAll(0 as RelativeTime, Infinity as RelativeTime)?.length).toEqual(
-        maxPageStateEntriesSelectable
-      )
+        const defaultRumEventAttributes = hooks.triggerHook(HookNames.Assemble, {
+          eventType,
+          startTime: clock.relative(0),
+          duration: 0 as Duration,
+        })
+
+        expect(defaultRumEventAttributes).toEqual({
+          type: eventType,
+          view: { in_foreground: true },
+        })
+      })
+
+      it('should add in_foreground: false when the page is not active', () => {
+        pageStateHistory.addPageState(PageState.HIDDEN)
+
+        const defaultRumEventAttributes = hooks.triggerHook(HookNames.Assemble, {
+          eventType,
+          startTime: clock.relative(0),
+          duration: 0 as Duration,
+        })
+
+        expect(defaultRumEventAttributes).toEqual({
+          type: eventType,
+          view: { in_foreground: false },
+        })
+      })
     })
   })
 
-  describe('isInActivePageStateAt', () => {
-    it('should return true if the page was active at the given time', () => {
-      pageStateHistory.addPageState(PageState.ACTIVE)
+  describe('initialization with visibility-state backfill', () => {
+    let pageStateHistory: PageStateHistory
 
-      clock.tick(10)
-      pageStateHistory.addPageState(PageState.PASSIVE)
-
-      expect(pageStateHistory.isInActivePageStateAt(0 as RelativeTime)).toEqual(true)
+    afterEach(() => {
+      if (pageStateHistory) {
+        pageStateHistory.stop()
+      }
     })
 
-    it('should return false if the page was not active at the given time', () => {
-      const maxPageStateEntriesSelectable = 1
-      pageStateHistory = startPageStateHistory(configuration, maxPageStateEntriesSelectable)
+    it('should backfill history if visibility-state is supported and entries exist', () => {
+      const { notifyPerformanceEntries } = mockPerformanceObserver({
+        supportedEntryTypes: [performanceObservable.RumPerformanceEntryType.VISIBILITY_STATE],
+      })
 
-      pageStateHistory.addPageState(PageState.ACTIVE)
-      clock.tick(10)
-      pageStateHistory.addPageState(PageState.PASSIVE)
-      expect(pageStateHistory.isInActivePageStateAt(10 as RelativeTime)).toEqual(false)
+      notifyPerformanceEntries([
+        createPerformanceEntry(performanceObservable.RumPerformanceEntryType.VISIBILITY_STATE, {
+          name: 'visible',
+          startTime: 5 as RelativeTime,
+        }),
+        createPerformanceEntry(performanceObservable.RumPerformanceEntryType.VISIBILITY_STATE, {
+          name: 'hidden',
+          startTime: 15 as RelativeTime,
+        }),
+      ])
+
+      pageStateHistory = startPageStateHistory(hooks, configuration)
+      registerCleanupTask(pageStateHistory.stop)
+
+      expect(pageStateHistory.wasInPageStateDuringPeriod(PageState.ACTIVE, 5 as RelativeTime, 5 as Duration)).toBeTrue()
+      expect(
+        pageStateHistory.wasInPageStateDuringPeriod(PageState.HIDDEN, 15 as RelativeTime, 5 as Duration)
+      ).toBeTrue()
+    })
+
+    it('should not backfill if visibility-state is not supported', () => {
+      mockPerformanceObserver({
+        supportedEntryTypes: [],
+      })
+
+      pageStateHistory = startPageStateHistory(hooks, configuration)
+      registerCleanupTask(pageStateHistory.stop)
+
+      expect(
+        pageStateHistory.wasInPageStateDuringPeriod(PageState.ACTIVE, 5 as RelativeTime, 5 as Duration)
+      ).toBeFalse()
     })
   })
 })

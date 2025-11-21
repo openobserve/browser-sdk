@@ -1,74 +1,175 @@
-import { bundleSetup, createTest, flushEvents } from '../lib/framework'
-import { browserExecute } from '../lib/helpers/browser'
+import { test, expect } from '@playwright/test'
+import { createTest, html } from '../lib/framework'
 
-describe('telemetry', () => {
+test.describe('telemetry', () => {
   createTest('send errors for logs')
-    .withSetup(bundleSetup)
-    .withLogs()
-    .run(async ({ serverEvents }) => {
-      await browserExecute(() => {
+    .withLogs({ trackingConsent: 'granted' })
+    .run(async ({ intakeRegistry, page, flushEvents }) => {
+      await page.evaluate(() => {
         const context = {
           get foo() {
-            throw new window.Error('bar')
+            throw new window.Error('expected error')
           },
         }
         window.OO_LOGS!.logger.log('hop', context as any)
       })
       await flushEvents()
-      expect(serverEvents.telemetryErrors.length).toBe(1)
-      const event = serverEvents.telemetryErrors[0]
+      expect(intakeRegistry.telemetryErrorEvents).toHaveLength(1)
+      const event = intakeRegistry.telemetryErrorEvents[0]
       expect(event.service).toEqual('browser-logs-sdk')
-      expect(event.telemetry.message).toBe('bar')
+      expect(event.telemetry.message).toBe('expected error')
       expect(event.telemetry.error!.kind).toBe('Error')
       expect(event.telemetry.status).toBe('error')
-      serverEvents.empty()
+      intakeRegistry.empty()
     })
 
   createTest('send errors for RUM')
-    .withSetup(bundleSetup)
     .withRum()
-    .run(async ({ serverEvents }) => {
-      await browserExecute(() => {
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(() => {
         const context = {
           get foo() {
-            throw new window.Error('bar')
+            throw new window.Error('expected error')
           },
         }
         window.OO_RUM!.addAction('hop', context as any)
       })
       await flushEvents()
-      expect(serverEvents.telemetryErrors.length).toBe(1)
-      const event = serverEvents.telemetryErrors[0]
+      expect(intakeRegistry.telemetryErrorEvents).toHaveLength(1)
+      const event = intakeRegistry.telemetryErrorEvents[0]
       expect(event.service).toEqual('browser-rum-sdk')
-      expect(event.telemetry.message).toBe('bar')
+      expect(event.telemetry.message).toBe('expected error')
       expect(event.telemetry.error!.kind).toBe('Error')
       expect(event.telemetry.status).toBe('error')
-      serverEvents.empty()
+      intakeRegistry.empty()
     })
 
   createTest('send init configuration for logs')
-    .withSetup(bundleSetup)
     .withLogs({
       forwardErrorsToLogs: true,
     })
-    .run(async ({ serverEvents }) => {
+    .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()
-      expect(serverEvents.telemetryConfigurations.length).toBe(1)
-      const event = serverEvents.telemetryConfigurations[0]
+      expect(intakeRegistry.telemetryConfigurationEvents).toHaveLength(1)
+      const event = intakeRegistry.telemetryConfigurationEvents[0]
       expect(event.service).toEqual('browser-logs-sdk')
       expect(event.telemetry.configuration.forward_errors_to_logs).toEqual(true)
+      expect(event.session!.id).toEqual(expect.any(String))
     })
 
   createTest('send init configuration for RUM')
-    .withSetup(bundleSetup)
     .withRum({
       trackUserInteractions: true,
     })
-    .run(async ({ serverEvents }) => {
+    .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()
-      expect(serverEvents.telemetryConfigurations.length).toBe(1)
-      const event = serverEvents.telemetryConfigurations[0]
+      expect(intakeRegistry.telemetryConfigurationEvents).toHaveLength(1)
+      const event = intakeRegistry.telemetryConfigurationEvents[0]
       expect(event.service).toEqual('browser-rum-sdk')
       expect(event.telemetry.configuration.track_user_interactions).toEqual(true)
+      expect(event.application!.id).toEqual(expect.any(String))
     })
+
+  createTest('send usage telemetry for RUM')
+    .withRum()
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(() => {
+        window.DD_RUM!.addAction('foo')
+      })
+
+      await flushEvents()
+      expect(intakeRegistry.telemetryUsageEvents).toHaveLength(2)
+      const event = intakeRegistry.telemetryUsageEvents[1] // first event is 'set-global-context' done in pageSetup.ts
+      expect(event.service).toEqual('browser-rum-sdk')
+      expect(event.telemetry.usage.feature).toEqual('add-action')
+    })
+
+  createTest('send usage telemetry for logs')
+    .withLogs()
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(() => {
+        window.DD_LOGS!.setTrackingConsent('granted')
+      })
+
+      await flushEvents()
+      expect(intakeRegistry.telemetryUsageEvents).toHaveLength(1)
+      const event = intakeRegistry.telemetryUsageEvents[0]
+      expect(event.service).toEqual('browser-logs-sdk')
+      expect(event.telemetry.usage.feature).toEqual('set-tracking-consent')
+    })
+
+  createTest('stops sending telemetry after consent revocation')
+    .withRum()
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      // Generate initial telemetry, revoke consent, then try to generate more
+      await page.evaluate(() => {
+        window.DD_RUM!.addAction('initial-action')
+        window.DD_RUM!.setTrackingConsent('not-granted')
+        window.DD_RUM!.addAction('post-revocation-action')
+        window.DD_RUM!.getAccount()
+      })
+
+      await flushEvents()
+
+      // Verify telemetry events: should have initial action and consent revocation,
+      // but NOT the post-revocation action
+      const telemetryEvents = intakeRegistry.telemetryUsageEvents
+      expect(telemetryEvents.length).toBeGreaterThanOrEqual(2)
+
+      // Verify no telemetry for post-revocation action or get-account
+      const postRevocationEvents = telemetryEvents.filter(
+        (event) => event.telemetry.usage.feature === 'add-action' || event.telemetry.usage.feature === 'get-account'
+      )
+      expect(postRevocationEvents.length).toEqual(1) // Only the initial action
+    })
+
+  test.describe('collect errors related to session initialization', () => {
+    // Test for RUM and Logs separately, because using both at the same time via NPM triggers
+    // different errors (because both SDKs are sharing the same cookie store `operationBuffer`
+    // queue). This could be revisited after properly fixing incident-39238.
+
+    const DENY_SESSION_COOKIE_ACCESS = html`
+      <script>
+        // Make Logs and RUM session initialization fail by denying cookie access
+        const originalDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')
+        Object.defineProperty(Document.prototype, 'cookie', {
+          get: () => originalDescriptor.get.call(document),
+          set: (value) => {
+            if (value.includes('_dd_s=')) {
+              throw new Error('expected error')
+            }
+            originalDescriptor.set.call(document, value)
+          },
+        })
+      </script>
+    `
+
+    createTest('logs')
+      .withHead(DENY_SESSION_COOKIE_ACCESS)
+      .withLogs()
+      .run(async ({ intakeRegistry, flushEvents }) => {
+        await flushEvents()
+        expect(intakeRegistry.telemetryErrorEvents).toHaveLength(1)
+        const error = intakeRegistry.telemetryErrorEvents[0]
+        expect(error.service).toEqual('browser-logs-sdk')
+        expect(error.telemetry.message).toBe('expected error')
+        expect(error.telemetry.error!.kind).toBe('Error')
+        expect(error.telemetry.status).toBe('error')
+        intakeRegistry.empty()
+      })
+
+    createTest('rum')
+      .withHead(DENY_SESSION_COOKIE_ACCESS)
+      .withRum()
+      .run(async ({ intakeRegistry, flushEvents }) => {
+        await flushEvents()
+        expect(intakeRegistry.telemetryErrorEvents).toHaveLength(1)
+        const error = intakeRegistry.telemetryErrorEvents[0]
+        expect(error.service).toEqual('browser-rum-sdk')
+        expect(error.telemetry.message).toBe('expected error')
+        expect(error.telemetry.error!.kind).toBe('Error')
+        expect(error.telemetry.status).toBe('error')
+        intakeRegistry.empty()
+      })
+  })
 })

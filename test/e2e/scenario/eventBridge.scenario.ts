@@ -1,7 +1,7 @@
-import { browserExecute, flushBrowserLogs } from '../lib/helpers/browser'
-import { createTest, flushEvents, html } from '../lib/framework'
+import { test, expect } from '@playwright/test'
+import { createTest, html } from '../lib/framework'
 
-describe('bridge present', () => {
+test.describe('bridge present', () => {
   createTest('send action')
     .withRum({ trackUserInteractions: true })
     .withEventBridge()
@@ -14,55 +14,57 @@ describe('bridge present', () => {
         })
       </script>
     `)
-    .run(async ({ serverEvents, bridgeEvents }) => {
-      const button = await $('button')
+    .run(async ({ flushEvents, intakeRegistry, page }) => {
+      const button = page.locator('button')
       await button.click()
+      // wait for click chain to close
+      await page.waitForTimeout(1000)
       await flushEvents()
 
-      expect(serverEvents.rumActions.length).toBe(0)
-      expect(bridgeEvents.rumActions.length).toBe(1)
+      expect(intakeRegistry.rumActionEvents).toHaveLength(1)
+      expect(intakeRegistry.hasOnlyBridgeRequests).toBe(true)
     })
 
   createTest('send error')
     .withRum()
     .withEventBridge()
-    .run(async ({ serverEvents, bridgeEvents }) => {
-      await browserExecute(() => {
+    .run(async ({ flushBrowserLogs, flushEvents, intakeRegistry, page }) => {
+      await page.evaluate(() => {
         console.error('oh snap')
       })
 
-      await flushBrowserLogs()
+      flushBrowserLogs()
       await flushEvents()
 
-      expect(serverEvents.rumErrors.length).toBe(0)
-      expect(bridgeEvents.rumErrors.length).toBeGreaterThan(0)
+      expect(intakeRegistry.rumErrorEvents).toHaveLength(1)
+      expect(intakeRegistry.hasOnlyBridgeRequests).toBe(true)
     })
 
   createTest('send resource')
     .withRum()
     .withEventBridge()
-    .run(async ({ serverEvents, bridgeEvents }) => {
+    .run(async ({ flushEvents, intakeRegistry }) => {
       await flushEvents()
 
-      expect(serverEvents.rumResources.length).toEqual(0)
-      expect(bridgeEvents.rumResources.length).toBeGreaterThan(0)
+      expect(intakeRegistry.rumResourceEvents.length).toBeGreaterThan(0)
+      expect(intakeRegistry.hasOnlyBridgeRequests).toBe(true)
     })
 
   createTest('send view')
     .withRum()
     .withEventBridge()
-    .run(async ({ serverEvents, bridgeEvents }) => {
+    .run(async ({ flushEvents, intakeRegistry }) => {
       await flushEvents()
 
-      expect(serverEvents.rumViews.length).toEqual(0)
-      expect(bridgeEvents.rumViews.length).toBeGreaterThan(0)
+      expect(intakeRegistry.rumViewEvents.length).toBeGreaterThan(0)
+      expect(intakeRegistry.hasOnlyBridgeRequests).toBe(true)
     })
 
   createTest('forward telemetry to the bridge')
     .withLogs()
     .withEventBridge()
-    .run(async ({ serverEvents, bridgeEvents }) => {
-      await browserExecute(() => {
+    .run(async ({ flushEvents, intakeRegistry, page }) => {
+      await page.evaluate(() => {
         const context = {
           get foo() {
             throw new window.Error('bar')
@@ -72,20 +74,52 @@ describe('bridge present', () => {
       })
 
       await flushEvents()
-      expect(serverEvents.telemetryErrors.length).toBe(0)
-      expect(bridgeEvents.telemetryErrors.length).toBe(1)
+      expect(intakeRegistry.telemetryErrorEvents).toHaveLength(1)
+      expect(intakeRegistry.hasOnlyBridgeRequests).toBe(true)
+      intakeRegistry.empty()
     })
 
   createTest('forward logs to the bridge')
     .withLogs()
     .withEventBridge()
-    .run(async ({ serverEvents, bridgeEvents }) => {
-      await browserExecute(() => {
+    .run(async ({ flushEvents, intakeRegistry, page }) => {
+      await page.evaluate(() => {
         window.OO_LOGS!.logger.log('hello')
       })
       await flushEvents()
 
-      expect(serverEvents.logs.length).toBe(0)
-      expect(bridgeEvents.logs.length).toBe(1)
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.hasOnlyBridgeRequests).toBe(true)
+    })
+
+  createTest('send records to the bridge')
+    .withRum()
+    .withEventBridge()
+    .run(async ({ flushEvents, intakeRegistry }) => {
+      await flushEvents()
+
+      expect(intakeRegistry.replayRecords.length).toBeGreaterThan(0)
+      expect(intakeRegistry.hasOnlyBridgeRequests).toBe(true)
+    })
+
+  createTest('do not send records when the recording is stopped')
+    .withRum()
+    .withEventBridge()
+    .run(async ({ flushEvents, intakeRegistry, page }) => {
+      // wait for recorder to be properly started
+      await page.waitForTimeout(200)
+
+      const preStopRecordsCount = intakeRegistry.replayRecords.length
+      await page.evaluate(() => {
+        window.DD_RUM!.stopSessionReplayRecording()
+
+        // trigger a new record
+        document.body.appendChild(document.createElement('li'))
+      })
+
+      await flushEvents()
+
+      const postStopRecordsCount = intakeRegistry.replayRecords.length - preStopRecordsCount
+      expect(postStopRecordsCount).toEqual(0)
     })
 })

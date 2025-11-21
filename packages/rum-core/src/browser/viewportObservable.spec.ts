@@ -1,7 +1,7 @@
 import type { Subscription } from '@openobserve/browser-core/src/tools/observable'
 import type { Clock } from '@openobserve/browser-core/test'
 import { mockClock, createNewEvent } from '@openobserve/browser-core/test'
-import type { RumConfiguration } from '../domain/configuration'
+import { mockRumConfiguration } from '../../test'
 import type { ViewportDimension } from './viewportObservable'
 import { getViewportDimension, initViewportObservable } from './viewportObservable'
 
@@ -9,10 +9,9 @@ describe('viewportObservable', () => {
   let viewportSubscription: Subscription
   let viewportDimension: ViewportDimension
   let clock: Clock
-  let configuration: RumConfiguration
+  const configuration = mockRumConfiguration()
 
   beforeEach(() => {
-    configuration = {} as RumConfiguration
     viewportSubscription = initViewportObservable(configuration).subscribe((dimension) => {
       viewportDimension = dimension
     })
@@ -21,7 +20,6 @@ describe('viewportObservable', () => {
 
   afterEach(() => {
     viewportSubscription.unsubscribe()
-    clock.cleanup()
   })
 
   const addVerticalScrollBar = () => {

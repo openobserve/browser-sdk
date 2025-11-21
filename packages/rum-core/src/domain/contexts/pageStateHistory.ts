@@ -1,15 +1,20 @@
 import type { Duration, RelativeTime } from '@openobserve/browser-core'
 import {
+  SKIPPED,
   elapsed,
-  ValueHistory,
+  createValueHistory,
   SESSION_TIME_OUT_DELAY,
   toServerDuration,
   addEventListeners,
   relativeNow,
   DOM_EVENT,
+  HookNames,
 } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../configuration'
+import { supportPerformanceTimingEvent, RumPerformanceEntryType } from '../../browser/performanceObservable'
 import type { PageStateServerEntry } from '../../rawRumEvent.types'
+import { RumEventType } from '../../rawRumEvent.types'
+import type { DefaultRumEventAttributes, Hooks } from '../hooks'
 
 // Arbitrary value to cap number of element for memory consumption in the browser
 export const MAX_PAGE_STATE_ENTRIES = 4000
@@ -26,22 +31,40 @@ export const enum PageState {
   TERMINATED = 'terminated',
 }
 
-export type PageStateEntry = { state: PageState; startTime: RelativeTime }
+export interface PageStateEntry {
+  state: PageState
+  startTime: RelativeTime
+}
 
 export interface PageStateHistory {
-  findAll: (startTime: RelativeTime, duration: Duration) => PageStateServerEntry[] | undefined
-  isInActivePageStateAt: (startTime: RelativeTime) => boolean
+  wasInPageStateDuringPeriod: (state: PageState, startTime: RelativeTime, duration: Duration) => boolean
   addPageState(nextPageState: PageState, startTime?: RelativeTime): void
   stop: () => void
 }
 
 export function startPageStateHistory(
+  hooks: Hooks,
   configuration: RumConfiguration,
   maxPageStateEntriesSelectable = MAX_PAGE_STATE_ENTRIES_SELECTABLE
 ): PageStateHistory {
-  const pageStateHistory = new ValueHistory<PageStateEntry>(PAGE_STATE_CONTEXT_TIME_OUT_DELAY, MAX_PAGE_STATE_ENTRIES)
+  const pageStateEntryHistory = createValueHistory<PageStateEntry>({
+    expireDelay: PAGE_STATE_CONTEXT_TIME_OUT_DELAY,
+    maxEntries: MAX_PAGE_STATE_ENTRIES,
+  })
 
   let currentPageState: PageState
+
+  if (supportPerformanceTimingEvent(RumPerformanceEntryType.VISIBILITY_STATE)) {
+    const visibilityEntries = performance.getEntriesByType(
+      RumPerformanceEntryType.VISIBILITY_STATE
+    ) as PerformanceEntry[]
+
+    visibilityEntries.forEach((entry) => {
+      const state = entry.name === 'hidden' ? PageState.HIDDEN : PageState.ACTIVE
+      addPageState(state, entry.startTime as RelativeTime)
+    })
+  }
+
   addPageState(getPageState(), relativeNow())
 
   const { stop: stopEventListeners } = addEventListeners(
@@ -57,11 +80,7 @@ export function startPageStateHistory(
       DOM_EVENT.PAGE_HIDE,
     ],
     (event) => {
-      // Only get events fired by the browser to avoid false currentPageState changes done with custom events
-      // cf: developer extension auto flush: https://github.com/openobserve/browser-sdk/blob/2f72bf05a672794c9e33965351964382a94c72ba/developer-extension/src/panel/flushEvents.ts#L11-L12
-      if (event.isTrusted) {
-        addPageState(computePageState(event), event.timeStamp as RelativeTime)
-      }
+      addPageState(computePageState(event), event.timeStamp as RelativeTime)
     },
     { capture: true }
   )
@@ -72,49 +91,65 @@ export function startPageStateHistory(
     }
 
     currentPageState = nextPageState
-    pageStateHistory.closeActive(startTime)
-    pageStateHistory.add({ state: currentPageState, startTime }, startTime)
+    pageStateEntryHistory.closeActive(startTime)
+    pageStateEntryHistory.add({ state: currentPageState, startTime }, startTime)
   }
 
+  function wasInPageStateDuringPeriod(state: PageState, startTime: RelativeTime, duration: Duration) {
+    return pageStateEntryHistory.findAll(startTime, duration).some((pageState) => pageState.state === state)
+  }
+
+  hooks.register(
+    HookNames.Assemble,
+    ({ startTime, duration = 0 as Duration, eventType }): DefaultRumEventAttributes | SKIPPED => {
+      if (eventType === RumEventType.VIEW) {
+        const pageStates = pageStateEntryHistory.findAll(startTime, duration)
+        return {
+          type: eventType,
+          _dd: { page_states: processPageStates(pageStates, startTime, maxPageStateEntriesSelectable) },
+        }
+      }
+
+      if (eventType === RumEventType.ACTION || eventType === RumEventType.ERROR) {
+        return {
+          type: eventType,
+          view: { in_foreground: wasInPageStateDuringPeriod(PageState.ACTIVE, startTime, 0 as Duration) },
+        }
+      }
+
+      return SKIPPED
+    }
+  )
+
   return {
-    findAll: (eventStartTime: RelativeTime, duration: Duration): PageStateServerEntry[] | undefined => {
-      const pageStateEntries = pageStateHistory.findAll(eventStartTime, duration)
-
-      if (pageStateEntries.length === 0) {
-        return
-      }
-
-      const pageStateServerEntries = []
-      // limit the number of entries to return
-      const limit = Math.max(0, pageStateEntries.length - maxPageStateEntriesSelectable)
-
-      // loop page state entries backward to return the selected ones in desc order
-      for (let index = pageStateEntries.length - 1; index >= limit; index--) {
-        const pageState = pageStateEntries[index]
-        // compute the start time relative to the event start time (ex: to be relative to the view start time)
-        const relativeStartTime = elapsed(eventStartTime, pageState.startTime)
-
-        pageStateServerEntries.push({
-          state: pageState.state,
-          start: toServerDuration(relativeStartTime),
-        })
-      }
-
-      return pageStateServerEntries
-    },
-    isInActivePageStateAt: (startTime: RelativeTime) => {
-      const pageStateEntry = pageStateHistory.find(startTime)
-      return pageStateEntry !== undefined && pageStateEntry.state === PageState.ACTIVE
-    },
+    wasInPageStateDuringPeriod,
     addPageState,
     stop: () => {
       stopEventListeners()
-      pageStateHistory.stop()
+      pageStateEntryHistory.stop()
     },
   }
 }
 
-function computePageState(event: Event) {
+function processPageStates(
+  pageStateEntries: PageStateEntry[],
+  eventStartTime: RelativeTime,
+  maxPageStateEntriesSelectable: number
+): PageStateServerEntry[] | undefined {
+  if (pageStateEntries.length === 0) {
+    return
+  }
+
+  return pageStateEntries
+    .slice(-maxPageStateEntriesSelectable)
+    .reverse()
+    .map(({ state, startTime }) => ({
+      state,
+      start: toServerDuration(elapsed(eventStartTime, startTime)),
+    }))
+}
+
+function computePageState(event: Event & { type: DOM_EVENT }) {
   if (event.type === DOM_EVENT.FREEZE) {
     return PageState.FROZEN
   } else if (event.type === DOM_EVENT.PAGE_HIDE) {

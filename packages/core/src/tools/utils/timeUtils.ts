@@ -10,10 +10,17 @@ export type Duration = number & { d: 'Duration in ms' }
 export type ServerDuration = number & { s: 'Duration in ns' }
 export type TimeStamp = number & { t: 'Epoch time' }
 export type RelativeTime = number & { r: 'Time relative to navigation start' } & { d: 'Duration in ms' }
-export type ClocksState = { relative: RelativeTime; timeStamp: TimeStamp }
+export interface ClocksState {
+  relative: RelativeTime
+  timeStamp: TimeStamp
+}
 
 export function relativeToClocks(relative: RelativeTime) {
   return { relative, timeStamp: getCorrectedTimeStamp(relative) }
+}
+
+export function timeStampToClocks(timeStamp: TimeStamp) {
+  return { relative: getRelativeTime(timeStamp), timeStamp }
 }
 
 function getCorrectedTimeStamp(relativeTime: RelativeTime) {
@@ -76,13 +83,7 @@ export function addDuration(a: number, b: number) {
   return a + b
 }
 
-/**
- * Get the time since the navigation was started.
- *
- * Note: this does not use `performance.timeOrigin` because it doesn't seem to reflect the actual
- * time on which the navigation has started: it may be much farther in the past, at least in Firefox 71.
- * Related issue in Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=1429926
- */
+// Get the time since the navigation was started.
 export function getRelativeTime(timestamp: TimeStamp) {
   return (timestamp - getNavigationStart()) as RelativeTime
 }
@@ -100,13 +101,17 @@ export function looksLikeRelativeTime(time: RelativeTime | TimeStamp): time is R
  */
 let navigationStart: TimeStamp | undefined
 
+/**
+ * Notes: this does not use `performance.timeOrigin` because:
+ * - It doesn't seem to reflect the actual time on which the navigation has started: it may be much farther in the past,
+ * at least in Firefox 71. (see: https://bugzilla.mozilla.org/show_bug.cgi?id=1429926)
+ * - It is not supported in Safari <15
+ */
 function getNavigationStart() {
   if (navigationStart === undefined) {
-    navigationStart = performance.timing.navigationStart as TimeStamp
+    // ServiceWorkers do not support navigationStart (it's deprecated), so we fallback to timeOrigin
+    navigationStart = (performance.timing?.navigationStart ?? performance.timeOrigin) as TimeStamp
   }
-  return navigationStart
-}
 
-export function resetNavigationStart() {
-  navigationStart = undefined
+  return navigationStart
 }

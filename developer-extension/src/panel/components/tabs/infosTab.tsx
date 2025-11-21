@@ -1,20 +1,25 @@
-import { Anchor, Button, Divider, Group, Space, Text } from '@mantine/core'
+import { Anchor, Button, Divider, Group, JsonInput, Space, Text } from '@mantine/core'
 import type { ReactNode } from 'react'
-import React from 'react'
+import React, { useState } from 'react'
 import { evalInWindow } from '../../evalInWindow'
 import { useSdkInfos } from '../../hooks/useSdkInfos'
 import { Columns } from '../columns'
 import { Json } from '../json'
 import { TabBase } from '../tabBase'
 import { createLogger } from '../../../common/logger'
+import { formatDate } from '../../formatNumber'
+import { useSettings } from '../../hooks/useSettings'
 
 const logger = createLogger('infosTab')
 
 export function InfosTab() {
   const infos = useSdkInfos()
+  const [settings, setSetting] = useSettings()
+
   if (!infos) {
     return null
   }
+
   const sessionId = infos.cookie?.id
 
   return (
@@ -24,19 +29,25 @@ export function InfosTab() {
           {infos.cookie && (
             <>
               <Entry name="Id" value={infos.cookie.id} />
-              <Entry name="Logs" value={formatSessionType(infos.cookie.logs, 'Not tracked', 'Tracked')} />
+              <Entry
+                name="Logs"
+                value={infos.cookie.logs && formatSessionType(infos.cookie.logs, 'Not tracked', 'Tracked')}
+              />
               <Entry
                 name="RUM"
-                value={formatSessionType(
-                  infos.cookie.rum,
-                  'Not tracked',
-                  'Tracked with Session Replay',
-                  'Tracked without Session Replay'
-                )}
+                value={
+                  infos.cookie.rum &&
+                  formatSessionType(
+                    infos.cookie.rum,
+                    'Not tracked',
+                    'Tracked with Session Replay',
+                    'Tracked without Session Replay'
+                  )
+                }
               />
-              <Entry name="Created" value={formatDate(Number(infos.cookie.created))} />
-              <Entry name="Expire" value={formatDate(Number(infos.cookie.expire))} />
-              <Space h="sm" />
+              {infos.cookie.forcedReplay && <Entry name="Is Replay Forced" value={'True'} />}
+              <Entry name="Created" value={infos.cookie.created && formatDate(Number(infos.cookie.created))} />
+              <Entry name="Expire" value={infos.cookie.expire && formatDate(Number(infos.cookie.expire))} />
               <Button color="violet" variant="light" onClick={endSession} className="dd-privacy-allow">
                 End current session
               </Button>
@@ -58,14 +69,21 @@ export function InfosTab() {
                   >
                     Explorer
                   </AppLink>
-                  <Divider sx={{ height: '24px' }} orientation="vertical" />
+                  <Divider orientation="vertical" />
                   <AppLink config={infos.rum.config} path={`rum/replay/sessions/${sessionId}`} params={{}}>
                     Session Replay
                   </AppLink>
                 </Group>
               )}
               <Entry name="Version" value={infos.rum.version} />
-              <Entry name="Configuration" value={infos.rum.config} />
+              <Entry
+                name="Configuration"
+                value={infos.rum.config}
+                onChange={(value) => {
+                  setSetting('rumConfigurationOverride', value)
+                }}
+                isOverridden={!!settings.rumConfigurationOverride}
+              />
               <Entry name="Internal context" value={infos.rum.internalContext} />
               <Entry name="Global context" value={infos.rum.globalContext} />
               <Entry name="User" value={infos.rum.user} />
@@ -89,7 +107,14 @@ export function InfosTab() {
                 </div>
               )}
               <Entry name="Version" value={infos.logs.version} />
-              <Entry name="Configuration" value={infos.logs.config} />
+              <Entry
+                name="Configuration"
+                value={infos.logs.config}
+                onChange={(value) => {
+                  setSetting('logsConfigurationOverride', value)
+                }}
+                isOverridden={!!settings.logsConfigurationOverride}
+              />
               <Entry name="Global context" value={infos.logs.globalContext} />
               <Entry name="User" value={infos.logs.user} />
             </>
@@ -120,26 +145,111 @@ function AppLink({
   )
 }
 
-function Entry({ name, value }: { name: string; value: any }) {
+function Entry({
+  name,
+  value,
+  isOverridden = false,
+  onChange,
+}: {
+  name: string
+  value: any
+  isOverridden?: boolean
+  onChange?: (value: object | null) => void
+}) {
+  const [edited, setEdited] = useState(false)
+  const [newValue, setNewValue] = React.useState<string | null>()
+
+  const handleApplyClick = () => {
+    const valueJson = newValue ? tryParseJson(newValue) : null
+    if (onChange && valueJson !== false) {
+      onChange(valueJson)
+      setEdited(false)
+      reloadPage()
+    }
+  }
+
+  const handleClearClick = () => {
+    onChange?.(null)
+    reloadPage()
+  }
+
+  const handleEditClick = () => {
+    setEdited(true)
+    setNewValue(serializeJson(value))
+  }
   return (
-    <Text size="sm" component="div">
+    <Text component="div">
       {typeof value === 'string' ? (
         <>
-          {name}: {value}
+          <EntryName>{name}: </EntryName> {value}
         </>
       ) : value ? (
         <>
-          {name}: <Json name="" src={value} collapsed={1} />
+          <div style={{ display: 'inline-flex', gap: '5px', alignItems: 'center' }}>
+            <EntryName>{name}: </EntryName>
+            {onChange && (
+              <>
+                {!edited ? (
+                  <>
+                    <Button variant="light" size="compact-xs" onClick={handleEditClick}>
+                      Edit
+                    </Button>
+                    {isOverridden && (
+                      <Button variant="light" size="compact-xs" onClick={handleClearClick}>
+                        Clear
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Button variant="light" size="compact-xs" onClick={handleApplyClick} className="dd-privacy-allow">
+                      Apply
+                    </Button>
+                    <Button
+                      variant="light"
+                      size="compact-xs"
+                      color="gray"
+                      onClick={() => setEdited(false)}
+                      className="dd-privacy-allow"
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+          {!edited ? (
+            <Json value={value} />
+          ) : (
+            <JsonInput
+              style={{ marginTop: '5px' }}
+              validationError="Invalid JSON"
+              formatOnBlur
+              autosize
+              minRows={4}
+              value={newValue ?? ''}
+              onChange={setNewValue}
+              serialize={serializeJson}
+            />
+          )}
         </>
       ) : (
-        <>{name}: (empty)</>
+        <>
+          <EntryName>{name}: </EntryName>(empty)
+        </>
       )}
+      <Space h="xs" />
     </Text>
   )
 }
 
-function formatDate(timestamp: number) {
-  return new Date(timestamp).toLocaleString('en-US')
+function EntryName({ children }: { children: ReactNode }) {
+  return (
+    <Text component="span" size="md" fw={500}>
+      {children}
+    </Text>
+  )
 }
 
 function formatSessionType(value: string, ...labels: string[]) {
@@ -148,9 +258,32 @@ function formatSessionType(value: string, ...labels: string[]) {
 }
 
 function endSession() {
+  const fourHours = 1000 * 60 * 60 * 4
+  const expires = new Date(Date.now() + fourHours).toUTCString()
+
   evalInWindow(
     `
-      document.cookie = '_oo_s=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
+      document.cookie = '_oo_s=isExpired=1; expires=${expires}; path=/'
     `
   ).catch((error) => logger.error('Error while ending session:', error))
+}
+
+function reloadPage() {
+  evalInWindow('window.location.reload()').catch((error) => logger.error('Error while reloading the page:', error))
+}
+
+function tryParseJson(value: string) {
+  try {
+    return JSON.parse(value) as { [key: string]: any }
+  } catch {
+    return false
+  }
+}
+
+function serializeJson(value: object) {
+  // replacer to remove function attributes that have been serialized as empty object by useSdkInfos() (ex: beforeSend)
+  const replacer = (key: string, val: unknown) =>
+    key !== '' && !Array.isArray(val) && typeof val === 'object' && val && !Object.keys(val).length ? undefined : val
+
+  return JSON.stringify(value, replacer, 2)
 }

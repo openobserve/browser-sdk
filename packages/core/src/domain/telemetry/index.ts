@@ -1,14 +1,22 @@
+export type { Telemetry } from './telemetry'
 export {
-  Telemetry,
   TelemetryService,
+  TelemetryMetrics,
   addTelemetryDebug,
   addTelemetryError,
-  startFakeTelemetry,
   resetTelemetry,
   startTelemetry,
-  isTelemetryReplicationAllowed,
   addTelemetryConfiguration,
+  addTelemetryUsage,
+  addTelemetryMetrics,
+  getTelemetryObservable,
 } from './telemetry'
 
 export * from './rawTelemetryEvent.types'
-export * from './telemetryEvent.types'
+export type {
+  TelemetryEvent,
+  TelemetryErrorEvent,
+  TelemetryDebugEvent,
+  TelemetryConfigurationEvent,
+  TelemetryUsageEvent,
+} from './telemetryEvent.types'

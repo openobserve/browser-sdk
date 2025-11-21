@@ -1,25 +1,26 @@
-import type { Context, InitConfiguration, User } from '@openobserve/browser-core'
+import type { TrackingConsent, PublicApi, ContextManager, Account, Context, User } from '@openobserve/browser-core'
 import {
-  CustomerDataType,
-  assign,
-  BoundedBuffer,
-  createContextManager,
+  ContextManagerMethod,
+  CustomerContextKey,
+  addTelemetryUsage,
   makePublicApi,
   monitor,
-  display,
-  deepClone,
-  canUseEventBridge,
-  timeStampNow,
-  checkUser,
-  sanitizeUser,
   sanitize,
+  displayAlreadyInitializedError,
+  deepClone,
+  createTrackingConsentState,
+  defineContextMethod,
+  startBufferingData,
+  callMonitored,
 } from '@openobserve/browser-core'
 import type { LogsInitConfiguration } from '../domain/configuration'
-import { validateAndBuildLogsConfiguration } from '../domain/configuration'
-import type { HandlerType, StatusType, LogsMessage } from '../domain/logger'
+import type { HandlerType } from '../domain/logger'
+import type { StatusType } from '../domain/logger/isAuthorized'
 import { Logger } from '../domain/logger'
-import type { CommonContext } from '../rawLogsEvent.types'
-import type { startLogs } from './startLogs'
+import { buildCommonContext } from '../domain/contexts/commonContext'
+import type { InternalContext } from '../domain/contexts/internalContext'
+import type { StartLogs, StartLogsResult } from './startLogs'
+import { createPreStartStrategy } from './preStartLogs'
 
 export interface LoggerConfiguration {
   level?: StatusType
@@ -27,143 +28,377 @@ export interface LoggerConfiguration {
   context?: object
 }
 
-export type LogsPublicApi = ReturnType<typeof makeLogsPublicApi>
+/**
+ * Public API for the Logs browser SDK.
+ *
+ * See [Browser Log Collection](https://docs.datadoghq.com/logs/log_collection/javascript) for further information.
+ *
+ * @category Main
+ */
+export interface LogsPublicApi extends PublicApi {
+  /**
+   * The default logger
+   *
+   * @category Logger
+   */
+  logger: Logger
 
-export type StartLogs = typeof startLogs
+  /**
+   * Init the Logs browser SDK.
+   *
+   * See [Browser Log Collection](https://docs.datadoghq.com/logs/log_collection/javascript) for further information.
+   *
+   * @category Init
+   * @param initConfiguration - Configuration options of the SDK
+   */
+  init: (initConfiguration: LogsInitConfiguration) => void
 
-type StartLogsResult = ReturnType<typeof startLogs>
+  /**
+   * Set the tracking consent of the current user.
+   *
+   * Logs will be sent only if it is set to "granted". This value won't be stored by the library
+   * across page loads: you will need to call this method or set the appropriate `trackingConsent`
+   * field in the init() method at each page load.
+   *
+   * If this method is called before the init() method, the provided value will take precedence
+   * over the one provided as initialization parameter.
+   *
+   * See [User tracking consent](https://docs.datadoghq.com/logs/log_collection/javascript/#user-tracking-consent) for further information.
+   *
+   * @category Privacy
+   * @param trackingConsent - The user tracking consent
+   */
+  setTrackingConsent: (trackingConsent: TrackingConsent) => void
 
-export function makeLogsPublicApi(startLogsImpl: StartLogs) {
-  let isAlreadyInitialized = false
+  /**
+   * Set the global context information to all events, stored in `@context`
+   * See [Global context](https://docs.datadoghq.com/logs/log_collection/javascript/#overwrite-context) for further information.
+   *
+   * @category Context - Global Context
+   * @param context - Global context
+   */
+  setGlobalContext: (context: any) => void
 
-  const globalContextManager = createContextManager(CustomerDataType.GlobalContext)
-  const userContextManager = createContextManager(CustomerDataType.User)
+  /**
+   * Get the global Context
+   *
+   * See [Global context](https://docs.datadoghq.com/logs/log_collection/javascript/#overwrite-context) for further information.
+   *
+   * @category Context - Global Context
+   */
+  getGlobalContext: () => Context
 
-  const customLoggers: { [name: string]: Logger | undefined } = {}
-  let getInternalContextStrategy: StartLogsResult['getInternalContext'] = () => undefined
+  /**
+   * Set or update a global context property, stored in `@context.<key>`
+   *
+   * See [Global context](https://docs.datadoghq.com/logs/log_collection/javascript/#overwrite-context) for further information.
+   *
+   * @category Context - Global Context
+   * @param key - Key of the property
+   * @param value - Value of the property
+   */
+  setGlobalContextProperty: (key: any, value: any) => void
 
-  const beforeInitLoggerLog = new BoundedBuffer()
+  /**
+   * Remove a global context property
+   *
+   * See [Global context](https://docs.datadoghq.com/logs/log_collection/javascript/#overwrite-context) for further information.
+   *
+   * @category Context - Global Context
+   */
+  removeGlobalContextProperty: (key: any) => void
 
-  let handleLogStrategy: StartLogsResult['handleLog'] = (
-    logsMessage: LogsMessage,
-    logger: Logger,
-    savedCommonContext = deepClone(buildCommonContext()),
-    date = timeStampNow()
-  ) => {
-    beforeInitLoggerLog.add(() => handleLogStrategy(logsMessage, logger, savedCommonContext, date))
-  }
+  /**
+   * Clear the global context
+   *
+   * See [Global context](https://docs.datadoghq.com/logs/log_collection/javascript/#overwrite-context) for further information.
+   *
+   * @category Context - Global Context
+   */
+  clearGlobalContext: () => void
 
-  let getInitConfigurationStrategy = (): InitConfiguration | undefined => undefined
-  const mainLogger = new Logger((...params) => handleLogStrategy(...params))
+  /**
+   * Set user information to all events, stored in `@usr`
+   *
+   * See [User session](https://docs.datadoghq.com/logs/log_collection/javascript/#user-context) for further information.
+   *
+   * @category Context - User
+   * @param newUser - User information
+   */
+  setUser(newUser: User & { id: string }): void
 
-  function buildCommonContext(): CommonContext {
-    return {
-      view: {
-        referrer: document.referrer,
-        url: window.location.href,
-      },
-      context: globalContextManager.getContext(),
-      user: userContextManager.getContext(),
-    }
-  }
+  /**
+   * Set user information to all events, stored in `@usr`
+   *
+   * @category Context - User
+   * @deprecated You must specify a user id, favor using {@link setUser} instead
+   * @param newUser - User information with optional id
+   */
+  setUser(newUser: User): void
 
-  return makePublicApi({
-    logger: mainLogger,
+  /**
+   * Get user information
+   *
+   * See [User session](https://docs.datadoghq.com/logs/log_collection/javascript/#user-context) for further information.
+   *
+   * @category Context - User
+   * @returns User information
+   */
+  getUser: () => Context
 
-    init: monitor((initConfiguration: LogsInitConfiguration) => {
-      // This function should be available, regardless of initialization success.
-      getInitConfigurationStrategy = () => deepClone(initConfiguration)
+  /**
+   * Set or update the user property, stored in `@usr.<key>`
+   *
+   * See [User session](https://docs.datadoghq.com/logs/log_collection/javascript/#user-context) for further information.
+   *
+   * @category Context - User
+   * @param key - Key of the property
+   * @param property - Value of the property
+   */
+  setUserProperty: (key: any, property: any) => void
 
-      if (canUseEventBridge()) {
-        initConfiguration = overrideInitConfigurationForBridge(initConfiguration)
-      }
+  /**
+   * Remove a user property
+   *
+   * @category Context - User
+   * @param key - Key of the property to remove
+   * @see [User session](https://docs.datadoghq.com/logs/log_collection/javascript/#user-context) for further information.
+   */
+  removeUserProperty: (key: any) => void
 
-      if (!canInitLogs(initConfiguration)) {
-        return
-      }
+  /**
+   * Clear all user information
+   *
+   * See [User session](https://docs.datadoghq.com/logs/log_collection/javascript/#user-context) for further information.
+   *
+   * @category Context - User
+   */
+  clearUser: () => void
 
-      const configuration = validateAndBuildLogsConfiguration(initConfiguration)
-      if (!configuration) {
-        return
-      }
+  /**
+   * Set account information to all events, stored in `@account`
+   *
+   * @category Context - Account
+   * @param newAccount - Account information
+   */
+  setAccount: (newAccount: Account) => void
 
-      ; ({ handleLog: handleLogStrategy, getInternalContext: getInternalContextStrategy } = startLogsImpl(
-        initConfiguration,
+  /**
+   * Get account information
+   *
+   * @category Context - Account
+   * @returns Account information
+   */
+  getAccount: () => Context
+
+  /**
+   * Set or update the account property, stored in `@account.<key>`
+   *
+   * @category Context - Account
+   * @param key - Key of the property
+   * @param property - Value of the property
+   */
+  setAccountProperty: (key: string, property: any) => void
+
+  /**
+   * Remove an account property
+   *
+   * @category Context - Account
+   * @param key - Key of the property to remove
+   */
+  removeAccountProperty: (key: string) => void
+
+  /**
+   * Clear all account information
+   *
+   * @category Context - Account
+   * @returns Clear all account information
+   */
+  clearAccount: () => void
+
+  /**
+   * The Datadog browser logs SDK contains a default logger `DD_LOGS.logger`, but this API allows to create different ones.
+   *
+   * See [Define multiple loggers](https://docs.datadoghq.com/logs/log_collection/javascript/#define-multiple-loggers) for further information.
+   *
+   * @category Logger
+   * @param name - Name of the logger
+   * @param conf - Configuration of the logger (level, handler, context)
+   */
+  createLogger: (name: string, conf?: LoggerConfiguration) => Logger
+
+  /**
+   * Get a logger
+   *
+   * See [Define multiple loggers](https://docs.datadoghq.com/logs/log_collection/javascript/#define-multiple-loggers) for further information.
+   *
+   * @category Logger
+   * @param name - Name of the logger
+   */
+  getLogger: (name: string) => Logger | undefined
+
+  /**
+   * Get the init configuration
+   *
+   * @category Init
+   * @returns The init configuration
+   */
+  getInitConfiguration: () => LogsInitConfiguration | undefined
+
+  /**
+   * [Internal API] Get the internal SDK context
+   *
+   * See [Access internal context](https://docs.datadoghq.com/logs/log_collection/javascript/#access-internal-context) for further information.
+   *
+   * @internal
+   */
+  getInternalContext: (startTime?: number) => InternalContext | undefined
+}
+
+export interface Strategy {
+  init: (initConfiguration: LogsInitConfiguration, errorStack?: string) => void
+  initConfiguration: LogsInitConfiguration | undefined
+  globalContext: ContextManager
+  accountContext: ContextManager
+  userContext: ContextManager
+  getInternalContext: StartLogsResult['getInternalContext']
+  handleLog: StartLogsResult['handleLog']
+}
+
+export function makeLogsPublicApi(startLogsImpl: StartLogs): LogsPublicApi {
+  const trackingConsentState = createTrackingConsentState()
+  const bufferedDataObservable = startBufferingData().observable
+
+  let strategy = createPreStartStrategy(
+    buildCommonContext,
+    trackingConsentState,
+    (initConfiguration, configuration) => {
+      const startLogsResult = startLogsImpl(
         configuration,
         buildCommonContext,
-        mainLogger
-      ))
+        trackingConsentState,
+        bufferedDataObservable
+      )
 
-      beforeInitLoggerLog.drain()
+      strategy = createPostStartStrategy(initConfiguration, startLogsResult)
+      return startLogsResult
+    }
+  )
 
-      isAlreadyInitialized = true
+  const getStrategy = () => strategy
+
+  const customLoggers: { [name: string]: Logger | undefined } = {}
+
+  const mainLogger = new Logger((...params) => strategy.handleLog(...params))
+
+  return makePublicApi<LogsPublicApi>({
+    logger: mainLogger,
+
+    init: (initConfiguration) => {
+      const errorStack = new Error().stack
+      callMonitored(() => strategy.init(initConfiguration, errorStack))
+    },
+
+    setTrackingConsent: monitor((trackingConsent) => {
+      trackingConsentState.update(trackingConsent)
+      addTelemetryUsage({ feature: 'set-tracking-consent', tracking_consent: trackingConsent })
     }),
 
-    /** @deprecated: use getGlobalContext instead */
-    getLoggerGlobalContext: monitor(globalContextManager.get),
-    getGlobalContext: monitor(globalContextManager.getContext),
+    getGlobalContext: defineContextMethod(
+      getStrategy,
+      CustomerContextKey.globalContext,
+      ContextManagerMethod.getContext
+    ),
+    setGlobalContext: defineContextMethod(
+      getStrategy,
+      CustomerContextKey.globalContext,
+      ContextManagerMethod.setContext
+    ),
 
-    /** @deprecated: use setGlobalContext instead */
-    setLoggerGlobalContext: monitor(globalContextManager.set),
-    setGlobalContext: monitor(globalContextManager.setContext),
+    setGlobalContextProperty: defineContextMethod(
+      getStrategy,
+      CustomerContextKey.globalContext,
+      ContextManagerMethod.setContextProperty
+    ),
 
-    /** @deprecated: use setGlobalContextProperty instead */
-    addLoggerGlobalContext: monitor(globalContextManager.add),
-    setGlobalContextProperty: monitor(globalContextManager.setContextProperty),
+    removeGlobalContextProperty: defineContextMethod(
+      getStrategy,
+      CustomerContextKey.globalContext,
+      ContextManagerMethod.removeContextProperty
+    ),
 
-    /** @deprecated: use removeGlobalContextProperty instead */
-    removeLoggerGlobalContext: monitor(globalContextManager.remove),
-    removeGlobalContextProperty: monitor(globalContextManager.removeContextProperty),
+    clearGlobalContext: defineContextMethod(
+      getStrategy,
+      CustomerContextKey.globalContext,
+      ContextManagerMethod.clearContext
+    ),
 
-    clearGlobalContext: monitor(globalContextManager.clearContext),
-
-    createLogger: monitor((name: string, conf: LoggerConfiguration = {}) => {
+    createLogger: monitor((name, conf = {}) => {
       customLoggers[name] = new Logger(
-        (...params) => handleLogStrategy(...params),
+        (...params) => strategy.handleLog(...params),
         sanitize(name),
         conf.handler,
         conf.level,
         sanitize(conf.context) as object
       )
 
-      return customLoggers[name]!
+      return customLoggers[name]
     }),
 
-    getLogger: monitor((name: string) => customLoggers[name]),
+    getLogger: monitor((name) => customLoggers[name]),
 
-    getInitConfiguration: monitor(() => getInitConfigurationStrategy()),
+    getInitConfiguration: monitor(() => deepClone(strategy.initConfiguration)),
 
-    getInternalContext: monitor((startTime?: number | undefined) => getInternalContextStrategy(startTime)),
+    getInternalContext: monitor((startTime) => strategy.getInternalContext(startTime)),
 
-    setUser: monitor((newUser: User) => {
-      if (checkUser(newUser)) {
-        userContextManager.setContext(sanitizeUser(newUser as Context))
-      }
-    }),
+    setUser: defineContextMethod(getStrategy, CustomerContextKey.userContext, ContextManagerMethod.setContext),
 
-    getUser: monitor(userContextManager.getContext),
+    getUser: defineContextMethod(getStrategy, CustomerContextKey.userContext, ContextManagerMethod.getContext),
 
-    setUserProperty: monitor((key, property) => {
-      const sanitizedProperty = sanitizeUser({ [key]: property })[key]
-      userContextManager.setContextProperty(key, sanitizedProperty)
-    }),
+    setUserProperty: defineContextMethod(
+      getStrategy,
+      CustomerContextKey.userContext,
+      ContextManagerMethod.setContextProperty
+    ),
 
-    removeUserProperty: monitor(userContextManager.removeContextProperty),
+    removeUserProperty: defineContextMethod(
+      getStrategy,
+      CustomerContextKey.userContext,
+      ContextManagerMethod.removeContextProperty
+    ),
 
-    clearUser: monitor(userContextManager.clearContext),
+    clearUser: defineContextMethod(getStrategy, CustomerContextKey.userContext, ContextManagerMethod.clearContext),
+
+    setAccount: defineContextMethod(getStrategy, CustomerContextKey.accountContext, ContextManagerMethod.setContext),
+
+    getAccount: defineContextMethod(getStrategy, CustomerContextKey.accountContext, ContextManagerMethod.getContext),
+
+    setAccountProperty: defineContextMethod(
+      getStrategy,
+      CustomerContextKey.accountContext,
+      ContextManagerMethod.setContextProperty
+    ),
+
+    removeAccountProperty: defineContextMethod(
+      getStrategy,
+      CustomerContextKey.accountContext,
+      ContextManagerMethod.removeContextProperty
+    ),
+
+    clearAccount: defineContextMethod(
+      getStrategy,
+      CustomerContextKey.accountContext,
+      ContextManagerMethod.clearContext
+    ),
   })
+}
 
-  function overrideInitConfigurationForBridge<C extends InitConfiguration>(initConfiguration: C): C {
-    return assign({}, initConfiguration, { clientToken: 'empty' })
-  }
-
-  function canInitLogs(initConfiguration: LogsInitConfiguration) {
-    if (isAlreadyInitialized) {
-      if (!initConfiguration.silentMultipleInit) {
-        display.error('OO_LOGS is already initialized.')
-      }
-      return false
-    }
-    return true
+function createPostStartStrategy(initConfiguration: LogsInitConfiguration, startLogsResult: StartLogsResult): Strategy {
+  return {
+    init: (initConfiguration: LogsInitConfiguration) => {
+      displayAlreadyInitializedError('OO_LOGS', initConfiguration)
+    },
+    initConfiguration,
+    ...startLogsResult,
   }
 }

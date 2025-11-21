@@ -1,5 +1,9 @@
+import { generateUUID, INTAKE_URL_PARAMETERS } from '@openobserve/browser-core'
 import type { LogsInitConfiguration } from '@openobserve/browser-logs'
-import type { RumInitConfiguration } from '@openobserve/browser-rum-core'
+import type { RumInitConfiguration, RemoteConfiguration } from '@openobserve/browser-rum-core'
+import type test from '@playwright/test'
+import { DEFAULT_LOGS_CONFIGURATION } from '../helpers/configuration'
+import { isBrowserStack, isContinuousIntegration } from './environment'
 import type { Servers } from './httpServers'
 
 export interface SetupOptions {
@@ -8,6 +12,7 @@ export interface SetupOptions {
   logs?: LogsInitConfiguration
   logsInit: (initConfiguration: LogsInitConfiguration) => void
   rumInit: (initConfiguration: RumInitConfiguration) => void
+  remoteConfiguration?: RemoteConfiguration
   eventBridge: boolean
   head?: string
   body?: string
@@ -16,16 +21,20 @@ export interface SetupOptions {
     run_id: string
     test_name: string
   }
+  testFixture: typeof test
+  extension?: {
+    rumConfiguration?: RumInitConfiguration
+    logsConfiguration?: LogsInitConfiguration
+  }
+  hostName?: string
+}
+
+export interface WorkerOptions {
+  importScripts?: boolean
+  nativeLog?: boolean
 }
 
 export type SetupFactory = (options: SetupOptions, servers: Servers) => string
-
-const isBrowserStack =
-  'services' in browser.options &&
-  browser.options.services &&
-  browser.options.services.some((service) => (Array.isArray(service) ? service[0] : service) === 'browserstack')
-
-const isContinuousIntegration = Boolean(process.env.CI_JOB_ID)
 
 // By default, run tests only with the 'bundle' setup outside of the CI (to run faster on the
 // developer laptop) or with Browser Stack (to limit flakiness).
@@ -46,6 +55,10 @@ export function asyncSetup(options: SetupOptions, servers: Servers) {
     header += setupEventBridge(servers)
   }
 
+  if (options.extension) {
+    header += setupExtension(options, servers)
+  }
+
   function formatSnippet(url: string, globalName: string) {
     return `(function(h,o,u,n,d) {
 h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
@@ -54,13 +67,15 @@ n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
 })(window,document,'script','${url}','${globalName}')`
   }
 
+  const { logsScriptUrl, rumScriptUrl } = createCrossOriginScriptUrls(servers, options)
+
   if (options.logs) {
     body += html`
       <script>
-        ${formatSnippet('./openobserve-logs.js', 'OO_LOGS')}
+        ${formatSnippet(logsScriptUrl, 'OO_LOGS')}
         OO_LOGS.onReady(function () {
           OO_LOGS.setGlobalContext(${JSON.stringify(options.context)})
-          OO_LOGS.init(${formatConfiguration(options.logs, servers)})
+          ;(${options.logsInit.toString()})(${formatConfiguration(options.logs, servers)})
         })
       </script>
     `
@@ -69,7 +84,7 @@ n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
   if (options.rum) {
     body += html`
       <script type="text/javascript">
-        ${formatSnippet(options.useRumSlim ? './openobserve-rum-slim.js' : './openobserve-rum.js', 'OO_RUM')}
+        ${formatSnippet(rumScriptUrl, 'OO_RUM')}
         OO_RUM.onReady(function () {
           OO_RUM.setGlobalContext(${JSON.stringify(options.context)})
           ;(${options.rumInit.toString()})(${formatConfiguration(options.rum, servers)})
@@ -91,22 +106,25 @@ export function bundleSetup(options: SetupOptions, servers: Servers) {
     header += setupEventBridge(servers)
   }
 
+  if (options.extension) {
+    header += setupExtension(options, servers)
+  }
+
+  const { logsScriptUrl, rumScriptUrl } = createCrossOriginScriptUrls(servers, options)
+
   if (options.logs) {
     header += html`
-      <script type="text/javascript" src="./openobserve-logs.js"></script>
+      <script type="text/javascript" src="${logsScriptUrl}"></script>
       <script type="text/javascript">
         OO_LOGS.setGlobalContext(${JSON.stringify(options.context)})
-        OO_LOGS.init(${formatConfiguration(options.logs, servers)})
+        ;(${options.logsInit.toString()})(${formatConfiguration(options.logs, servers)})
       </script>
     `
   }
 
   if (options.rum) {
     header += html`
-      <script
-        type="text/javascript"
-        src="${options.useRumSlim ? './openobserve-rum-slim.js' : './openobserve-rum.js'}"
-      ></script>
+      <script type="text/javascript" src="${rumScriptUrl}"></script>
       <script type="text/javascript">
         OO_RUM.setGlobalContext(${JSON.stringify(options.context)})
         ;(${options.rumInit.toString()})(${formatConfiguration(options.rum, servers)})
@@ -122,9 +140,14 @@ export function bundleSetup(options: SetupOptions, servers: Servers) {
 
 export function npmSetup(options: SetupOptions, servers: Servers) {
   let header = options.head || ''
+  const body = options.body || ''
 
   if (options.eventBridge) {
     header += setupEventBridge(servers)
+  }
+
+  if (options.extension) {
+    header += setupExtension(options, servers)
   }
 
   if (options.logs) {
@@ -153,8 +176,53 @@ export function npmSetup(options: SetupOptions, servers: Servers) {
 
   return basePage({
     header,
-    body: options.body,
+    body,
   })
+}
+
+export function reactSetup(options: SetupOptions, servers: Servers, appName: string) {
+  let header = options.head || ''
+  let body = options.body || ''
+
+  if (options.eventBridge) {
+    header += setupEventBridge(servers)
+  }
+
+  if (options.extension) {
+    header += setupExtension(options, servers)
+  }
+
+  if (options.rum) {
+    header += html`
+      <script type="text/javascript">
+        window.RUM_CONFIGURATION = ${formatConfiguration(options.rum, servers)}
+        window.RUM_CONTEXT = ${JSON.stringify(options.context)}
+      </script>
+    `
+  }
+
+  body += html` <script type="text/javascript" src="./${appName}.js"></script> `
+
+  return basePage({
+    header,
+    body,
+  })
+}
+
+export function workerSetup(options: WorkerOptions, servers: Servers) {
+  return js`
+      ${options.importScripts ? js`importScripts('/datadog-logs.js');` : js`import '/datadog-logs.js';`}
+      
+      // Initialize DD_LOGS in service worker
+      DD_LOGS.init(${formatConfiguration({ ...DEFAULT_LOGS_CONFIGURATION, forwardConsoleLogs: 'all', forwardErrorsToLogs: true }, servers)})
+
+      // Handle messages from main thread
+      self.addEventListener('message', (event) => {
+        const message = event.data;
+        
+        ${options.nativeLog ? js`console.log(message);` : js`DD_LOGS.logger.log(message);`}
+      });
+    `
 }
 
 export function basePage({ header, body }: { header?: string; body?: string }) {
@@ -176,22 +244,32 @@ export function html(parts: readonly string[], ...vars: string[]) {
   return parts.reduce((full, part, index) => full + vars[index - 1] + part)
 }
 
+function js(parts: readonly string[], ...vars: string[]) {
+  return parts.reduce((full, part, index) => full + vars[index - 1] + part)
+}
+
 function setupEventBridge(servers: Servers) {
-  const baseHostname = new URL(servers.base.url).hostname
+  const baseHostname = new URL(servers.base.origin).hostname
 
   const version =
 
   // Send EventBridge events to the intake so we can inspect them in our E2E test cases. The URL
   // needs to be similar to the normal Openobserve intake (through proxy) to make the SDK completely
   // ignore them.
-  const eventBridgeIntake = `${servers.intake.url}/?${new URLSearchParams({
-    ooforward: '/rum/v2/rum?',
+  const eventBridgeIntake = `${servers.intake.origin}/?${new URLSearchParams({
+    ooforward: `/rum/v2/rum?${INTAKE_URL_PARAMETERS.join('&')}`,
     bridge: 'true',
   }).toString()}`
 
   return html`
     <script type="text/javascript">
       window.OpenobserveEventBridge = {
+        getCapabilities() {
+          return '["records"]'
+        },
+        getPrivacyLevel() {
+          return 'mask'
+        },
         getAllowedWebViewHosts() {
           return '["${baseHostname}"]'
         },
@@ -206,18 +284,68 @@ function setupEventBridge(servers: Servers) {
   `
 }
 
-function formatConfiguration(initConfiguration: LogsInitConfiguration | RumInitConfiguration, servers: Servers) {
+function setupExtension(options: SetupOptions, servers: Servers) {
+  let header = ''
+
+  const { rumScriptUrl, logsScriptUrl } = createCrossOriginScriptUrls(servers, { ...options, useRumSlim: false })
+
+  if (options.extension?.rumConfiguration) {
+    header += html`
+      <script type="text/javascript">
+        window.RUM_BUNDLE_URL = '${rumScriptUrl}'
+        window.RUM_CONTEXT = ${JSON.stringify(options.context)}
+        window.EXT_RUM_CONFIGURATION = ${formatConfiguration(options.extension.rumConfiguration, servers)}
+      </script>
+    `
+  }
+
+  if (options.extension?.logsConfiguration) {
+    header += html`
+      <script type="text/javascript">
+        window.LOGS_BUNDLE_URL = '${logsScriptUrl}'
+        window.LOGS_CONTEXT = ${JSON.stringify(options.context)}
+        window.EXT_LOGS_CONFIGURATION = ${formatConfiguration(options.extension.logsConfiguration, servers)}
+      </script>
+    `
+  }
+
+  return header
+}
+
+export function formatConfiguration(initConfiguration: LogsInitConfiguration | RumInitConfiguration, servers: Servers) {
+  const fns = new Map<string, () => void>()
+
   let result = JSON.stringify(
     {
       ...initConfiguration,
-      proxy: servers.intake.url,
+      proxy: servers.intake.origin,
+      remoteConfigurationProxy: `${servers.base.origin}/config`,
     },
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-    (key, value) => (key === 'beforeSend' ? 'BEFORE_SEND' : value)
+    (_key, value) => {
+      if (typeof value === 'function') {
+        const id = generateUUID()
+        fns.set(id, value)
+
+        return id
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+      return value
+    }
   )
+
   result = result.replace('"LOCATION_ORIGIN"', 'location.origin')
-  if (initConfiguration.beforeSend) {
-    result = result.replace('"BEFORE_SEND"', initConfiguration.beforeSend.toString())
+
+  for (const [id, fn] of fns) {
+    result = result.replace(`"${id}"`, fn.toString())
   }
+
   return result
+}
+
+export function createCrossOriginScriptUrls(servers: Servers, options: SetupOptions) {
+  return {
+    logsScriptUrl: `${servers.crossOrigin.origin}/openobserve-logs.js`,
+    rumScriptUrl: `${servers.crossOrigin.origin}/${options.useRumSlim ? 'openobserve-rum-slim.js' : 'openobserve-rum.js'}`,
+  }
 }

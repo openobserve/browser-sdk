@@ -30,7 +30,7 @@ export function trackEventCounts({
   }
 
   const subscription = lifeCycle.subscribe(LifeCycleEventType.RUM_EVENT_COLLECTED, (event): void => {
-    if (event.type === 'view' || !isChildEvent(event)) {
+    if (event.type === 'view' || event.type === 'vital' || !isChildEvent(event)) {
       return
     }
     switch (event.type) {
@@ -50,8 +50,10 @@ export function trackEventCounts({
         callback()
         break
       case RumEventType.RESOURCE:
-        eventCounts.resourceCount += 1
-        callback()
+        if (!event._dd?.discarded) {
+          eventCounts.resourceCount += 1
+          callback()
+        }
         break
     }
   })

@@ -1,5 +1,0 @@
-export const INTAKE_SITE_STAGING = 'alpha1-api.dev.zinclabs.dev'
-export const INTAKE_SITE_US1 = 'api.openobserve.ai'
-export const INTAKE_SITE_EU1 = 'api.openobserve.ai'
-export const INTAKE_SITE_AP1 = 'api.openobserve.ai'
-export const INTAKE_SITE_US1_FED = 'api.openobserve.ai'

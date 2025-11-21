@@ -1,50 +1,132 @@
 import { DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT } from '@openobserve/browser-logs/cjs/domain/configuration'
-import { createTest, flushEvents } from '../lib/framework'
-import { APPLICATION_ID, UNREACHABLE_URL } from '../lib/helpers/constants'
-import { browserExecute, browserExecuteAsync, flushBrowserLogs, withBrowserLogs } from '../lib/helpers/browser'
+import { test, expect } from '@playwright/test'
+import { createTest } from '../lib/framework'
+import { APPLICATION_ID } from '../lib/helpers/configuration'
 
-describe('logs', () => {
+const UNREACHABLE_URL = 'http://localhost:9999/unreachable'
+
+declare global {
+  interface Window {
+    myServiceWorker: ServiceWorkerRegistration
+  }
+}
+
+test.describe('logs', () => {
+  createTest('service worker with worker logs - esm')
+    .withWorker()
+    .run(async ({ flushEvents, intakeRegistry, browserName, interactWithWorker }) => {
+      test.skip(browserName !== 'chromium', 'Non-Chromium browsers do not support ES modules in Service Workers')
+
+      await interactWithWorker((worker) => {
+        worker.postMessage('Some message')
+      })
+
+      await flushEvents()
+
+      expect(intakeRegistry.logsRequests).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].message).toBe('Some message')
+    })
+
+  createTest('service worker with worker logs - importScripts')
+    .withWorker({ importScript: true })
+    .run(async ({ flushEvents, intakeRegistry, browserName, interactWithWorker }) => {
+      test.skip(
+        browserName === 'webkit',
+        'BrowserStack overrides the localhost URL with bs-local.com and cannot be used to install a Service Worker'
+      )
+
+      await interactWithWorker((worker) => {
+        worker.postMessage('Other message')
+      })
+
+      await flushEvents()
+
+      expect(intakeRegistry.logsRequests).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].message).toBe('Other message')
+    })
+
+  createTest('service worker console forwarding')
+    .withWorker({ importScript: true, nativeLog: true })
+    .run(async ({ flushEvents, intakeRegistry, interactWithWorker, browserName }) => {
+      test.skip(
+        browserName === 'webkit',
+        'BrowserStack overrides the localhost URL with bs-local.com and cannot be used to install a Service Worker'
+      )
+
+      await interactWithWorker((worker) => {
+        worker.postMessage('SW console log test')
+      })
+
+      await flushEvents()
+
+      // Expect logs for console, error, and report events from service worker
+      expect(intakeRegistry.logsRequests).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].message).toBe('SW console log test')
+    })
+
   createTest('send logs')
     .withLogs()
-    .run(async ({ serverEvents }) => {
-      await browserExecute(() => {
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(() => {
         window.OO_LOGS!.logger.log('hello')
       })
       await flushEvents()
-      expect(serverEvents.logs.length).toBe(1)
-      expect(serverEvents.logs[0].message).toBe('hello')
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].message).toBe('hello')
+    })
+
+  createTest('display logs in the console')
+    .withLogs()
+    .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs }) => {
+      await page.evaluate(() => {
+        window.OO_LOGS!.logger.setHandler('console')
+        window.OO_LOGS!.logger.warn('hello')
+      })
+      await flushEvents()
+      expect(intakeRegistry.logsEvents).toHaveLength(0)
+
+      withBrowserLogs((logs) => {
+        expect(logs).toHaveLength(1)
+        expect(logs[0].level).toBe('warning')
+        expect(logs[0].message).not.toEqual(expect.stringContaining('Datadog Browser SDK'))
+        expect(logs[0].message).toEqual(expect.stringContaining('hello'))
+      })
     })
 
   createTest('send console errors')
     .withLogs({ forwardErrorsToLogs: true })
-    .run(async ({ serverEvents }) => {
-      await browserExecute(() => {
+    .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs }) => {
+      await page.evaluate(() => {
         console.error('oh snap')
       })
       await flushEvents()
-      expect(serverEvents.logs.length).toBe(1)
-      expect(serverEvents.logs[0].message).toBe('console error: oh snap')
-      await withBrowserLogs((browserLogs) => {
-        expect(browserLogs.length).toEqual(1)
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].message).toBe('oh snap')
+      withBrowserLogs((browserLogs) => {
+        expect(browserLogs).toHaveLength(1)
       })
     })
 
   createTest('send XHR network errors')
     .withLogs({ forwardErrorsToLogs: true })
-    .run(async ({ serverEvents }) => {
-      await browserExecuteAsync((unreachableUrl, done) => {
-        const xhr = new XMLHttpRequest()
-        xhr.addEventListener('error', () => done(undefined))
-        xhr.open('GET', unreachableUrl)
-        xhr.send()
-      }, UNREACHABLE_URL)
+    .run(async ({ intakeRegistry, flushEvents, withBrowserLogs, page }) => {
+      await page.evaluate(
+        (unreachableUrl) =>
+          new Promise<void>((resolve) => {
+            const xhr = new XMLHttpRequest()
+            xhr.addEventListener('error', () => resolve())
+            xhr.open('GET', unreachableUrl)
+            xhr.send()
+          }),
+        UNREACHABLE_URL
+      )
 
       await flushEvents()
-      expect(serverEvents.logs.length).toBe(1)
-      expect(serverEvents.logs[0].message).toBe(`XHR error GET ${UNREACHABLE_URL}`)
-      expect(serverEvents.logs[0].error?.origin).toBe('network')
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].message).toBe(`XHR error GET ${UNREACHABLE_URL}`)
+      expect(intakeRegistry.logsEvents[0].origin).toBe('network')
 
-      await withBrowserLogs((browserLogs) => {
+      withBrowserLogs((browserLogs) => {
         // Some browser report two errors:
         // * failed to load resource
         // * blocked by CORS policy
@@ -54,19 +136,15 @@ describe('logs', () => {
 
   createTest('send fetch network errors')
     .withLogs({ forwardErrorsToLogs: true })
-    .run(async ({ serverEvents }) => {
-      await browserExecuteAsync((unreachableUrl, done) => {
-        fetch(unreachableUrl).catch(() => {
-          done(undefined)
-        })
-      }, UNREACHABLE_URL)
+    .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs }) => {
+      await page.evaluate((unreachableUrl) => fetch(unreachableUrl).catch(() => undefined), UNREACHABLE_URL)
 
       await flushEvents()
-      expect(serverEvents.logs.length).toBe(1)
-      expect(serverEvents.logs[0].message).toBe(`Fetch error GET ${UNREACHABLE_URL}`)
-      expect(serverEvents.logs[0].error?.origin).toBe('network')
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].message).toBe(`Fetch error GET ${UNREACHABLE_URL}`)
+      expect(intakeRegistry.logsEvents[0].origin).toBe('network')
 
-      await withBrowserLogs((browserLogs) => {
+      withBrowserLogs((browserLogs) => {
         // Some browser report two errors:
         // * failed to load resource
         // * blocked by CORS policy
@@ -76,64 +154,71 @@ describe('logs', () => {
 
   createTest('keep only the first bytes of the response')
     .withLogs({ forwardErrorsToLogs: true })
-    .run(async ({ serverEvents, baseUrl, servers }) => {
-      await browserExecuteAsync((done) => {
-        fetch('/throw-large-response').then(() => done(undefined), console.log)
-      })
+    .run(async ({ intakeRegistry, baseUrl, servers, flushEvents, page, withBrowserLogs, browserName }) => {
+      await page.evaluate(() => fetch('/throw-large-response'))
 
       await flushEvents()
-      expect(serverEvents.logs.length).toBe(1)
-      expect(serverEvents.logs[0].message).toBe(`Fetch error GET ${baseUrl}/throw-large-response`)
-      expect(serverEvents.logs[0].error?.origin).toBe('network')
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].message).toBe(`Fetch error GET ${new URL('/throw-large-response', baseUrl)}`)
+      expect(intakeRegistry.logsEvents[0].origin).toBe('network')
 
       const ellipsisSize = 3
-      expect(serverEvents.logs[0].error?.stack?.length).toBe(DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT + ellipsisSize)
+      expect(intakeRegistry.logsEvents[0].error?.stack).toHaveLength(
+        DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT + ellipsisSize
+      )
 
       expect(servers.base.app.getLargeResponseWroteSize()).toBeGreaterThanOrEqual(
         DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT
       )
 
-      await withBrowserLogs((browserLogs) => {
-        // Some browser report two errors:
-        // * the server responded with a status of 500
-        // * canceling the body stream is reported as a network error (net::ERR_FAILED)
-        expect(browserLogs.length).toBeGreaterThanOrEqual(1)
+      withBrowserLogs((browserLogs) => {
+        if (browserName === 'firefox') {
+          // Firefox does not report the error message
+          expect(browserLogs).toHaveLength(0)
+        } else {
+          expect(browserLogs).toHaveLength(1)
+          expect(browserLogs[0].message).toContain('the server responded with a status of 500')
+        }
       })
     })
 
   createTest('track fetch error')
     .withLogs({ forwardErrorsToLogs: true })
-    .run(async ({ serverEvents, baseUrl }) => {
-      await browserExecuteAsync((unreachableUrl, done) => {
-        let count = 0
-        fetch('/throw')
-          .then(() => (count += 1))
-          .catch((err) => console.error(err))
-        fetch('/unknown')
-          .then(() => (count += 1))
-          .catch((err) => console.error(err))
-        fetch(unreachableUrl).catch(() => (count += 1))
-        fetch('/ok')
-          .then(() => (count += 1))
-          .catch((err) => console.error(err))
+    .run(async ({ intakeRegistry, baseUrl, flushEvents, flushBrowserLogs, page }) => {
+      await page.evaluate(
+        (unreachableUrl) =>
+          new Promise<void>((resolve) => {
+            let count = 0
+            fetch('/throw')
+              .then(() => (count += 1))
+              .catch((err) => console.error(err))
+            fetch('/unknown')
+              .then(() => (count += 1))
+              .catch((err) => console.error(err))
+            fetch(unreachableUrl).catch(() => (count += 1))
+            fetch('/ok')
+              .then(() => (count += 1))
+              .catch((err) => console.error(err))
 
-        const interval = setInterval(() => {
-          if (count === 4) {
-            clearInterval(interval)
-            done(undefined)
-          }
-        }, 500)
-      }, UNREACHABLE_URL)
+            const interval = setInterval(() => {
+              if (count === 4) {
+                clearInterval(interval)
+                resolve()
+              }
+            }, 500)
+          }),
+        UNREACHABLE_URL
+      )
 
-      await flushBrowserLogs()
+      flushBrowserLogs()
       await flushEvents()
 
-      expect(serverEvents.logs.length).toEqual(2)
+      expect(intakeRegistry.logsEvents).toHaveLength(2)
 
-      const unreachableRequest = serverEvents.logs.find((log) => log.http!.url.includes('/unreachable'))!
-      const throwRequest = serverEvents.logs.find((log) => log.http!.url.includes('/throw'))!
+      const unreachableRequest = intakeRegistry.logsEvents.find((log) => log.http!.url.includes('/unreachable'))!
+      const throwRequest = intakeRegistry.logsEvents.find((log) => log.http!.url.includes('/throw'))!
 
-      expect(throwRequest.message).toEqual(`Fetch error GET ${baseUrl}/throw`)
+      expect(throwRequest.message).toEqual(`Fetch error GET ${new URL('/throw', baseUrl)}`)
       expect(throwRequest.http!.status_code).toEqual(500)
       expect(throwRequest.error!.stack).toMatch(/Server error/)
 
@@ -142,31 +227,94 @@ describe('logs', () => {
       expect(unreachableRequest.error!.stack).toContain('TypeError')
     })
 
+  createTest('send runtime errors happening before initialization')
+    .withLogs({ forwardErrorsToLogs: true })
+    .withLogsInit((configuration) => {
+      // Use a setTimeout to:
+      // * have a constant stack trace regardless of the setup used
+      // * avoid the exception to be swallowed by the `onReady` logic
+      setTimeout(() => {
+        throw new Error('oh snap')
+      })
+      // Simulate a late initialization of the RUM SDK
+      setTimeout(() => window.DD_LOGS!.init(configuration))
+    })
+    .run(async ({ intakeRegistry, flushEvents, withBrowserLogs }) => {
+      await flushEvents()
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].message).toBe('oh snap')
+      withBrowserLogs((browserLogs) => {
+        expect(browserLogs).toHaveLength(1)
+      })
+    })
+
   createTest('add RUM internal context to logs')
     .withRum()
     .withLogs()
-    .run(async ({ serverEvents }) => {
-      await browserExecute(() => {
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(() => {
         window.OO_LOGS!.logger.log('hello')
       })
       await flushEvents()
-      expect(serverEvents.logs.length).toBe(1)
-      expect(serverEvents.logs[0].view.id).toBeDefined()
-      expect(serverEvents.logs[0].application_id).toBe(APPLICATION_ID)
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].view.id).toBeDefined()
+      expect(intakeRegistry.logsEvents[0].application_id).toBe(APPLICATION_ID)
+    })
+
+  createTest('add default tags to logs')
+    .withLogs({
+      service: 'foo',
+      env: 'dev',
+      version: '1.0.0',
+    })
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(() => {
+        window.OO_LOGS!.logger.log('hello world!')
+      })
+      await flushEvents()
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].ootags).toMatch(/sdk_version:(.*),env:dev,service:foo,version:1.0.0$/)
+    })
+
+  createTest('add tags to the logger')
+    .withLogs()
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(() => {
+        window.OO_LOGS!.logger.addTag('planet', 'mars')
+        window.OO_LOGS!.logger.log('hello world!')
+      })
+
+      await flushEvents()
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].ootags).toMatch(/sdk_version:(.*),planet:mars$/)
+    })
+
+  createTest('ignore tags from message context and logger context')
+    .withLogs()
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(() => {
+        window.OO_LOGS!.logger.setContextProperty('ootags', 'planet:mars')
+        window.OO_LOGS!.logger.log('hello world!', { ootags: 'planet:earth' })
+      })
+
+      await flushEvents()
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].ootags).toMatch(/sdk_version:(.*)$/)
     })
 
   createTest('allow to modify events')
     .withLogs({
       beforeSend: (event) => {
         event.foo = 'bar'
+        return true
       },
     })
-    .run(async ({ serverEvents }) => {
-      await browserExecute(() => {
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(() => {
         window.OO_LOGS!.logger.log('hello', {})
       })
       await flushEvents()
-      expect(serverEvents.logs.length).toBe(1)
-      expect(serverEvents.logs[0].foo).toBe('bar')
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].foo).toBe('bar')
     })
 })

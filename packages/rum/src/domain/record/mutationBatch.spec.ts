@@ -1,12 +1,17 @@
-import { collectAsyncCalls } from '@openobserve/browser-core/test'
-import { createMutationBatch } from './mutationBatch'
-import type { RumMutationRecord } from './observers'
+import type { Clock, RequestIdleCallbackMock } from '@openobserve/browser-core/test'
+import { mockClock, mockRequestIdleCallback } from '@openobserve/browser-core/test'
+import type { RumMutationRecord } from '@openobserve/browser-rum-core'
+import { MUTATION_PROCESS_MIN_DELAY, createMutationBatch } from './mutationBatch'
 
 describe('createMutationBatch', () => {
   let mutationBatch: ReturnType<typeof createMutationBatch>
   let processMutationBatchSpy: jasmine.Spy<(mutations: RumMutationRecord[]) => void>
+  let clock: Clock
+  let requestIdleCallbackMock: RequestIdleCallbackMock
 
   beforeEach(() => {
+    clock = mockClock()
+    requestIdleCallbackMock = mockRequestIdleCallback()
     processMutationBatchSpy = jasmine.createSpy()
     mutationBatch = createMutationBatch(processMutationBatchSpy)
   })
@@ -15,14 +20,15 @@ describe('createMutationBatch', () => {
     mutationBatch.stop()
   })
 
-  it('calls the callback asynchronously after adding a mutation', (done) => {
+  it('calls the callback asynchronously after MUTATION_PROCESS_MIN_DELAY', () => {
     const mutation = { type: 'childList' } as RumMutationRecord
     mutationBatch.addMutations([mutation])
 
-    collectAsyncCalls(processMutationBatchSpy, 1, (calls) => {
-      expect(calls.mostRecent().args[0]).toEqual([mutation])
-      done()
-    })
+    expect(requestIdleCallbackMock.spy).toHaveBeenCalled()
+    expect(processMutationBatchSpy).not.toHaveBeenCalled()
+    requestIdleCallbackMock.idle()
+    clock.tick(MUTATION_PROCESS_MIN_DELAY)
+    expect(processMutationBatchSpy).toHaveBeenCalledWith([mutation])
   })
 
   it('calls the callback synchronously on flush', () => {

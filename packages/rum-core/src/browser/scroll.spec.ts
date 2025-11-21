@@ -1,46 +1,33 @@
-import { addEventListener, DOM_EVENT, isIE } from '@openobserve/browser-core'
-import type { RumConfiguration } from '../domain/configuration'
+import { DOM_EVENT } from '@openobserve/browser-core'
 import { getScrollX, getScrollY } from './scroll'
 
-function isMobileSafari12() {
-  return /iPhone OS 12.* like Mac OS.* Version\/12.* Mobile.*Safari/.test(navigator.userAgent)
-}
-
 describe('scroll', () => {
-  let shouldWaitForWindowScrollEvent: boolean
-  let configuration: RumConfiguration
-  const addVerticalScrollBar = () => {
-    document.body.style.setProperty('margin-bottom', '5000px')
-  }
+  let testDidScroll: boolean
 
   beforeEach(() => {
-    if (isIE()) {
-      pending('IE not supported')
-    }
-    configuration = {} as RumConfiguration
-    shouldWaitForWindowScrollEvent = false
+    document.body.style.setProperty('margin-bottom', '5000px')
+    testDidScroll = false
   })
 
-  afterEach((done) => {
+  afterEach(async () => {
     document.body.style.removeProperty('margin-bottom')
     window.scrollTo(0, 0)
 
-    // Those tests are triggering asynchronous scroll events that might impact tests run after them.
-    // To avoid that, we wait for the next scroll event before continuing to the next one.
-    if (shouldWaitForWindowScrollEvent) {
-      addEventListener(configuration, window, DOM_EVENT.SCROLL, () => done(), {
-        passive: true,
-        once: true,
-        capture: true,
-      })
-    } else {
-      done()
-    }
+    // Those tests are triggering asynchronous events that might impact tests run after them. To
+    // avoid that, we wait for the events before continuing to the next test.
+    await Promise.all([
+      window.visualViewport &&
+        waitForEvents(
+          window.visualViewport,
+          DOM_EVENT.RESIZE,
+          2 // We add then remove the scrollbar, so the resize event is triggered twice
+        ),
+      testDidScroll && waitForEvents(window, DOM_EVENT.SCROLL, 1),
+    ])
   })
 
   describe('getScrollX/Y', () => {
-    it('normalized scroll matches initial behaviour', () => {
-      addVerticalScrollBar()
+    it('normalized scroll matches initial behavior', () => {
       expect(getScrollX()).toBe(0)
       expect(getScrollY()).toBe(0)
       expect(getScrollX()).toBe(window.scrollX || window.pageXOffset)
@@ -48,17 +35,10 @@ describe('scroll', () => {
     })
 
     it('normalized scroll updates when scrolled', () => {
-      if (isMobileSafari12()) {
-        // Mobile Safari 12 doesn't support scrollTo() within an iframe
-        // Karma is evaluating some tests in an iframe
-        // https://coderwall.com/p/c-aqqw/scrollable-iframe-on-mobile-safari
-        pending('Mobile Safari 12 not supported')
-      }
-      addVerticalScrollBar()
       const SCROLL_DOWN_PX = 100
 
       window.scrollTo(0, SCROLL_DOWN_PX)
-      shouldWaitForWindowScrollEvent = true
+      testDidScroll = true
 
       expect(getScrollX()).toBe(0)
       expect(getScrollY()).toBe(100)
@@ -67,3 +47,27 @@ describe('scroll', () => {
     })
   })
 })
+
+function waitForEvents(target: EventTarget, eventName: string, count: number) {
+  return new Promise<void>((resolve) => {
+    let counter = 0
+
+    function listener() {
+      counter++
+      if (counter === count) {
+        done()
+      }
+    }
+
+    function done() {
+      target.removeEventListener(eventName, listener)
+      resolve()
+    }
+
+    target.addEventListener(eventName, listener)
+
+    // In some cases, events are not triggered consistently. This have been observed in Safari. To
+    // avoid waiting forever, we use a timeout.
+    setTimeout(done, 1000)
+  })
+}

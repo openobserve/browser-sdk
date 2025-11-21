@@ -6,16 +6,13 @@
   "module": "esm/index.js",
   "types": "cjs/index.d.ts",
   "scripts": {
-    "build": "run-p build:cjs build:esm",
-    "build:cjs": "rm -rf cjs && tsc -p tsconfig.cjs.json && yarn replace-build-env cjs",
-    "build:esm": "rm -rf esm && tsc -p tsconfig.esm.json && yarn replace-build-env esm",
-    "replace-build-env": "node ../../scripts/build/replace-build-env.js"
+    "build": "node ../../scripts/build/build-package.ts --modules"
   },
   "dependencies": {
     "@openobserve/browser-core": "0.2.11"
   },
   "devDependencies": {
-    "ajv": "6.12.6"
+    "ajv": "8.17.1"
   },
   "repository": {
     "type": "git",

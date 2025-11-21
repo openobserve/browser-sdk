@@ -1,32 +1,91 @@
-import type { Context } from '@openobserve/browser-core'
 import ajv from 'ajv'
-import rumEventsSchemaJson from '../../../rum-events-format/schemas/rum-events-schema.json'
-import _commonSchemaJson from '../../../rum-events-format/schemas/rum/_common-schema.json'
-import _actionChildSchemaJson from '../../../rum-events-format/schemas/rum/_action-child-schema.json'
-import _perfMetricSchemaJson from '../../../rum-events-format/schemas/rum/_perf-metric-schema.json'
-import actionSchemaJson from '../../../rum-events-format/schemas/rum/action-schema.json'
-import errorSchemaJson from '../../../rum-events-format/schemas/rum/error-schema.json'
-import longTaskSchemaJson from '../../../rum-events-format/schemas/rum/long_task-schema.json'
-import resourceSchemaJson from '../../../rum-events-format/schemas/rum/resource-schema.json'
-import viewSchemaJson from '../../../rum-events-format/schemas/rum/view-schema.json'
+import { registerCleanupTask } from '@openobserve/browser-core/test'
+import type { TimeStamp, Context } from '@openobserve/browser-core'
+import { combine } from '@openobserve/browser-core'
+import type { CommonProperties } from '@openobserve/browser-rum-core'
+import type { LifeCycle, RawRumEventCollectedData } from '../src/domain/lifeCycle'
+import { LifeCycleEventType } from '../src/domain/lifeCycle'
+import type { RawRumEvent } from '../src/rawRumEvent.types'
+import { allJsonSchemas } from './allJsonSchemas'
 
-export function validateRumFormat(rumEvent: Context) {
+export function collectAndValidateRawRumEvents(lifeCycle: LifeCycle) {
+  const rawRumEvents: Array<RawRumEventCollectedData<RawRumEvent>> = []
+  const subscription = lifeCycle.subscribe(LifeCycleEventType.RAW_RUM_EVENT_COLLECTED, (data) => {
+    rawRumEvents.push(data)
+    validateRumEventFormat(data.rawRumEvent)
+  })
+  registerCleanupTask(() => {
+    subscription.unsubscribe()
+  })
+
+  return rawRumEvents
+}
+
+function validateRumEventFormat(rawRumEvent: RawRumEvent) {
+  const fakeId = '00000000-aaaa-0000-aaaa-000000000000'
+  const fakeContext: Partial<CommonProperties> = {
+    _dd: {
+      format_version: 2,
+      drift: 0,
+      configuration: {
+        session_sample_rate: 40,
+        session_replay_sample_rate: 60,
+        profiling_sample_rate: 0,
+      },
+    },
+    application: {
+      id: fakeId,
+    },
+    date: 0 as TimeStamp,
+    source: 'browser',
+    session: {
+      id: fakeId,
+      type: 'user',
+    },
+    view: {
+      id: fakeId,
+      referrer: '',
+      url: 'fake url',
+    },
+    connectivity: {
+      status: 'connected',
+      interfaces: ['wifi'],
+      effective_type: '4g',
+    },
+    context: {},
+  }
+  validateRumFormat(combine(fakeContext as CommonProperties & Context, rawRumEvent))
+}
+
+function validateRumFormat(rumEvent: Context) {
   const instance = new ajv({
     allErrors: true,
   })
-  void instance
-    .addSchema(_commonSchemaJson, 'rum/_common-schema.json')
-    .addSchema(_actionChildSchemaJson, 'rum/_action-child-schema.json')
-    .addSchema(_perfMetricSchemaJson, 'rum/_perf-metric-schema.json')
-    .addSchema(viewSchemaJson, 'rum/view-schema.json')
-    .addSchema(actionSchemaJson, 'rum/action-schema.json')
-    .addSchema(resourceSchemaJson, 'rum/resource-schema.json')
-    .addSchema(longTaskSchemaJson, 'rum/long_task-schema.json')
-    .addSchema(errorSchemaJson, 'rum/error-schema.json')
-    .addSchema(rumEventsSchemaJson, 'rum-events-schema.json')
-    .validate('rum-events-schema.json', rumEvent)
+
+  instance.addSchema(allJsonSchemas)
+
+  void instance.validate('rum-events-schema.json', rumEvent)
 
   if (instance.errors) {
-    instance.errors.map((error) => fail(`${error.dataPath || 'event'} ${error.message!}`))
+    const errors = instance.errors
+      .map((error) => {
+        let message = error.message
+        if (error.keyword === 'const') {
+          message += ` ${formatAllowedValues([error.params.allowedValue])}`
+        }
+        if (error.keyword === 'enum') {
+          message += ` ${formatAllowedValues(error.params.allowedValues)}`
+        }
+        if (error.keyword === 'additionalProperties') {
+          message += ` ${formatAllowedValues([error.params.additionalProperty])}`
+        }
+        return `  event${error.instancePath || ''} ${message}`
+      })
+      .join('\n')
+    fail(`Invalid RUM event format:\n${errors}`)
   }
+}
+
+function formatAllowedValues(allowedValues: string[]) {
+  return allowedValues.map((v) => `'${v}'`).join(', ')
 }

@@ -1,13 +1,24 @@
-import type { BrowserRecord } from '../../../../packages/rum/src/types'
-import { IncrementalSource, RecordType } from '../../../../packages/rum/src/types'
+import { IncrementalSource, RecordType } from '@datadog/browser-rum/src/types'
+import type { BrowserRecord } from '@datadog/browser-rum/src/types'
 import { createLogger } from '../../common/logger'
 import { onBackgroundMessage } from '../backgroundScriptConnection'
-import type { MessageBridgeUp } from './types'
-import { MessageBridgeDownType } from './types'
+import {
+  DEV_REPLAY_SANDBOX_ORIGIN,
+  DEV_REPLAY_SANDBOX_URL,
+  PROD_REPLAY_SANDBOX_ORIGIN,
+  PROD_REPLAY_SANDBOX_URL,
+} from '../../common/packagesUrlConstants'
+import type { MessageBridgeUp } from './sessionReplayPlayer.types'
+import { MessageBridgeDownType, MessageBridgeUpLogLevel, MessageBridgeUpType } from './sessionReplayPlayer.types'
 
 const sandboxLogger = createLogger('sandbox')
 
 export type SessionReplayPlayerStatus = 'loading' | 'waiting-for-full-snapshot' | 'ready'
+export interface SessionReplayPlayerState {
+  status: SessionReplayPlayerStatus
+  recordCount: number
+  excludeMouseMovements: boolean
+}
 
 // const sandboxOrigin = 'https://session-replay-datadoghq.com'
 const sandboxOrigin = 'https://api.openobserve.ai/session-replay/sandbox'
@@ -21,34 +32,38 @@ const sandboxParams = new URLSearchParams({
     featureFlags: {
       // Allows to easily inspect the DOM in the sandbox
       rum_session_replay_iframe_interactive: true,
-
-      // Use the service worker
-      rum_session_replay_service_worker: true,
       rum_session_replay_service_worker_debug: false,
-
       rum_session_replay_disregard_origin: true,
     },
   }),
 })
-const sandboxUrl = `${sandboxOrigin}/${sandboxVersion}/index.html?${String(sandboxParams)}`
+const devSandboxUrl = `${DEV_REPLAY_SANDBOX_URL}?${String(sandboxParams)}`
+const prodSandboxUrl = `${PROD_REPLAY_SANDBOX_URL}?${String(sandboxParams)}`
 
 export function startSessionReplayPlayer(
   iframe: HTMLIFrameElement,
-  onStatusChange: (status: SessionReplayPlayerStatus) => void
+  setPlayerState: (state: SessionReplayPlayerState) => void,
+  useDevReplaySandbox: boolean
 ) {
   let status: SessionReplayPlayerStatus = 'loading'
   const bufferedRecords = createRecordBuffer()
+  let excludeMouseMovements = false
 
-  const messageBridge = createMessageBridge(iframe, () => {
-    const records = bufferedRecords.consume()
+  const sandboxOrigin = useDevReplaySandbox ? DEV_REPLAY_SANDBOX_ORIGIN : PROD_REPLAY_SANDBOX_ORIGIN
+
+  const messageBridge = createMessageBridge(iframe, sandboxOrigin, () => {
+    const records = bufferedRecords.getRecords()
     if (records.length > 0) {
       status = 'ready'
-      onStatusChange(status)
       records.forEach((record) => messageBridge.sendRecord(record))
     } else {
       status = 'waiting-for-full-snapshot'
-      onStatusChange(status)
     }
+    setPlayerState({
+      status,
+      recordCount: bufferedRecords.getCount(),
+      excludeMouseMovements,
+    })
   })
 
   const backgroundMessageSubscription = onBackgroundMessage.subscribe((backgroundMessage) => {
@@ -56,25 +71,47 @@ export function startSessionReplayPlayer(
       return
     }
     const record = backgroundMessage.message.payload.record
-    if (status === 'loading') {
-      bufferedRecords.add(record)
-    } else if (status === 'waiting-for-full-snapshot') {
-      if (isFullSnapshotStart(record)) {
-        status = 'ready'
-        onStatusChange(status)
-        messageBridge.sendRecord(record)
-      }
-    } else {
+
+    // Check if this is a mouse movement that should be excluded
+    const isMouseMovement =
+      record.type === RecordType.IncrementalSnapshot && record.data.source === IncrementalSource.MouseMove
+
+    if (excludeMouseMovements && isMouseMovement) {
+      return // Skip adding this record entirely
+    }
+
+    // Add record to buffer
+    bufferedRecords.add(record)
+    if (status === 'ready') {
+      messageBridge.sendRecord(record)
+    } else if (status === 'waiting-for-full-snapshot' && isFullSnapshotStart(record)) {
+      status = 'ready'
       messageBridge.sendRecord(record)
     }
+    setPlayerState({
+      status,
+      recordCount: bufferedRecords.getCount(),
+      excludeMouseMovements,
+    })
   })
 
-  iframe.src = sandboxUrl
+  iframe.src = useDevReplaySandbox ? devSandboxUrl : prodSandboxUrl
 
   return {
     stop() {
       messageBridge.stop()
       backgroundMessageSubscription.unsubscribe()
+    },
+    getRecords() {
+      return bufferedRecords.getRecords()
+    },
+    setExcludeMouseMovements(shouldExcludeMouseMovements: boolean) {
+      excludeMouseMovements = shouldExcludeMouseMovements
+      setPlayerState({
+        status,
+        recordCount: bufferedRecords.getCount(),
+        excludeMouseMovements,
+      })
     },
   }
 }
@@ -92,8 +129,11 @@ function createRecordBuffer() {
         records.push(record)
       }
     },
-    consume(): BrowserRecord[] {
-      return records.splice(0, records.length)
+    getRecords(): BrowserRecord[] {
+      return [...records]
+    },
+    getCount(): number {
+      return records.length
     },
   }
 }
@@ -116,24 +156,24 @@ function normalizeRecord(record: BrowserRecord) {
   return record
 }
 
-function createMessageBridge(iframe: HTMLIFrameElement, onReady: () => void) {
+function createMessageBridge(iframe: HTMLIFrameElement, sandboxOrigin: string, onReady: () => void) {
   let nextMessageOrderId = 1
 
   function globalMessageListener(event: MessageEvent<MessageBridgeUp>) {
     if (event.origin === sandboxOrigin) {
       const message = event.data
-      if (message.type === 'log') {
-        if (message.level === 'error') {
+      if (message.type === MessageBridgeUpType.LOG) {
+        if (message.level === MessageBridgeUpLogLevel.ERROR) {
           sandboxLogger.error(message.message)
         } else {
           sandboxLogger.log(message.message)
         }
-      } else if (message.type === 'error') {
+      } else if (message.type === MessageBridgeUpType.ERROR) {
         sandboxLogger.error(
           `${message.serialisedError.name}: ${message.serialisedError.message}`,
           message.serialisedError.stack
         )
-      } else if (message.type === 'ready') {
+      } else if (message.type === MessageBridgeUpType.READY) {
         onReady()
       } else {
         // Ignore other messages for now.
@@ -147,20 +187,18 @@ function createMessageBridge(iframe: HTMLIFrameElement, onReady: () => void) {
       window.removeEventListener('message', globalMessageListener)
     },
 
-    sendRecord(record: BrowserRecord) {
+    sendRecord: (record: BrowserRecord) => {
       iframe.contentWindow!.postMessage(
         {
-          type: MessageBridgeDownType.RECORDS,
-          records: [
-            {
-              ...normalizeRecord(record),
-              viewId: 'xxx',
-              orderId: nextMessageOrderId,
-              isSeeking: false,
-              shouldWaitForIt: false,
-              segmentSource: 'browser',
-            },
-          ],
+          type: MessageBridgeDownType.RECORD,
+          record: {
+            ...normalizeRecord(record),
+            viewId: 'xxx',
+            orderId: nextMessageOrderId,
+            isSeeking: false,
+            shouldWaitForIt: false,
+            segmentSource: 'browser',
+          },
           sentAt: Date.now(),
         },
         sandboxOrigin

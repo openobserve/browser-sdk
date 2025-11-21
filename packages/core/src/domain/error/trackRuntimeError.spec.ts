@@ -1,107 +1,343 @@
-import { Observable } from '../../tools/observable'
-import { collectAsyncCalls } from '../../../test'
-import { NO_ERROR_STACK_PRESENT_MESSAGE } from './error'
-import { trackRuntimeError } from './trackRuntimeError'
+import { disableJasmineUncaughtExceptionTracking, wait } from '../../../test'
+import type { UnhandledErrorCallback } from './trackRuntimeError'
+import { instrumentOnError, instrumentUnhandledRejection, trackRuntimeError } from './trackRuntimeError'
 import type { RawError } from './error.types'
 
 describe('trackRuntimeError', () => {
   const ERROR_MESSAGE = 'foo'
 
-  let originalOnErrorHandler: OnErrorEventHandler
-  let onErrorSpy: jasmine.Spy
+  const errorViaTrackRuntimeError = async (callback: () => void): Promise<RawError> => {
+    disableJasmineUncaughtExceptionTracking()
 
-  let originalOnUnhandledRejectionHandler: Window['onunhandledrejection']
-  let onUnhandledrejectionSpy: jasmine.Spy
+    const errorObservable = trackRuntimeError()
+    const errorNotification = new Promise<RawError>((resolve) => {
+      errorObservable.subscribe((e: RawError) => resolve(e))
+    })
 
-  let notifyError: jasmine.Spy
-  let stopRuntimeErrorTracking: () => void
+    try {
+      await invokeAndWaitForErrorHandlers(callback)
+      return await errorNotification
+    } finally {
+      stop()
+    }
+  }
 
-  beforeEach(() => {
-    originalOnErrorHandler = window.onerror
-    onErrorSpy = jasmine.createSpy()
-    window.onerror = onErrorSpy
-
-    originalOnUnhandledRejectionHandler = window.onunhandledrejection
-    onUnhandledrejectionSpy = jasmine.createSpy()
-    window.onunhandledrejection = onUnhandledrejectionSpy
-
-    notifyError = jasmine.createSpy()
-    const errorObservable = new Observable<RawError>()
-    errorObservable.subscribe((e: RawError) => notifyError(e) as void)
-    ;({ stop: stopRuntimeErrorTracking } = trackRuntimeError(errorObservable))
-  })
-
-  afterEach(() => {
-    stopRuntimeErrorTracking()
-    window.onerror = originalOnErrorHandler
-    window.onunhandledrejection = originalOnUnhandledRejectionHandler
-  })
-
-  it('should call original error handler', (done) => {
-    setTimeout(() => {
+  it('should collect unhandled error', async () => {
+    const error = await errorViaTrackRuntimeError(() => {
       throw new Error(ERROR_MESSAGE)
     })
-    collectAsyncCalls(onErrorSpy, 1, () => {
-      expect(onErrorSpy.calls.mostRecent().args[0]).toMatch(ERROR_MESSAGE)
-      done()
+    expect(error.message).toEqual(ERROR_MESSAGE)
+  })
+
+  it('should collect unhandled rejection', async () => {
+    if (!('onunhandledrejection' in window)) {
+      pending('onunhandledrejection not supported')
+    }
+
+    const error = await errorViaTrackRuntimeError(() => {
+      // Reject with a string instead of an Error here because Jasmine forwards the
+      // unhandled rejection to the onerror handler with the wrong argument structure if
+      // you use an Error. (It uses the argument structure you'd use for
+      // addEventListener('error'). We could make our error processing code robust to
+      // that, but since it's a Jasmine-specific issue with a simple workaround, it makes
+      // sense to just work around it here.
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+      void Promise.reject(ERROR_MESSAGE)
     })
+    expect(error.message).toEqual(jasmine.stringContaining(ERROR_MESSAGE))
   })
+})
 
-  it('should call original unhandled rejection handler', () => {
-    window.onunhandledrejection!({
-      reason: new Error(ERROR_MESSAGE),
-    } as PromiseRejectionEvent)
+describe('instrumentOnError', () => {
+  const testLineNo = 1337
+  const testColNo = 42
+  const ERROR_MESSAGE = 'foo'
 
-    expect(onUnhandledrejectionSpy.calls.mostRecent().args[0].reason).toMatch(ERROR_MESSAGE)
-  })
+  const spyViaInstrumentOnError = async (callback: () => void) => {
+    const onErrorSpy = spyOn(window as any, 'onerror')
+    const callbackSpy = jasmine.createSpy<UnhandledErrorCallback>()
+    const { stop } = instrumentOnError(callbackSpy)
 
-  it('should notify unhandled error instance', (done) => {
-    setTimeout(() => {
+    try {
+      await invokeAndWaitForErrorHandlers(callback)
+      expect(onErrorSpy).toHaveBeenCalled()
+      return callbackSpy
+    } finally {
+      stop()
+    }
+  }
+
+  it('should call original error handler', async () => {
+    // withInstrumentOnError() asserts that the original error handler has been called for
+    // every test, so we don't need an explicit expectation here.
+    await spyViaInstrumentOnError(() => {
       throw new Error(ERROR_MESSAGE)
     })
-    collectAsyncCalls(onErrorSpy, 1, () => {
-      const collectedError = notifyError.calls.mostRecent().args[0] as RawError
-      expect(collectedError.message).toEqual(ERROR_MESSAGE)
-      expect(collectedError.stack).not.toEqual(NO_ERROR_STACK_PRESENT_MESSAGE)
-      done()
+  })
+
+  it('should notify unhandled error instance', async () => {
+    const error = new Error(ERROR_MESSAGE)
+    const spy = await spyViaInstrumentOnError(() => {
+      throw error
+    })
+
+    const [originalError, stack] = spy.calls.mostRecent().args
+    expect(originalError).toBe(error)
+    expect(stack).toBeUndefined()
+  })
+
+  it('should notify unhandled string', async () => {
+    const error = 'foo' as any
+    const spy = await spyViaInstrumentOnError(() => {
+      throw error
+    })
+
+    const [originalError, stack] = spy.calls.mostRecent().args
+    expect(originalError).toBe(error)
+    expect(stack).toBeDefined()
+  })
+
+  it('should notify unhandled object', async () => {
+    const error = { a: 'foo' } as any
+    const spy = await spyViaInstrumentOnError(() => {
+      throw error
+    })
+
+    const [originalError, stack] = spy.calls.mostRecent().args
+    expect(originalError).toBe(error)
+    expect(stack).toBeDefined()
+  })
+
+  describe('uncaught exception handling', () => {
+    it('should not go into an infinite loop', async () => {
+      const spy = await spyViaInstrumentOnError(() => {
+        throw new Error('expected error')
+      })
+
+      expect(spy).toHaveBeenCalledTimes(1)
+      await wait(1000)
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    it('should get extra arguments (isWindowError and exception)', async () => {
+      const exception = new Error('expected error')
+      const spy = await spyViaInstrumentOnError(() => {
+        throw exception
+      })
+
+      expect(spy).toHaveBeenCalledTimes(1)
+      await wait(1000)
+      expect(spy).toHaveBeenCalledTimes(1)
+      const [reportedError] = spy.calls.mostRecent().args
+      expect(reportedError).toEqual(exception)
     })
   })
 
-  it('should notify unhandled string', (done) => {
-    setTimeout(() => {
-      // eslint-disable-next-line no-throw-literal
-      throw 'foo'
-    })
-    collectAsyncCalls(onErrorSpy, 1, () => {
-      const collectedError = notifyError.calls.mostRecent().args[0] as RawError
-      expect(collectedError.message).toEqual('Uncaught "foo"')
-      expect(collectedError.stack).not.toEqual(NO_ERROR_STACK_PRESENT_MESSAGE)
-      done()
-    })
-  })
+  describe('should handle direct onerror calls', () => {
+    it('with objects', async () => {
+      const error = { foo: 'bar' } as any
+      const spy = await spyViaInstrumentOnError(() => {
+        window.onerror!(error, 'http://example.com', testLineNo, testColNo)
+      })
 
-  it('should notify unhandled object', (done) => {
-    setTimeout(() => {
-      // eslint-disable-next-line no-throw-literal
-      throw { a: 'foo' }
+      const [originalError, stack] = spy.calls.mostRecent().args
+      expect(originalError).toBe(error)
+      expect(stack).toBeDefined()
     })
-    collectAsyncCalls(onErrorSpy, 1, () => {
-      const collectedError = notifyError.calls.mostRecent().args[0] as RawError
-      expect(collectedError.message).toEqual('Uncaught {"a":"foo"}')
-      expect(collectedError.stack).not.toEqual(NO_ERROR_STACK_PRESENT_MESSAGE)
-      done()
-    })
-  })
 
-  it('should handle direct onerror calls with objects', (done) => {
-    setTimeout(() => {
-      window.onerror!({ foo: 'bar' } as any)
+    describe('with undefined arguments', () => {
+      it('discards the stack', async () => {
+        // this is probably not good behavior;  just writing this test to verify
+        // that it doesn't change unintentionally
+        const spy = await spyViaInstrumentOnError(() => {
+          window.onerror!(undefined!, undefined, testLineNo)
+        })
+
+        const [, stack] = spy.calls.mostRecent().args
+        expect(stack).toBeUndefined()
+      })
     })
-    collectAsyncCalls(onErrorSpy, 1, () => {
-      const collectedError = notifyError.calls.mostRecent().args[0] as RawError
-      expect(collectedError.message).toEqual('Uncaught {"foo":"bar"}')
-      expect(collectedError.stack).toEqual(NO_ERROR_STACK_PRESENT_MESSAGE)
-      done()
+
+    describe('when no 5th argument (error object)', () => {
+      it('should separate name, message for default error types (e.g. ReferenceError)', async () => {
+        const spy = await spyViaInstrumentOnError(() => {
+          window.onerror!('ReferenceError: foo is undefined', 'http://example.com', testLineNo)
+        })
+
+        const [, stack] = spy.calls.mostRecent().args
+        expect(stack!.name).toEqual('ReferenceError')
+        expect(stack!.message).toEqual('foo is undefined')
+      })
+
+      it('should separate name, message for default error types (e.g. Uncaught ReferenceError)', async () => {
+        // should work with/without 'Uncaught'
+        const spy = await spyViaInstrumentOnError(() => {
+          window.onerror!('Uncaught ReferenceError: foo is undefined', 'http://example.com', testLineNo)
+        })
+
+        const [, stack] = spy.calls.mostRecent().args
+        expect(stack!.name).toEqual('ReferenceError')
+        expect(stack!.message).toEqual('foo is undefined')
+      })
+
+      it('should separate name, message for default error types on Opera Mini', async () => {
+        const spy = await spyViaInstrumentOnError(() => {
+          window.onerror!(
+            'Uncaught exception: ReferenceError: Undefined variable: foo',
+            'http://example.com',
+            testLineNo
+          )
+        })
+
+        const [, stack] = spy.calls.mostRecent().args
+        expect(stack!.name).toEqual('ReferenceError')
+        expect(stack!.message).toEqual('Undefined variable: foo')
+      })
+
+      it('should separate name, message for error with multiline message', async () => {
+        const spy = await spyViaInstrumentOnError(() => {
+          window.onerror!(
+            "TypeError: foo is not a function. (In 'my.function(\n foo)",
+            'http://example.com',
+            testLineNo
+          )
+        })
+
+        const [, stack] = spy.calls.mostRecent().args
+        expect(stack!.message).toEqual("foo is not a function. (In 'my.function(\n foo)")
+        expect(stack!.name).toEqual('TypeError')
+      })
+
+      it('should ignore unknown error types', async () => {
+        const spy = await spyViaInstrumentOnError(() => {
+          window.onerror!('CustomError: woo scary', 'http://example.com', testLineNo)
+        })
+
+        // TODO: should we attempt to parse this?
+        const [, stack] = spy.calls.mostRecent().args
+        expect(stack!.name).toEqual(undefined)
+        expect(stack!.message).toEqual('CustomError: woo scary')
+      })
+
+      it('should ignore arbitrary messages passed through onerror', async () => {
+        const spy = await spyViaInstrumentOnError(() => {
+          window.onerror!('all work and no play makes homer: something something', 'http://example.com', testLineNo)
+        })
+
+        const [, stack] = spy.calls.mostRecent().args
+        expect(stack!.name).toEqual(undefined)
+        expect(stack!.message).toEqual('all work and no play makes homer: something something')
+      })
+
+      it('should handle object message passed through onerror', async () => {
+        const spy = await spyViaInstrumentOnError(() => {
+          window.onerror!({ foo: 'bar' } as any, 'http://example.com', testLineNo, testColNo)
+        })
+
+        const [error, stack] = spy.calls.mostRecent().args
+        expect(stack!.message).toBeUndefined()
+        expect(error).toEqual({ foo: 'bar' }) // consider the message as initial error
+      })
+    })
+
+    describe('when 5th argument (errorObj) is not of type Error', () => {
+      it('should handle strings', async () => {
+        const spy = await spyViaInstrumentOnError(() => {
+          window.onerror!(
+            'Any error message',
+            'https://example.com',
+            testLineNo,
+            testColNo,
+            'Actual Error Message' as any
+          )
+        })
+
+        const [error, stack] = spy.calls.mostRecent().args
+        expect(stack!.message).toBe('Any error message')
+        expect(stack!.stack).toEqual([{ url: 'https://example.com', column: testColNo, line: testLineNo }])
+        expect(error).toEqual('Actual Error Message')
+      })
+
+      it('should handle objects', async () => {
+        const spy = await spyViaInstrumentOnError(() => {
+          window.onerror!('Any error message', 'https://example.com', testLineNo, testColNo, {
+            message: 'SyntaxError',
+            data: 'foo',
+          } as any)
+        })
+
+        const [error, stack] = spy.calls.mostRecent().args
+        expect(stack!.message).toBe('Any error message')
+        expect(stack!.stack).toEqual([{ url: 'https://example.com', column: testColNo, line: testLineNo }])
+        expect(error).toEqual({ message: 'SyntaxError', data: 'foo' })
+      })
     })
   })
 })
+
+describe('instrumentUnhandledRejection', () => {
+  const ERROR_MESSAGE = 'foo'
+
+  const spyViaInstrumentOnUnhandledRejection = async (callback: () => void) => {
+    if (!('onunhandledrejection' in window)) {
+      pending('onunhandledrejection not supported')
+    }
+
+    const onUnhandledRejectionSpy = spyOn(window as any, 'onunhandledrejection')
+    const callbackSpy = jasmine.createSpy<UnhandledErrorCallback>()
+    const { stop } = instrumentUnhandledRejection(callbackSpy)
+
+    try {
+      await invokeAndWaitForErrorHandlers(callback)
+      expect(onUnhandledRejectionSpy).toHaveBeenCalled()
+      return callbackSpy
+    } finally {
+      stop()
+    }
+  }
+
+  it('should call original unhandled rejection handler', async () => {
+    // withInstrumentOnUnhandledRejection() asserts that the original unhandled
+    // rejection handler has been called for every test, so we don't need an
+    // explicit expectation here.
+    await spyViaInstrumentOnUnhandledRejection(() => {
+      window.onunhandledrejection!({
+        reason: new Error(ERROR_MESSAGE),
+      } as PromiseRejectionEvent)
+    })
+  })
+
+  it('should notify unhandled rejection', async () => {
+    const reason = new Error(ERROR_MESSAGE)
+    const spy = await spyViaInstrumentOnUnhandledRejection(() => {
+      window.onunhandledrejection!({ reason } as PromiseRejectionEvent)
+    })
+
+    const [originalError, stack] = spy.calls.mostRecent().args
+    expect(originalError).toBe(reason)
+    expect(stack).toBeUndefined()
+  })
+})
+
+/**
+ * Invokes the given callback, which is expected to be a function that throws or generates
+ * an unhandled promise rejection, and returns a promise that resolves after the callback
+ * has finished running and any global error handlers that run as a result are complete.
+ */
+function invokeAndWaitForErrorHandlers(callback: () => void): Promise<void> {
+  return new Promise<void>((resolve) => {
+    setTimeout(() => {
+      try {
+        // Invoke the callback.
+        callback()
+      } finally {
+        // The callback has generated an error here, but global error handlers
+        // have not yet run. The global unhandledrejection handler will run at
+        // the end of the next microtask checkpoint; the global error handler
+        // will run in a later macrotask. So, schedule a new task to resolve
+        // the promise after both of those things have happened.
+        setTimeout(resolve)
+      }
+    })
+  })
+}

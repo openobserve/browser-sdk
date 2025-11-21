@@ -1,27 +1,27 @@
 /* eslint-disable no-console */
-import { isIE } from '../../tools/utils/browserDetection'
+import { ignoreConsoleLogs } from '../../../test'
 import { ConsoleApiName } from '../../tools/display'
 import type { Subscription } from '../../tools/observable'
-import type { ConsoleLog } from './consoleObservable'
+import type { ErrorConsoleLog } from './consoleObservable'
 import { initConsoleObservable } from './consoleObservable'
 
-  // prettier: avoid formatting issue
-  // cf https://github.com/prettier/prettier/issues/12211
-  ;[
-    { api: ConsoleApiName.log, prefix: '' },
-    { api: ConsoleApiName.info, prefix: '' },
-    { api: ConsoleApiName.warn, prefix: '' },
-    { api: ConsoleApiName.debug, prefix: '' },
-    { api: ConsoleApiName.error, prefix: 'console error: ' },
-  ].forEach(({ api, prefix }) => {
-    describe(`console ${api} observable`, () => {
-      let consoleStub: jasmine.Spy
-      let consoleSubscription: Subscription
-      let notifyLog: jasmine.Spy
+// prettier: avoid formatting issue
+// cf https://github.com/prettier/prettier/issues/12211
+;[
+  { api: ConsoleApiName.log },
+  { api: ConsoleApiName.info },
+  { api: ConsoleApiName.warn },
+  { api: ConsoleApiName.debug },
+  { api: ConsoleApiName.error },
+].forEach(({ api }) => {
+  describe(`console ${api} observable`, () => {
+    let consoleSpy: jasmine.Spy
+    let consoleSubscription: Subscription
+    let notifyLog: jasmine.Spy
 
-      beforeEach(() => {
-        consoleStub = spyOn(console, api)
-        notifyLog = jasmine.createSpy('notifyLog')
+    beforeEach(() => {
+      consoleSpy = spyOn(console, api)
+      notifyLog = jasmine.createSpy('notifyLog')
 
         consoleSubscription = initConsoleObservable([api]).subscribe(notifyLog)
       })
@@ -35,31 +35,31 @@ import { initConsoleObservable } from './consoleObservable'
 
         const consoleLog = notifyLog.calls.mostRecent().args[0]
 
-        expect(consoleLog).toEqual(
-          jasmine.objectContaining({
-            message: `${prefix}foo bar`,
-            api,
-          })
-        )
-      })
+      expect(consoleLog).toEqual(
+        jasmine.objectContaining({
+          message: 'foo bar',
+          api,
+        })
+      )
+    })
 
       it('should keep original behavior', () => {
         console[api]('foo', 'bar')
 
-        expect(consoleStub).toHaveBeenCalledWith('foo', 'bar')
-      })
+      expect(consoleSpy).toHaveBeenCalledWith('foo', 'bar')
+    })
 
-      it('should format error instance', () => {
-        console[api](new TypeError('hello'))
-        const consoleLog = notifyLog.calls.mostRecent().args[0]
-        expect(consoleLog.message).toBe(`${prefix}TypeError: hello`)
-      })
+    it('should format error instance', () => {
+      console[api](new TypeError('hello'))
+      const consoleLog = notifyLog.calls.mostRecent().args[0]
+      expect(consoleLog.message).toBe('TypeError: hello')
+    })
 
-      it('should stringify object parameters', () => {
-        console[api]('Hello', { foo: 'bar' })
-        const consoleLog = notifyLog.calls.mostRecent().args[0]
-        expect(consoleLog.message).toBe(`${prefix}Hello {\n  "foo": "bar"\n}`)
-      })
+    it('should stringify object parameters', () => {
+      console[api]('Hello', { foo: 'bar' })
+      const consoleLog = notifyLog.calls.mostRecent().args[0]
+      expect(consoleLog.message).toBe('Hello {\n  "foo": "bar"\n}')
+    })
 
       it('should allow multiple callers', () => {
         const notifyOtherCaller = jasmine.createSpy('notifyOtherCaller')
@@ -79,10 +79,11 @@ import { initConsoleObservable } from './consoleObservable'
 
 describe('console error observable', () => {
   let consoleSubscription: Subscription
-  let notifyLog: jasmine.Spy
+  let notifyLog: jasmine.Spy<(consoleLog: ErrorConsoleLog) => void>
 
   beforeEach(() => {
-    spyOn(console, 'error').and.callFake(() => true)
+    ignoreConsoleLogs('error', 'Error: foo')
+    ignoreConsoleLogs('error', 'foo bar')
     notifyLog = jasmine.createSpy('notifyLog')
 
     consoleSubscription = initConsoleObservable([ConsoleApiName.error]).subscribe(notifyLog)
@@ -98,17 +99,13 @@ describe('console error observable', () => {
     }
     triggerError()
     const consoleLog = notifyLog.calls.mostRecent().args[0]
-    expect(consoleLog.handlingStack).toMatch(/^Error:\s+at triggerError (.|\n)*$/)
+    expect(consoleLog.handlingStack).toMatch(/^HandlingStack: console error\s+at triggerError (.|\n)*$/)
   })
 
   it('should extract stack from first error', () => {
     console.error(new TypeError('foo'), new TypeError('bar'))
-    const stack = (notifyLog.calls.mostRecent().args[0] as ConsoleLog).stack
-    if (!isIE()) {
-      expect(stack).toMatch(/^TypeError: foo\s+at/)
-    } else {
-      expect(stack).toContain('TypeError: foo')
-    }
+    const stack = notifyLog.calls.mostRecent().args[0].error.stack
+    expect(stack).toContain('TypeError: foo')
   })
 
   it('should retrieve fingerprint from error', () => {
@@ -118,21 +115,37 @@ describe('console error observable', () => {
     const error = new Error('foo')
       ; (error as DatadogError).oo_fingerprint = 'my-fingerprint'
 
-    // eslint-disable-next-line no-console
     console.error(error)
 
     const consoleLog = notifyLog.calls.mostRecent().args[0]
-    expect(consoleLog.fingerprint).toBe('my-fingerprint')
+    expect(consoleLog.error.fingerprint).toBe('my-fingerprint')
   })
 
   it('should sanitize error fingerprint', () => {
     const error = new Error('foo')
       ; (error as any).oo_fingerprint = 2
 
-    // eslint-disable-next-line no-console
     console.error(error)
 
     const consoleLog = notifyLog.calls.mostRecent().args[0]
-    expect(consoleLog.fingerprint).toBe('2')
+    expect(consoleLog.error.fingerprint).toBe('2')
+  })
+
+  it('should retrieve context from error', () => {
+    interface DatadogError extends Error {
+      dd_context?: Record<string, unknown>
+    }
+    const error = new Error('foo')
+    ;(error as DatadogError).dd_context = { foo: 'bar' }
+    console.error(error)
+    const consoleLog = notifyLog.calls.mostRecent().args[0]
+    expect(consoleLog.error.context).toEqual({ foo: 'bar' })
+  })
+
+  it('should report original error', () => {
+    const error = new Error('foo')
+    console.error(error)
+    const consoleLog = notifyLog.calls.mostRecent().args[0]
+    expect(consoleLog.error.originalError).toBe(error)
   })
 })

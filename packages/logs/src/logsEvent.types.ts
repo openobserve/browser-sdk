@@ -10,11 +10,11 @@ export interface LogsEvent {
   /**
    * The log status
    */
-  status: 'debug' | 'info' | 'warn' | 'error'
+  status: 'ok' | 'debug' | 'info' | 'notice' | 'warn' | 'error' | 'critical' | 'alert' | 'emerg'
   /**
    * Origin of the log
    */
-  origin?: 'network' | 'source' | 'console' | 'logger' | 'agent' | 'report' | 'custom'
+  origin: 'network' | 'source' | 'console' | 'logger' | 'agent' | 'report'
   /**
    * UUID of the application
    */
@@ -24,9 +24,24 @@ export interface LogsEvent {
    */
   service?: string
   /**
-   * UUID of the session
+   * Tags of the log
+   */
+  ddtags?: string
+  /**
+   * UUID of the session (deprecated in favor of session.id)
    */
   session_id?: string
+  /**
+   * Session properties
+   */
+  session?: {
+    /**
+     * UUID of the session
+     */
+    id?: string
+
+    [k: string]: unknown
+  }
   /**
    * View properties
    */
@@ -43,6 +58,10 @@ export interface LogsEvent {
      * UUID of the view
      */
     id?: string
+    /**
+     * User defined name of the view
+     */
+    name?: string
 
     [k: string]: unknown
   }
@@ -66,13 +85,26 @@ export interface LogsEvent {
      */
     kind?: string
     /**
-     * Origin of the error
-     */
-    origin: 'network' | 'source' | 'console' | 'logger' | 'agent' | 'report' | 'custom'
-    /**
      * Stacktrace of the error
      */
     stack?: string
+    /**
+     * Fingerprint of the error
+     */
+    fingerprint?: string
+    /**
+     * Message of the error
+     */
+    message?: string
+    /**
+     * Flattened causes of the error
+     */
+    causes?: Array<{
+      message: string
+      source: string
+      type?: string
+      stack?: string
+    }>
 
     [k: string]: unknown
   }
@@ -93,6 +125,39 @@ export interface LogsEvent {
      */
     url: string
 
+    [k: string]: unknown
+  }
+  user_action?: {
+    id: string | string[]
+  }
+  usr?: {
+    /**
+     * Identifier of the user
+     */
+    id?: string
+    /**
+     * Name of the user
+     */
+    name?: string
+    /**
+     * Email of the user
+     */
+    email?: string
+    /**
+     * Identifier of the user across sessions
+     */
+    anonymous_id?: string
+    [k: string]: unknown
+  }
+  account?: {
+    /**
+     * Identifier of the account
+     */
+    id: string
+    /**
+     * Name of the account
+     */
+    name?: string
     [k: string]: unknown
   }
 

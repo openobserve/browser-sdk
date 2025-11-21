@@ -1,35 +1,27 @@
-import type { Context } from '@openobserve/browser-core'
+import type { Context, ContextManager } from '@openobserve/browser-core'
 import {
   clocksNow,
   computeRawError,
   ErrorHandling,
-  computeStackTrace,
-  CustomerDataType,
-  assign,
   combine,
   createContextManager,
   ErrorSource,
   monitored,
   sanitize,
   NonErrorPrefix,
+  createHandlingStack,
+  buildTag,
+  sanitizeTag,
 } from '@openobserve/browser-core'
 
-import type { LogsEvent } from '../logsEvent.types'
+import { isAuthorized, StatusType } from './logger/isAuthorized'
+import { createErrorFieldFromRawError } from './createErrorFieldFromRawError'
 
 export interface LogsMessage {
   message: string
   status: StatusType
   context?: Context
 }
-
-export const StatusType = {
-  debug: 'debug',
-  error: 'error',
-  info: 'info',
-  warn: 'warn',
-} as const
-
-export type StatusType = (typeof StatusType)[keyof typeof StatusType]
 
 export const HandlerType = {
   console: 'console',
@@ -40,32 +32,42 @@ export const HandlerType = {
 export type HandlerType = (typeof HandlerType)[keyof typeof HandlerType]
 export const STATUSES = Object.keys(StatusType) as StatusType[]
 
+// note: it is safe to merge declarations as long as the methods are actually defined on the prototype
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging, no-restricted-syntax
 export class Logger {
-  private contextManager = createContextManager(CustomerDataType.LoggerContext)
+  private contextManager: ContextManager
+
+  // Tags are formatted as either `key:value` or `key_only`
+  private tags: string[]
 
   constructor(
-    private handleLogStrategy: (logsMessage: LogsMessage, logger: Logger) => void,
+    private handleLogStrategy: (logsMessage: LogsMessage, logger: Logger, handlingStack?: string) => void,
     name?: string,
     private handlerType: HandlerType | HandlerType[] = HandlerType.http,
     private level: StatusType = StatusType.debug,
     loggerContext: object = {}
   ) {
-    this.contextManager.set(assign({}, loggerContext, name ? { logger: { name } } : undefined))
+    this.contextManager = createContextManager('logger')
+    this.tags = []
+    this.contextManager.setContext(loggerContext as Context)
+    if (name) {
+      this.contextManager.setContextProperty('logger', { name })
+    }
   }
 
   @monitored
-  log(message: string, messageContext?: object, status: StatusType = StatusType.info, error?: Error) {
-    let errorContext: LogsEvent['error']
-
-    if (status === StatusType.error) {
-      // Always add origin if status is error (backward compatibility - Remove in next major)
-      errorContext = { origin: ErrorSource.LOGGER }
-    }
+  logImplementation(
+    message: string,
+    messageContext?: object,
+    status: StatusType = StatusType.info,
+    error?: Error,
+    handlingStack?: string
+  ) {
+    const sanitizedMessageContext = sanitize(messageContext) as Context
+    let context: Context
 
     if (error !== undefined && error !== null) {
-      const stackTrace = error instanceof Error ? computeStackTrace(error) : undefined
       const rawError = computeRawError({
-        stackTrace,
         originalError: error,
         nonErrorPrefix: NonErrorPrefix.PROVIDED,
         source: ErrorSource.LOGGER,
@@ -73,19 +75,16 @@ export class Logger {
         startClocks: clocksNow(),
       })
 
-      errorContext = {
-        origin: ErrorSource.LOGGER, // Remove in next major
-        stack: rawError.stack,
-        kind: rawError.type,
-        message: rawError.message,
-      }
+      context = combine(
+        {
+          error: createErrorFieldFromRawError(rawError, { includeMessage: true }),
+        },
+        rawError.context,
+        sanitizedMessageContext
+      )
+    } else {
+      context = sanitizedMessageContext
     }
-
-    const sanitizedMessageContext = sanitize(messageContext) as Context
-
-    const context = errorContext
-      ? (combine({ error: errorContext }, sanitizedMessageContext) as Context)
-      : sanitizedMessageContext
 
     this.handleLogStrategy(
       {
@@ -93,40 +92,53 @@ export class Logger {
         context,
         status,
       },
-      this
+      this,
+      handlingStack
     )
   }
 
-  debug(message: string, messageContext?: object, error?: Error) {
-    this.log(message, messageContext, StatusType.debug, error)
-  }
+  log(message: string, messageContext?: object, status: StatusType = StatusType.info, error?: Error) {
+    let handlingStack: string | undefined
 
-  info(message: string, messageContext?: object, error?: Error) {
-    this.log(message, messageContext, StatusType.info, error)
-  }
+    if (isAuthorized(status, HandlerType.http, this)) {
+      handlingStack = createHandlingStack('log')
+    }
 
-  warn(message: string, messageContext?: object, error?: Error) {
-    this.log(message, messageContext, StatusType.warn, error)
-  }
-
-  error(message: string, messageContext?: object, error?: Error) {
-    this.log(message, messageContext, StatusType.error, error)
+    this.logImplementation(message, messageContext, status, error, handlingStack)
   }
 
   setContext(context: object) {
-    this.contextManager.set(context)
+    this.contextManager.setContext(context as Context)
   }
 
   getContext() {
-    return this.contextManager.get()
+    return this.contextManager.getContext()
   }
 
-  addContext(key: string, value: any) {
-    this.contextManager.add(key, value)
+  setContextProperty(key: string, value: any) {
+    this.contextManager.setContextProperty(key, value)
   }
 
-  removeContext(key: string) {
-    this.contextManager.remove(key)
+  removeContextProperty(key: string) {
+    this.contextManager.removeContextProperty(key)
+  }
+
+  clearContext() {
+    this.contextManager.clearContext()
+  }
+
+  addTag(key: string, value?: string) {
+    this.tags.push(buildTag(key, value))
+  }
+
+  removeTagsWithKey(key: string) {
+    const sanitizedKey = sanitizeTag(key)
+
+    this.tags = this.tags.filter((tag) => tag !== sanitizedKey && !tag.startsWith(`${sanitizedKey}:`))
+  }
+
+  getTags() {
+    return this.tags.slice()
   }
 
   setHandler(handler: HandlerType | HandlerType[]) {
@@ -143,5 +155,43 @@ export class Logger {
 
   getLevel() {
     return this.level
+  }
+}
+
+/* eslint-disable local-rules/disallow-side-effects */
+Logger.prototype.ok = createLoggerMethod(StatusType.ok)
+Logger.prototype.debug = createLoggerMethod(StatusType.debug)
+Logger.prototype.info = createLoggerMethod(StatusType.info)
+Logger.prototype.notice = createLoggerMethod(StatusType.notice)
+Logger.prototype.warn = createLoggerMethod(StatusType.warn)
+Logger.prototype.error = createLoggerMethod(StatusType.error)
+Logger.prototype.critical = createLoggerMethod(StatusType.critical)
+Logger.prototype.alert = createLoggerMethod(StatusType.alert)
+Logger.prototype.emerg = createLoggerMethod(StatusType.emerg)
+/* eslint-enable local-rules/disallow-side-effects */
+
+// note: it is safe to merge declarations as long as the methods are actually defined on the prototype
+// eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
+export interface Logger {
+  ok(message: string, messageContext?: object, error?: Error): void
+  debug(message: string, messageContext?: object, error?: Error): void
+  info(message: string, messageContext?: object, error?: Error): void
+  notice(message: string, messageContext?: object, error?: Error): void
+  warn(message: string, messageContext?: object, error?: Error): void
+  error(message: string, messageContext?: object, error?: Error): void
+  critical(message: string, messageContext?: object, error?: Error): void
+  alert(message: string, messageContext?: object, error?: Error): void
+  emerg(message: string, messageContext?: object, error?: Error): void
+}
+
+function createLoggerMethod(status: StatusType) {
+  return function (this: Logger, message: string, messageContext?: object, error?: Error) {
+    let handlingStack: string | undefined
+
+    if (isAuthorized(status, HandlerType.http, this)) {
+      handlingStack = createHandlingStack('log')
+    }
+
+    this.logImplementation(message, messageContext, status, error, handlingStack)
   }
 }

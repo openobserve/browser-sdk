@@ -6,7 +6,7 @@ const logger = createLogger('useSdkInfos')
 
 const REFRESH_INFOS_INTERVAL = 2000
 
-interface SdkInfos {
+export interface SdkInfos {
   rum?: {
     version?: string
     config?: object & { site?: string }
@@ -21,11 +21,12 @@ interface SdkInfos {
     user: object
   }
   cookie?: {
-    id: string
-    created: string
-    expire: string
-    logs: string
-    rum: string
+    id?: string
+    created?: string
+    expire?: string
+    logs?: string
+    rum?: string
+    forcedReplay?: '1'
   }
 }
 
@@ -63,13 +64,13 @@ async function getInfos(): Promise<SdkInfos> {
           version: window.OO_RUM?.version,
           config: window.OO_RUM?.getInitConfiguration?.(),
           internalContext: window.OO_RUM?.getInternalContext?.(),
-          globalContext: window.OO_RUM?.getRumGlobalContext?.(),
+          globalContext: window.OO_RUM?.getGlobalContext?.(),
           user: window.OO_RUM?.getUser?.(),
         }
         const logs = window.OO_LOGS && {
           version: window.OO_LOGS?.version,
           config: window.OO_LOGS?.getInitConfiguration?.(),
-          globalContext: window.OO_LOGS?.getLoggerGlobalContext?.(),
+          globalContext: window.OO_LOGS?.getGlobalContext?.(),
           user: window.OO_LOGS?.getUser?.(),
         }
         return { rum, logs, cookie }

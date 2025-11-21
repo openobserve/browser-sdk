@@ -9,20 +9,29 @@
  */
 // We want to use a real enum (i.e. not a const enum) here, to be able to check whether an arbitrary
 // string is an expected feature flag
+
+import { objectHasValue } from './utils/objectUtils'
+
 // eslint-disable-next-line no-restricted-syntax
 export enum ExperimentalFeature {
-  PAGEHIDE = 'pagehide',
-  FEATURE_FLAGS = 'feature_flags',
-  RESOURCE_PAGE_STATES = 'resource_page_states',
-  PAGE_STATES = 'page_states',
-  COLLECT_FLUSH_REASON = 'collect_flush_reason',
-  NO_RESOURCE_DURATION_FROZEN_STATE = 'no_resource_duration_frozen_state',
-  SCROLLMAP = 'scrollmap',
-  INTERACTION_TO_NEXT_PAINT = 'interaction_to_next_paint',
-  DISABLE_REPLAY_INLINE_CSS = 'disable_replay_inline_css',
+  TRACK_INTAKE_REQUESTS = 'track_intake_requests',
+  USE_TREE_WALKER_FOR_ACTION_NAME = 'use_tree_walker_for_action_name',
+  FEATURE_OPERATION_VITAL = 'feature_operation_vital',
+  SHORT_SESSION_INVESTIGATION = 'short_session_investigation',
+  AVOID_FETCH_KEEPALIVE = 'avoid_fetch_keepalive',
 }
 
 const enabledExperimentalFeatures: Set<ExperimentalFeature> = new Set()
+
+export function initFeatureFlags(enableExperimentalFeatures: string[] | undefined) {
+  if (Array.isArray(enableExperimentalFeatures)) {
+    addExperimentalFeatures(
+      enableExperimentalFeatures.filter((flag): flag is ExperimentalFeature =>
+        objectHasValue(ExperimentalFeature, flag)
+      )
+    )
+  }
+}
 
 export function addExperimentalFeatures(enabledFeatures: ExperimentalFeature[]): void {
   enabledFeatures.forEach((flag) => {

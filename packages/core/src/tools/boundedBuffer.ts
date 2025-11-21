@@ -1,17 +1,45 @@
+import { removeItem } from './utils/arrayUtils'
+
 const BUFFER_LIMIT = 500
 
-export class BoundedBuffer {
-  private buffer: Array<() => void> = []
+/**
+ * BoundedBuffer is a deprecated interface.
+ *
+ * @deprecated Use `BufferedObservable` instead.
+ */
+export interface BoundedBuffer<T = void> {
+  add: (callback: (arg: T) => void) => void
+  remove: (callback: (arg: T) => void) => void
+  drain: (arg: T) => void
+}
 
-  add(callback: () => void) {
-    const length = this.buffer.push(callback)
+/**
+ * createBoundedBuffer creates a BoundedBuffer.
+ *
+ * @deprecated Use `BufferedObservable` instead.
+ */
+export function createBoundedBuffer<T = void>(): BoundedBuffer<T> {
+  const buffer: Array<(arg: T) => void> = []
+
+  const add: BoundedBuffer<T>['add'] = (callback: (arg: T) => void) => {
+    const length = buffer.push(callback)
     if (length > BUFFER_LIMIT) {
-      this.buffer.splice(0, 1)
+      buffer.splice(0, 1)
     }
   }
 
-  drain() {
-    this.buffer.forEach((callback) => callback())
-    this.buffer.length = 0
+  const remove: BoundedBuffer<T>['remove'] = (callback: (arg: T) => void) => {
+    removeItem(buffer, callback)
+  }
+
+  const drain = (arg: T) => {
+    buffer.forEach((callback) => callback(arg))
+    buffer.length = 0
+  }
+
+  return {
+    add,
+    remove,
+    drain,
   }
 }

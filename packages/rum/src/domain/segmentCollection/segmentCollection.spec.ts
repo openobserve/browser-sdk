@@ -1,20 +1,21 @@
-import type { ClocksState, HttpRequest, TimeStamp } from '@openobserve/browser-core'
-import { PageExitReason, isIE } from '@openobserve/browser-core'
-import type { ViewContexts, ViewContext, RumConfiguration } from '@openobserve/browser-rum-core'
+import type { ClocksState, HttpRequest, HttpRequestEvent, TimeStamp } from '@openobserve/browser-core'
+import { DeflateEncoderStreamId, Observable, PageExitReason } from '@openobserve/browser-core'
+import type { ViewHistory, ViewHistoryEntry, RumConfiguration } from '@openobserve/browser-rum-core'
 import { LifeCycle, LifeCycleEventType } from '@openobserve/browser-rum-core'
 import type { Clock } from '@openobserve/browser-core/test'
-import { mockClock, restorePageVisibility } from '@openobserve/browser-core/test'
+import { mockClock, registerCleanupTask, restorePageVisibility } from '@openobserve/browser-core/test'
 import { createRumSessionManagerMock } from '../../../../rum-core/test'
 import type { BrowserRecord, SegmentContext } from '../../types'
 import { RecordType } from '../../types'
 import { MockWorker, readMetadataFromReplayPayload } from '../../../test'
-import { DeflateEncoderStreamId, createDeflateEncoder } from '../deflate'
+import { createDeflateEncoder } from '../deflate'
 import {
   computeSegmentContext,
   doStartSegmentCollection,
   SEGMENT_BYTES_LIMIT,
   SEGMENT_DURATION_LIMIT,
 } from './segmentCollection'
+import type { ReplayPayload } from './buildReplayPayload'
 
 const CONTEXT: SegmentContext = { application: { id: 'a' }, view: { id: 'b' }, session: { id: 'c' } }
 const RECORD: BrowserRecord = { type: RecordType.ViewEnd, timestamp: 10 as TimeStamp }
@@ -34,8 +35,9 @@ describe('startSegmentCollection', () => {
   let lifeCycle: LifeCycle
   let worker: MockWorker
   let httpRequestSpy: {
-    sendOnExit: jasmine.Spy<HttpRequest['sendOnExit']>
-    send: jasmine.Spy<HttpRequest['send']>
+    observable: Observable<HttpRequestEvent<ReplayPayload>>
+    sendOnExit: jasmine.Spy<HttpRequest<ReplayPayload>['sendOnExit']>
+    send: jasmine.Spy<HttpRequest<ReplayPayload>['send']>
   }
   let addRecord: (record: BrowserRecord) => void
   let context: SegmentContext | undefined
@@ -50,7 +52,7 @@ describe('startSegmentCollection', () => {
   }
 
   function emulatePageUnload() {
-    lifeCycle.notify(LifeCycleEventType.PAGE_EXITED, { reason: PageExitReason.UNLOADING })
+    lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, { reason: PageExitReason.UNLOADING })
   }
 
   function readMostRecentMetadata(spy: jasmine.Spy<HttpRequest['send']>) {
@@ -58,28 +60,25 @@ describe('startSegmentCollection', () => {
   }
 
   beforeEach(() => {
-    if (isIE()) {
-      pending('IE not supported')
-    }
     configuration = {} as RumConfiguration
     lifeCycle = new LifeCycle()
     worker = new MockWorker()
     httpRequestSpy = {
+      observable: new Observable<HttpRequestEvent<ReplayPayload>>(),
       sendOnExit: jasmine.createSpy(),
       send: jasmine.createSpy(),
     }
     context = CONTEXT
-      ; ({ stop: stopSegmentCollection, addRecord } = doStartSegmentCollection(
-        lifeCycle,
-        () => context,
-        httpRequestSpy,
-        createDeflateEncoder(configuration, worker, DeflateEncoderStreamId.REPLAY)
-      ))
-  })
+    ;({ stop: stopSegmentCollection, addRecord } = doStartSegmentCollection(
+      lifeCycle,
+      () => context,
+      httpRequestSpy,
+      createDeflateEncoder(configuration, worker, DeflateEncoderStreamId.REPLAY)
+    ))
 
-  afterEach(() => {
-    clock?.cleanup()
-    stopSegmentCollection()
+    registerCleanupTask(() => {
+      stopSegmentCollection()
+    })
   })
 
   describe('initial segment', () => {
@@ -113,6 +112,19 @@ describe('startSegmentCollection', () => {
     expect(httpRequestSpy.sendOnExit).not.toHaveBeenCalled()
   })
 
+  it('includes metadata for segment telemetry in the segment payload', () => {
+    addRecordAndFlushSegment()
+    expect(httpRequestSpy.sendOnExit.calls.mostRecent().args[0]).toEqual({
+      data: jasmine.anything(),
+      bytesCount: jasmine.anything(),
+      cssText: jasmine.anything(),
+      isFullSnapshot: jasmine.anything(),
+      rawSize: jasmine.anything(),
+      recordCount: jasmine.anything(),
+      serializationDuration: jasmine.anything(),
+    })
+  })
+
   describe('segment flush strategy', () => {
     afterEach(() => {
       restorePageVisibility()
@@ -140,7 +152,7 @@ describe('startSegmentCollection', () => {
 
     describe('flush when the page exits because it gets hidden', () => {
       function emulatePageHidden() {
-        lifeCycle.notify(LifeCycleEventType.PAGE_EXITED, { reason: PageExitReason.HIDDEN })
+        lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, { reason: PageExitReason.HIDDEN })
       }
 
       it('uses `httpRequest.sendOnExit` when sending the segment', () => {
@@ -157,7 +169,7 @@ describe('startSegmentCollection', () => {
 
     describe('flush when the page exits because it gets frozen', () => {
       function emulatePageFrozen() {
-        lifeCycle.notify(LifeCycleEventType.PAGE_EXITED, { reason: PageExitReason.FROZEN })
+        lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, { reason: PageExitReason.FROZEN })
       }
 
       it('uses `httpRequest.sendOnExit` when sending the segment', () => {
@@ -281,11 +293,11 @@ describe('startSegmentCollection', () => {
 })
 
 describe('computeSegmentContext', () => {
-  const DEFAULT_VIEW_CONTEXT: ViewContext = { id: '123', startClocks: {} as ClocksState }
+  const DEFAULT_VIEW_CONTEXT: ViewHistoryEntry = { id: '123', startClocks: {} as ClocksState }
   const DEFAULT_SESSION = createRumSessionManagerMock().setId('456')
 
   it('returns a segment context', () => {
-    expect(computeSegmentContext('appid', DEFAULT_SESSION, mockViewContexts(DEFAULT_VIEW_CONTEXT))).toEqual({
+    expect(computeSegmentContext('appid', DEFAULT_SESSION, mockViewHistory(DEFAULT_VIEW_CONTEXT))).toEqual({
       application: { id: 'appid' },
       session: { id: '456' },
       view: { id: '123' },
@@ -293,7 +305,7 @@ describe('computeSegmentContext', () => {
   })
 
   it('returns undefined if there is no current view', () => {
-    expect(computeSegmentContext('appid', DEFAULT_SESSION, mockViewContexts(undefined))).toBeUndefined()
+    expect(computeSegmentContext('appid', DEFAULT_SESSION, mockViewHistory(undefined))).toBeUndefined()
   })
 
   it('returns undefined if the session is not tracked', () => {
@@ -301,12 +313,12 @@ describe('computeSegmentContext', () => {
       computeSegmentContext(
         'appid',
         createRumSessionManagerMock().setNotTracked(),
-        mockViewContexts(DEFAULT_VIEW_CONTEXT)
+        mockViewHistory(DEFAULT_VIEW_CONTEXT)
       )
     ).toBeUndefined()
   })
 
-  function mockViewContexts(view: ViewContext | undefined): ViewContexts {
+  function mockViewHistory(view: ViewHistoryEntry | undefined): ViewHistory {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return {
       findView() {
