@@ -38,7 +38,7 @@ export function startLoggerCollection(lifeCycle: LifeCycle) {
         },
         messageContext,
         savedCommonContext,
-        ddtags: logger.getTags(),
+        ootags: logger.getTags(),
       }
 
       if (handlingStack) {
