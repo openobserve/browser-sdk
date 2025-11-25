@@ -1,4 +1,4 @@
-import type { createContextManager, Context } from '@datadog/browser-core'
+import type { createContextManager, Context } from '@openobserve/browser-core'
 import {
   display,
   buildEndpointHost,
@@ -6,7 +6,7 @@ import {
   getCookie,
   addTelemetryMetrics,
   TelemetryMetrics,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { RumInitConfiguration } from './configuration'
 import type { RumSdkConfig, DynamicOption, ContextItem } from './remoteConfiguration.types'
 import { parseJsonPath } from './jsonPathParser'

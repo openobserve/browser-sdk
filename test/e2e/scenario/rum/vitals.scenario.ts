@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { ExperimentalFeature } from '@datadog/browser-core'
+import { ExperimentalFeature } from '@openobserve/browser-core'
 import { createTest } from '../../lib/framework'
 
 test.describe('vital collection', () => {

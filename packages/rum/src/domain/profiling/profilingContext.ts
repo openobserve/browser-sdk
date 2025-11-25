@@ -1,6 +1,6 @@
-import { HookNames, SKIPPED } from '@datadog/browser-core'
-import type { Hooks, ProfilingInternalContextSchema } from '@datadog/browser-rum-core'
-import { RumEventType } from '@datadog/browser-rum-core'
+import { HookNames, SKIPPED } from '@openobserve/browser-core'
+import type { Hooks, ProfilingInternalContextSchema } from '@openobserve/browser-rum-core'
+import { RumEventType } from '@openobserve/browser-rum-core'
 
 export interface ProfilingContextManager {
   set: (next: ProfilingInternalContextSchema) => void

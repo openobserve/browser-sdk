@@ -5,8 +5,8 @@ import type {
   DeflateEncoderStreamId,
   RawError,
   Context,
-} from '@datadog/browser-core'
-import { addTelemetryDebug, createHttpRequest, jsonStringify, objectEntries } from '@datadog/browser-core'
+} from '@openobserve/browser-core'
+import { addTelemetryDebug, createHttpRequest, jsonStringify, objectEntries } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../domain/configuration'
 import type { LifeCycle } from '../domain/lifeCycle'
 import { LifeCycleEventType } from '../domain/lifeCycle'

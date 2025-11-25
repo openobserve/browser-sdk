@@ -1,4 +1,4 @@
-import type { FetchResolveContext, XhrCompleteContext } from '@datadog/browser-core'
+import type { FetchResolveContext, XhrCompleteContext } from '@openobserve/browser-core'
 import {
   isWorkerEnvironment,
   Observable,
@@ -13,7 +13,7 @@ import {
   isIntakeUrl,
   ResponseBodyAction,
   safeTruncate,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { LogsConfiguration } from '../configuration'
 import type { LifeCycle } from '../lifeCycle'
 import type { LogsEventDomainContext } from '../../domainContext.types'

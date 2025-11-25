@@ -1,4 +1,4 @@
-import type { Duration, Encoder, RelativeTime } from '@datadog/browser-core'
+import type { Duration, Encoder, RelativeTime } from '@openobserve/browser-core'
 import {
   addEventListener,
   clearTimeout,
@@ -12,7 +12,7 @@ import {
   clocksNow,
   elapsed,
   DeflateEncoderStreamId,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 
 import type {
   LifeCycle,
@@ -20,13 +20,13 @@ import type {
   RumSessionManager,
   TransportPayload,
   ViewHistoryEntry,
-} from '@datadog/browser-rum-core'
+} from '@openobserve/browser-rum-core'
 import {
   createFormDataTransport,
   LifeCycleEventType,
   RumPerformanceEntryType,
   supportPerformanceTimingEvent,
-} from '@datadog/browser-rum-core'
+} from '@openobserve/browser-rum-core'
 import type {
   RumProfilerTrace,
   RumProfilerInstance,

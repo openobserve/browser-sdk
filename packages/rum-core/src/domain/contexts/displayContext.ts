@@ -1,4 +1,4 @@
-import { HookNames, monitor } from '@datadog/browser-core'
+import { HookNames, monitor } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../configuration'
 import type { ViewportDimension } from '../../browser/viewportObservable'
 import { getViewportDimension, initViewportObservable } from '../../browser/viewportObservable'

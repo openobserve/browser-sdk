@@ -1,4 +1,4 @@
-import { DISCARDED, HookNames, SKIPPED } from '@datadog/browser-core'
+import { DISCARDED, HookNames, SKIPPED } from '@openobserve/browser-core'
 import type { LogsConfiguration } from '../configuration'
 import type { LogsSessionManager } from '../logsSessionManager'
 import type { Hooks } from '../hooks'

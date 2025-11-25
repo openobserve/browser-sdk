@@ -1,4 +1,4 @@
-import type { Duration, RelativeTime } from '@datadog/browser-core'
+import type { Duration, RelativeTime } from '@openobserve/browser-core'
 import {
   elapsed,
   getPathName,
@@ -8,7 +8,7 @@ import {
   isIntakeUrl,
   isExperimentalFeatureEnabled,
   ExperimentalFeature,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 
 import type { RumPerformanceResourceTiming } from '../../browser/performanceObservable'
 

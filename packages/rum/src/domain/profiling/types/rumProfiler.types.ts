@@ -1,5 +1,5 @@
-import type { TimeoutId, ClocksState, Duration } from '@datadog/browser-core'
-import type { ViewHistoryEntry } from '@datadog/browser-rum-core'
+import type { TimeoutId, ClocksState, Duration } from '@openobserve/browser-core'
+import type { ViewHistoryEntry } from '@openobserve/browser-rum-core'
 import type { ProfilerTrace, Profiler } from './profilerApi.types'
 
 export interface RumViewEntry {

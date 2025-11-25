@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import type { RumPublicApi } from '@datadog/browser-rum-core'
+import type { RumPublicApi } from '@openobserve/browser-rum-core'
 
 export interface BrowserWindow extends Window {
   DD_RUM?: RumPublicApi

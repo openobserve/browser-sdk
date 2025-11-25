@@ -1,5 +1,5 @@
-import { registerCleanupTask } from '@datadog/browser-core/test'
-import { getGlobalObject } from '@datadog/browser-core'
+import { registerCleanupTask } from '@openobserve/browser-core/test'
+import { getGlobalObject } from '@openobserve/browser-core'
 import type { Profiler, ProfilerTrace, ProfilerInitOptions } from '../src/domain/profiling/types'
 
 export function mockProfiler(mockedTrace: ProfilerTrace) {

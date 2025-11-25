@@ -1,4 +1,4 @@
-import { Observable } from '@datadog/browser-core'
+import { Observable } from '@openobserve/browser-core'
 import { LoggerTrackingType, type LogsSessionManager } from '../src/domain/logsSessionManager'
 
 export interface LogsSessionManagerMock extends LogsSessionManager {

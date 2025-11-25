@@ -7,15 +7,15 @@
     "compat:ssr": "webpack --config ./webpack.ssr.js && node dist/app.js"
   },
   "dependencies": {
-    "@datadog/browser-logs": "file:../../../packages/logs/package.tgz",
-    "@datadog/browser-rum": "file:../../../packages/rum/package.tgz"
+    "@openobserve/browser-logs": "file:../../../packages/logs/package.tgz",
+    "@openobserve/browser-rum": "file:../../../packages/rum/package.tgz"
   },
   "resolutions": {
-    "@datadog/browser-core": "file:../../../packages/core/package.tgz",
-    "@datadog/browser-rum-core": "file:../../../packages/rum-core/package.tgz",
-    "@datadog/browser-rum-react": "file:../../../packages/rum-react/package.tgz",
-    "@datadog/browser-rum-slim": "file:../../../packages/rum-slim/package.tgz",
-    "@datadog/browser-worker": "file:../../../packages/worker/package.tgz"
+    "@openobserve/browser-core": "file:../../../packages/core/package.tgz",
+    "@openobserve/browser-rum-core": "file:../../../packages/rum-core/package.tgz",
+    "@openobserve/browser-rum-react": "file:../../../packages/rum-react/package.tgz",
+    "@openobserve/browser-rum-slim": "file:../../../packages/rum-slim/package.tgz",
+    "@openobserve/browser-worker": "file:../../../packages/worker/package.tgz"
   },
   "devDependencies": {
     "ts-loader": "6.2.1",

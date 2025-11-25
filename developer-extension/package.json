@@ -25,9 +25,9 @@
     "webpack-dev-server": "^5.0.4"
   },
   "dependencies": {
-    "@datadog/browser-core": "workspace:*",
-    "@datadog/browser-logs": "workspace:*",
-    "@datadog/browser-rum": "workspace:*",
+    "@openobserve/browser-core": "workspace:*",
+    "@openobserve/browser-logs": "workspace:*",
+    "@openobserve/browser-rum": "workspace:*",
     "@mantine/core": "8.3.7",
     "@mantine/hooks": "8.3.7",
     "@tabler/icons-react": "3.35.0",

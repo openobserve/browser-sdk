@@ -6,8 +6,8 @@ import type {
   RelativeTime,
   SKIPPED,
   TelemetryEvent,
-} from '@datadog/browser-core'
-import { abstractHooks } from '@datadog/browser-core'
+} from '@openobserve/browser-core'
+import { abstractHooks } from '@openobserve/browser-core'
 import type { RumEvent } from '../rumEvent.types'
 
 // Define a partial RUM event type.

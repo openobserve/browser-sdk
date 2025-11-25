@@ -5,10 +5,10 @@ import type {
   RumConfiguration,
   ProfilerApi,
   Hooks,
-} from '@datadog/browser-rum-core'
-import type { DeflateEncoderStreamId, Encoder } from '@datadog/browser-core'
-import { isSampled } from '@datadog/browser-rum-core'
-import { addTelemetryDebug, monitorError } from '@datadog/browser-core'
+} from '@openobserve/browser-rum-core'
+import type { DeflateEncoderStreamId, Encoder } from '@openobserve/browser-core'
+import { isSampled } from '@openobserve/browser-rum-core'
+import { addTelemetryDebug, monitorError } from '@openobserve/browser-core'
 import type { RUMProfiler } from '../domain/profiling/types'
 import { isProfilingSupported } from '../domain/profiling/profilingSupported'
 import { startProfilingContext } from '../domain/profiling/profilingContext'

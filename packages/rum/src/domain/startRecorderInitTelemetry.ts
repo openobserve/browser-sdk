@@ -1,5 +1,5 @@
-import type { Context, Duration, Telemetry, Observable, TimeStamp } from '@datadog/browser-core'
-import { TelemetryMetrics, addTelemetryMetrics, noop, timeStampNow, elapsed } from '@datadog/browser-core'
+import type { Context, Duration, Telemetry, Observable, TimeStamp } from '@openobserve/browser-core'
+import { TelemetryMetrics, addTelemetryMetrics, noop, timeStampNow, elapsed } from '@openobserve/browser-core'
 import type { RecorderInitEvent } from '../boot/postStartStrategy'
 
 type RecorderInitResult = 'aborted' | 'deflate-encoder-load-failed' | 'recorder-load-failed' | 'succeeded'

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { datadogRum } from '@datadog/browser-rum'
+import { datadogRum } from '@openobserve/browser-rum'
 import App from './App.tsx'
 
 // Initialize Datadog RUM

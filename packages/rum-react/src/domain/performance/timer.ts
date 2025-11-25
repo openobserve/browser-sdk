@@ -1,5 +1,5 @@
-import type { Duration, RelativeTime, TimeStamp } from '@datadog/browser-core'
-import { elapsed, relativeNow, timeStampNow } from '@datadog/browser-core'
+import type { Duration, RelativeTime, TimeStamp } from '@openobserve/browser-core'
+import { elapsed, relativeNow, timeStampNow } from '@openobserve/browser-core'
 
 export function createTimer() {
   let duration: Duration | undefined

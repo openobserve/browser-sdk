@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test'
-import type { RumPlugin, AllowedRawRumEvent } from '@datadog/browser-rum-core'
-import { ActionType, RumEventType } from '@datadog/browser-rum-core'
-import type { ServerDuration, TimeStamp } from '@datadog/browser-core'
-import { clocksNow, generateUUID } from '@datadog/browser-core'
+import type { RumPlugin, AllowedRawRumEvent } from '@openobserve/browser-rum-core'
+import { ActionType, RumEventType } from '@openobserve/browser-rum-core'
+import type { ServerDuration, TimeStamp } from '@openobserve/browser-core'
+import { clocksNow, generateUUID } from '@openobserve/browser-core'
 import { createTest } from '../lib/framework'
 
 declare global {

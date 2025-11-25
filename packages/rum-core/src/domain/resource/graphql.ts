@@ -1,4 +1,4 @@
-import { isNonEmptyArray, matchList, ONE_KIBI_BYTE, safeTruncate } from '@datadog/browser-core'
+import { isNonEmptyArray, matchList, ONE_KIBI_BYTE, safeTruncate } from '@openobserve/browser-core'
 import type { RumConfiguration, GraphQlUrlOption } from '../configuration'
 import type { RequestCompleteEvent } from '../requestCollection'
 

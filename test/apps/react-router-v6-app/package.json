@@ -5,17 +5,17 @@
     "build": "webpack"
   },
   "dependencies": {
-    "@datadog/browser-rum": "file:../../../packages/rum/package.tgz",
-    "@datadog/browser-rum-react": "file:../../../packages/rum-react/package.tgz",
+    "@openobserve/browser-rum": "file:../../../packages/rum/package.tgz",
+    "@openobserve/browser-rum-react": "file:../../../packages/rum-react/package.tgz",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-router-dom": "6.30.0"
   },
   "resolutions": {
-    "@datadog/browser-rum-core": "file:../../../packages/rum-core/package.tgz",
-    "@datadog/browser-core": "file:../../../packages/core/package.tgz",
-    "@datadog/browser-rum-slim": "file:../../../packages/rum-slim/package.tgz",
-    "@datadog/browser-worker": "file:../../../packages/worker/package.tgz"
+    "@openobserve/browser-rum-core": "file:../../../packages/rum-core/package.tgz",
+    "@openobserve/browser-core": "file:../../../packages/core/package.tgz",
+    "@openobserve/browser-rum-slim": "file:../../../packages/rum-slim/package.tgz",
+    "@openobserve/browser-worker": "file:../../../packages/worker/package.tgz"
   },
   "devDependencies": {
     "ts-loader": "^9.5.2",

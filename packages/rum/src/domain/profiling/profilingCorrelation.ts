@@ -1,6 +1,6 @@
-import type { RawRumEvent } from '@datadog/browser-rum-core'
-import { RumEventType } from '@datadog/browser-rum-core'
-import type { RelativeTime } from '@datadog/browser-core'
+import type { RawRumEvent } from '@openobserve/browser-rum-core'
+import { RumEventType } from '@openobserve/browser-rum-core'
+import type { RelativeTime } from '@openobserve/browser-core'
 import { setLongTaskId } from './utils/longTaskRegistry'
 
 /**

@@ -1,4 +1,4 @@
-import type { Context, RawError, ClocksState, BufferedData } from '@datadog/browser-core'
+import type { Context, RawError, ClocksState, BufferedData } from '@openobserve/browser-core'
 import {
   BufferedDataType,
   Observable,
@@ -8,7 +8,7 @@ import {
   ErrorHandling,
   NonErrorPrefix,
   combine,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { RumConfiguration } from '../configuration'
 import type { RawRumErrorEvent } from '../../rawRumEvent.types'
 import { RumEventType } from '../../rawRumEvent.types'

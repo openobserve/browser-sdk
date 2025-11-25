@@ -1,4 +1,4 @@
-import type { TrackingConsentState } from '@datadog/browser-core'
+import type { TrackingConsentState } from '@openobserve/browser-core'
 import {
   createBoundedBuffer,
   canUseEventBridge,
@@ -14,7 +14,7 @@ import {
   addTelemetryConfiguration,
   buildGlobalContextManager,
   buildUserContextManager,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { LogsConfiguration, LogsInitConfiguration } from '../domain/configuration'
 import { serializeLogsConfiguration, validateAndBuildLogsConfiguration } from '../domain/configuration'
 import type { CommonContext } from '../rawLogsEvent.types'

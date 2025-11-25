@@ -1,5 +1,5 @@
-import type { ClocksState, Context, Observable } from '@datadog/browser-core'
-import { noop, combine, toServerDuration, generateUUID, SKIPPED, HookNames } from '@datadog/browser-core'
+import type { ClocksState, Context, Observable } from '@openobserve/browser-core'
+import { noop, combine, toServerDuration, generateUUID, SKIPPED, HookNames } from '@openobserve/browser-core'
 import { discardNegativeDuration } from '../discardNegativeDuration'
 import type { RawRumActionEvent } from '../../rawRumEvent.types'
 import { ActionType, RumEventType } from '../../rawRumEvent.types'

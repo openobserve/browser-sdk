@@ -1,5 +1,5 @@
-import { elapsed, ONE_SECOND, relativeNow } from '@datadog/browser-core'
-import type { RelativeTime } from '@datadog/browser-core'
+import { elapsed, ONE_SECOND, relativeNow } from '@openobserve/browser-core'
+import type { RelativeTime } from '@openobserve/browser-core'
 
 // Maximum duration for click actions
 export const CLICK_ACTION_MAX_DURATION = 10 * ONE_SECOND

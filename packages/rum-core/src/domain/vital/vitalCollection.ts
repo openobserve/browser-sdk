@@ -1,4 +1,4 @@
-import type { ClocksState, Duration } from '@datadog/browser-core'
+import type { ClocksState, Duration } from '@openobserve/browser-core'
 import {
   clocksNow,
   combine,
@@ -8,7 +8,7 @@ import {
   isExperimentalFeatureEnabled,
   sanitize,
   toServerDuration,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { LifeCycle, RawRumEventCollectedData } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'
 import type { RawRumVitalEvent } from '../../rawRumEvent.types'

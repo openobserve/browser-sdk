@@ -1,4 +1,4 @@
-import { getConnectivity, HookNames } from '@datadog/browser-core'
+import { getConnectivity, HookNames } from '@openobserve/browser-core'
 import type { DefaultRumEventAttributes, Hooks } from '../hooks'
 
 export function startConnectivityContext(hooks: Hooks) {

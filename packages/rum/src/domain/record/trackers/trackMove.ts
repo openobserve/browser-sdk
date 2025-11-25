@@ -1,5 +1,5 @@
-import { addEventListeners, DOM_EVENT, throttle } from '@datadog/browser-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import { addEventListeners, DOM_EVENT, throttle } from '@openobserve/browser-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import type { BrowserIncrementalSnapshotRecord, MousemoveData, MousePosition } from '../../../types'
 import { IncrementalSource } from '../../../types'
 import { getEventTarget, isTouchEvent } from '../eventsUtils'

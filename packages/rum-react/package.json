@@ -1,5 +1,5 @@
 {
-  "name": "@datadog/browser-rum-react",
+  "name": "@openobserve/browser-rum-react",
   "version": "6.24.1",
   "license": "Apache-2.0",
   "main": "cjs/entries/main.js",
@@ -10,8 +10,8 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@datadog/browser-core": "6.24.1",
-    "@datadog/browser-rum-core": "6.24.1"
+    "@openobserve/browser-core": "6.24.1",
+    "@openobserve/browser-rum-core": "6.24.1"
   },
   "peerDependencies": {
     "react": "18 || 19",
@@ -19,10 +19,10 @@
     "react-router-dom": "6 || 7"
   },
   "peerDependenciesMeta": {
-    "@datadog/browser-rum": {
+    "@openobserve/browser-rum": {
       "optional": true
     },
-    "@datadog/browser-rum-slim": {
+    "@openobserve/browser-rum-slim": {
       "optional": true
     },
     "react": {

@@ -1,4 +1,4 @@
-import type { RelativeTime } from '@datadog/browser-core'
+import type { RelativeTime } from '@openobserve/browser-core'
 
 type PerformanceEntryStartTime = RelativeTime
 

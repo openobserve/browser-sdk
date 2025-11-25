@@ -1,4 +1,4 @@
-import { performDraw } from '@datadog/browser-core'
+import { performDraw } from '@openobserve/browser-core'
 
 const sampleDecisionCache: Map<number, { sessionId: string; decision: boolean }> = new Map()
 

@@ -1,5 +1,5 @@
-import { buildTags, currentDrift } from '@datadog/browser-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import { buildTags, currentDrift } from '@openobserve/browser-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import type { RumProfilerTrace } from '../types'
 import { buildProfileEventAttributes } from './buildProfileEventAttributes'
 import type { ProfileEventAttributes } from './buildProfileEventAttributes'

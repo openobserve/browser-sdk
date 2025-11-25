@@ -1,4 +1,4 @@
-import type { TrackingConsentState, DeflateWorker, Context, ContextManager, BoundedBuffer } from '@datadog/browser-core'
+import type { TrackingConsentState, DeflateWorker, Context, ContextManager, BoundedBuffer } from '@openobserve/browser-core'
 import {
   createBoundedBuffer,
   display,
@@ -18,7 +18,7 @@ import {
   buildUserContextManager,
   monitorError,
   sanitize,
-} from '@datadog/browser-core'
+} from '@openobserve/browser-core'
 import type { RumConfiguration, RumInitConfiguration } from '../domain/configuration'
 import {
   validateAndBuildRumConfiguration,

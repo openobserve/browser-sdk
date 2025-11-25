@@ -1,6 +1,6 @@
-import type { RumInitConfiguration, RumPublicApi } from '@datadog/browser-rum-core'
-import type { LogsInitConfiguration, LogsGlobal } from '@datadog/browser-logs'
-import type { Context } from '@datadog/browser-core'
+import type { RumInitConfiguration, RumPublicApi } from '@openobserve/browser-rum-core'
+import type { LogsInitConfiguration, LogsGlobal } from '@openobserve/browser-logs'
+import type { Context } from '@openobserve/browser-core'
 
 declare global {
   interface Window {

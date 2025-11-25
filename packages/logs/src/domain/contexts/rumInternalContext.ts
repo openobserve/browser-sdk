@@ -1,5 +1,5 @@
-import type { RelativeTime, RumInternalContext } from '@datadog/browser-core'
-import { globalObject, willSyntheticsInjectRum, HookNames, SKIPPED } from '@datadog/browser-core'
+import type { RelativeTime, RumInternalContext } from '@openobserve/browser-core'
+import { globalObject, willSyntheticsInjectRum, HookNames, SKIPPED } from '@openobserve/browser-core'
 import type { Hooks } from '../hooks'
 
 interface Rum {

@@ -1,5 +1,5 @@
-import type { Duration, RelativeTime } from '@datadog/browser-core'
-import { ONE_MINUTE, elapsed, relativeNow } from '@datadog/browser-core'
+import type { Duration, RelativeTime } from '@openobserve/browser-core'
+import { ONE_MINUTE, elapsed, relativeNow } from '@openobserve/browser-core'
 import type { RumPerformancePaintTiming } from '../../../browser/performanceObservable'
 import { createPerformanceObservable, RumPerformanceEntryType } from '../../../browser/performanceObservable'
 import type { RumConfiguration } from '../../configuration'

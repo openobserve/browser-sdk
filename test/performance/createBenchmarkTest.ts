@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import type { Page, CDPSession } from '@playwright/test'
-import type { RumInitConfiguration } from '@datadog/browser-rum-core'
+import type { RumInitConfiguration } from '@openobserve/browser-rum-core'
 import type { BrowserWindow, Metrics } from './profiling.type'
 import { startProfiling } from './profilers'
 import { reportToConsole } from './reporters/reportToConsole'

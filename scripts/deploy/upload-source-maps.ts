@@ -102,8 +102,8 @@ function uploadToDatadog(
         --service ${service}
         --release-version ${getBuildEnvValue('SDK_VERSION')}
         --minified-path-prefix ${prefix}
-        --project-path @datadog/browser-${packageName}/
-        --repository-url https://www.github.com/datadog/browser-sdk
+        --project-path @openobserve/browser-${packageName}/
+        --repository-url https://www.github.com/openobserve/browser-sdk
     `
       .withEnvironment({
         DATADOG_API_KEY: apiKey,

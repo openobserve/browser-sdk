@@ -1,4 +1,4 @@
-import type { LogsEvent } from '@datadog/browser-logs'
+import type { LogsEvent } from '@openobserve/browser-logs'
 import type {
   RumEvent,
   RumActionEvent,
@@ -6,15 +6,15 @@ import type {
   RumResourceEvent,
   RumViewEvent,
   RumVitalEvent,
-} from '@datadog/browser-rum'
+} from '@openobserve/browser-rum'
 import type {
   TelemetryEvent,
   TelemetryErrorEvent,
   TelemetryConfigurationEvent,
   TelemetryUsageEvent,
-} from '@datadog/browser-core'
-import type { BrowserSegment } from '@datadog/browser-rum/src/types'
-import type { BrowserSegmentMetadataAndSegmentSizes } from '@datadog/browser-rum/src/domain/segmentCollection'
+} from '@openobserve/browser-core'
+import type { BrowserSegment } from '@openobserve/browser-rum/src/types'
+import type { BrowserSegmentMetadataAndSegmentSizes } from '@openobserve/browser-rum/src/domain/segmentCollection'
 
 interface BaseIntakeRequest {
   isBridge: boolean

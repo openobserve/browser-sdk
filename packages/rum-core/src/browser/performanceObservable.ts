@@ -1,5 +1,5 @@
-import type { Duration, RelativeTime, TimeoutId } from '@datadog/browser-core'
-import { addEventListener, Observable, setTimeout, clearTimeout, monitor } from '@datadog/browser-core'
+import type { Duration, RelativeTime, TimeoutId } from '@openobserve/browser-core'
+import { addEventListener, Observable, setTimeout, clearTimeout, monitor } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../domain/configuration'
 import { hasValidResourceEntryDuration, isAllowedRequestUrl } from '../domain/resource/resourceUtils'
 import { retrieveFirstInputTiming } from './firstInputPolyfill'

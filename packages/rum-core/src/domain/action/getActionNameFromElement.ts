@@ -1,4 +1,4 @@
-import { ExperimentalFeature, isExperimentalFeatureEnabled, safeTruncate } from '@datadog/browser-core'
+import { ExperimentalFeature, isExperimentalFeatureEnabled, safeTruncate } from '@openobserve/browser-core'
 import { getPrivacySelector, NodePrivacyLevel } from '../privacyConstants'
 import { getNodePrivacyLevel, maskDisallowedTextContent, shouldMaskNode, shouldMaskAttribute } from '../privacy'
 import type { NodePrivacyLevelCache } from '../privacy'

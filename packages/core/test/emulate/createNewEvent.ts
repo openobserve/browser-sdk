@@ -1,4 +1,4 @@
-import type { MouseEventOnElement } from '@datadog/browser-rum-core'
+import type { MouseEventOnElement } from '@openobserve/browser-rum-core'
 import type { TrustableEvent } from '../../src'
 import { objectEntries } from '../../src'
 

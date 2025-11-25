@@ -1,4 +1,4 @@
-import type { Context, Duration, RelativeTime } from '@datadog/browser-core'
+import type { Context, Duration, RelativeTime } from '@openobserve/browser-core'
 import type { RumEventDomainContext } from '../../domainContext.types'
 import type { LifeCycle } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'

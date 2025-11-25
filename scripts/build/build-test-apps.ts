@@ -45,7 +45,7 @@ async function buildReactRouterv7App() {
 
   await modifyFile(path.join(appPath, 'app.tsx'), (content: string) =>
     content
-      .replace('@datadog/browser-rum-react/react-router-v6', '@datadog/browser-rum-react/react-router-v7')
+      .replace('@openobserve/browser-rum-react/react-router-v6', '@openobserve/browser-rum-react/react-router-v7')
       .replace("from 'react-router-dom'", "from 'react-router'")
   )
 

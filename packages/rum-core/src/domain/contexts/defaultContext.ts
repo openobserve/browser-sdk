@@ -1,4 +1,4 @@
-import { canUseEventBridge, currentDrift, HookNames, round, timeStampNow } from '@datadog/browser-core'
+import { canUseEventBridge, currentDrift, HookNames, round, timeStampNow } from '@openobserve/browser-core'
 import type { RumConfiguration } from '../configuration'
 import type { DefaultRumEventAttributes, DefaultTelemetryEventAttributes, Hooks } from '../hooks'
 

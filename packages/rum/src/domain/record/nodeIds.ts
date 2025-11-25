@@ -1,4 +1,4 @@
-import { getParentNode, isNodeShadowRoot } from '@datadog/browser-rum-core'
+import { getParentNode, isNodeShadowRoot } from '@openobserve/browser-rum-core'
 
 export type NodeWithSerializedNode = Node & { __brand: 'NodeWithSerializedNode' }
 export type NodeId = number & { __brand: 'NodeId' }

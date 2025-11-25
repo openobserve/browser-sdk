@@ -1,5 +1,5 @@
-import type { RelativeTime, TimeStamp } from '@datadog/browser-core'
-import { getRelativeTime, isNumber } from '@datadog/browser-core'
+import type { RelativeTime, TimeStamp } from '@openobserve/browser-core'
+import { getRelativeTime, isNumber } from '@openobserve/browser-core'
 import type { RumPerformanceNavigationTiming } from './performanceObservable'
 import { RumPerformanceEntryType, supportPerformanceTimingEvent } from './performanceObservable'
 

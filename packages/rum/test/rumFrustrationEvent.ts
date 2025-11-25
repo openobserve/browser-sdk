@@ -1,6 +1,6 @@
-import { relativeNow, timeStampNow } from '@datadog/browser-core'
-import type { RawRumActionEvent, RawRumEventCollectedData } from '@datadog/browser-rum-core'
-import { ActionType, FrustrationType, RumEventType } from '@datadog/browser-rum-core'
+import { relativeNow, timeStampNow } from '@openobserve/browser-core'
+import type { RawRumActionEvent, RawRumEventCollectedData } from '@openobserve/browser-rum-core'
+import { ActionType, FrustrationType, RumEventType } from '@openobserve/browser-rum-core'
 
 export function createRumFrustrationEvent(mouseEvent: MouseEvent): RawRumEventCollectedData<RawRumActionEvent> {
   return {

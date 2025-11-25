@@ -52,8 +52,8 @@ function isToplevelPackage(packageDirectoryName: string): boolean {
 }
 
 function getPackageDirectoryNameFromPackageName(packageName: string): string | undefined {
-  if (packageName.startsWith('@datadog/browser-')) {
-    return packageName.slice('@datadog/browser-'.length)
+  if (packageName.startsWith('@openobserve/browser-')) {
+    return packageName.slice('@openobserve/browser-'.length)
   }
 }
 

@@ -8,8 +8,8 @@ import {
   ErrorSource,
   generateUUID,
   NonErrorPrefix,
-} from '@datadog/browser-core'
-import { RumEventType } from '@datadog/browser-rum-core'
+} from '@openobserve/browser-core'
+import { RumEventType } from '@openobserve/browser-rum-core'
 import { onRumStart } from '../reactPlugin'
 
 /**

@@ -1,5 +1,5 @@
-import { DOM_EVENT, addEventListeners, timeStampNow } from '@datadog/browser-core'
-import type { RumConfiguration } from '@datadog/browser-rum-core'
+import { DOM_EVENT, addEventListeners, timeStampNow } from '@openobserve/browser-core'
+import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import type { FocusRecord } from '../../../types'
 import { RecordType } from '../../../types'
 import type { Tracker } from './tracker.types'

@@ -18,7 +18,7 @@ import type { LogsEventDomainContext } from '../domainContext.types'
  * @category Main
  * @example NPM
  * ```ts
- * import { datadogLogs } from '@datadog/browser-logs'
+ * import { datadogLogs } from '@openobserve/browser-logs'
  *
  * datadogLogs.init({
  *   clientToken: '<DATADOG_CLIENT_TOKEN>',
