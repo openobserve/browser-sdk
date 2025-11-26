@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-rum-react",
-  "version": "6.24.1",
+  "version": "0.2.11",
   "license": "Apache-2.0",
   "main": "cjs/entries/main.js",
   "module": "esm/entries/main.js",
@@ -10,8 +10,8 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "6.24.1",
-    "@openobserve/browser-rum-core": "6.24.1"
+    "@openobserve/browser-core": "0.2.11",
+    "@openobserve/browser-rum-core": "0.2.11"
   },
   "peerDependencies": {
     "react": "18 || 19",
@@ -46,7 +46,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/DataDog/browser-sdk.git",
+    "url": "https://github.com/openobserve/browser-sdk.git",
     "directory": "packages/rum-react"
   },
   "volta": {
