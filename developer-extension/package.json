@@ -25,11 +25,11 @@
     "webpack-dev-server": "^5.0.4"
   },
   "dependencies": {
+    "@mantine/core": "8.3.7",
+    "@mantine/hooks": "8.3.7",
     "@openobserve/browser-core": "workspace:*",
     "@openobserve/browser-logs": "workspace:*",
     "@openobserve/browser-rum": "workspace:*",
-    "@mantine/core": "8.3.7",
-    "@mantine/hooks": "8.3.7",
     "@tabler/icons-react": "3.35.0",
     "clsx": "2.1.1",
     "react": "19.2.0",
