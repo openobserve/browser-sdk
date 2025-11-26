@@ -328,9 +328,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@openobserve/browser-sdk-developer-extension@workspace:developer-extension":
+"@datadog/browser-sdk-developer-extension@workspace:developer-extension":
   version: 0.0.0-use.local
-  resolution: "@openobserve/browser-sdk-developer-extension@workspace:developer-extension"
+  resolution: "@datadog/browser-sdk-developer-extension@workspace:developer-extension"
   dependencies:
     "@openobserve/browser-core": "workspace:*"
     "@openobserve/browser-logs": "workspace:*"
