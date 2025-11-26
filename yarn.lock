@@ -215,64 +215,64 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@datadog/browser-core@npm:6.22.0":
+"@openobserve/browser-core@npm:6.22.0":
   version: 6.22.0
-  resolution: "@datadog/browser-core@npm:6.22.0"
+  resolution: "@openobserve/browser-core@npm:6.22.0"
   checksum: 10c0/3398f9efd2105197e5380588bc699a6cafa6b1fa548f3be6723aa1f440aad905469991b21d5142b5c17b0a60321d6fd73f573bd4c15455cf9c2f3d6403d8a5fd
   languageName: node
   linkType: hard
 
-"@datadog/browser-core@npm:6.24.1, @datadog/browser-core@workspace:*, @datadog/browser-core@workspace:packages/core":
+"@openobserve/browser-core@npm:6.24.1, @openobserve/browser-core@0.2.11, @openobserve/browser-core@0.2.11":
   version: 0.0.0-use.local
-  resolution: "@datadog/browser-core@workspace:packages/core"
+  resolution: "@openobserve/browser-core@0.2.11"
   dependencies:
     "@types/pako": "npm:2.0.4"
     pako: "npm:2.1.0"
   languageName: unknown
   linkType: soft
 
-"@datadog/browser-flagging@workspace:packages/flagging":
+"@openobserve/browser-flagging@workspace:packages/flagging":
   version: 0.0.0-use.local
-  resolution: "@datadog/browser-flagging@workspace:packages/flagging"
+  resolution: "@openobserve/browser-flagging@workspace:packages/flagging"
   dependencies:
-    "@datadog/browser-core": "npm:6.22.0"
+    "@openobserve/browser-core": "npm:6.22.0"
     webpack: "npm:5.102.1"
   peerDependencies:
-    "@datadog/browser-rum": 6.22.0
+    "@openobserve/browser-rum": 6.22.0
   peerDependenciesMeta:
-    "@datadog/browser-rum":
+    "@openobserve/browser-rum":
       optional: true
   languageName: unknown
   linkType: soft
 
-"@datadog/browser-logs@workspace:*, @datadog/browser-logs@workspace:packages/logs":
+"@openobserve/browser-logs@workspace:*, @openobserve/browser-logs@workspace:packages/logs":
   version: 0.0.0-use.local
-  resolution: "@datadog/browser-logs@workspace:packages/logs"
+  resolution: "@openobserve/browser-logs@workspace:packages/logs"
   dependencies:
-    "@datadog/browser-core": "npm:6.24.1"
+    "@openobserve/browser-core": "npm:6.24.1"
   peerDependencies:
-    "@datadog/browser-rum": 6.24.1
+    "@openobserve/browser-rum": 6.24.1
   peerDependenciesMeta:
-    "@datadog/browser-rum":
+    "@openobserve/browser-rum":
       optional: true
   languageName: unknown
   linkType: soft
 
-"@datadog/browser-rum-core@npm:6.24.1, @datadog/browser-rum-core@workspace:packages/rum-core":
+"@openobserve/browser-rum-core@npm:6.24.1, @openobserve/browser-rum-core@workspace:packages/rum-core":
   version: 0.0.0-use.local
-  resolution: "@datadog/browser-rum-core@workspace:packages/rum-core"
+  resolution: "@openobserve/browser-rum-core@workspace:packages/rum-core"
   dependencies:
-    "@datadog/browser-core": "npm:6.24.1"
+    "@openobserve/browser-core": "npm:6.24.1"
     ajv: "npm:8.17.1"
   languageName: unknown
   linkType: soft
 
-"@datadog/browser-rum-react@workspace:packages/rum-react":
+"@openobserve/browser-rum-react@workspace:packages/rum-react":
   version: 0.0.0-use.local
-  resolution: "@datadog/browser-rum-react@workspace:packages/rum-react"
+  resolution: "@openobserve/browser-rum-react@workspace:packages/rum-react"
   dependencies:
-    "@datadog/browser-core": "npm:6.24.1"
-    "@datadog/browser-rum-core": "npm:6.24.1"
+    "@openobserve/browser-core": "npm:6.24.1"
+    "@openobserve/browser-rum-core": "npm:6.24.1"
     "@types/react": "npm:19.2.2"
     "@types/react-dom": "npm:19.2.2"
     react: "npm:19.2.0"
@@ -285,9 +285,9 @@ __metadata:
     react-router: 6 || 7
     react-router-dom: 6 || 7
   peerDependenciesMeta:
-    "@datadog/browser-rum":
+    "@openobserve/browser-rum":
       optional: true
-    "@datadog/browser-rum-slim":
+    "@openobserve/browser-rum-slim":
       optional: true
     react:
       optional: true
@@ -298,43 +298,43 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@datadog/browser-rum-slim@workspace:packages/rum-slim":
+"@openobserve/browser-rum-slim@workspace:packages/rum-slim":
   version: 0.0.0-use.local
-  resolution: "@datadog/browser-rum-slim@workspace:packages/rum-slim"
+  resolution: "@openobserve/browser-rum-slim@workspace:packages/rum-slim"
   dependencies:
-    "@datadog/browser-core": "npm:6.24.1"
-    "@datadog/browser-rum-core": "npm:6.24.1"
+    "@openobserve/browser-core": "npm:6.24.1"
+    "@openobserve/browser-rum-core": "npm:6.24.1"
   peerDependencies:
-    "@datadog/browser-logs": 6.24.1
+    "@openobserve/browser-logs": 6.24.1
   peerDependenciesMeta:
-    "@datadog/browser-logs":
+    "@openobserve/browser-logs":
       optional: true
   languageName: unknown
   linkType: soft
 
-"@datadog/browser-rum@workspace:*, @datadog/browser-rum@workspace:packages/rum":
+"@openobserve/browser-rum@workspace:*, @openobserve/browser-rum@workspace:packages/rum":
   version: 0.0.0-use.local
-  resolution: "@datadog/browser-rum@workspace:packages/rum"
+  resolution: "@openobserve/browser-rum@workspace:packages/rum"
   dependencies:
-    "@datadog/browser-core": "npm:6.24.1"
-    "@datadog/browser-rum-core": "npm:6.24.1"
+    "@openobserve/browser-core": "npm:6.24.1"
+    "@openobserve/browser-rum-core": "npm:6.24.1"
     "@types/pako": "npm:2.0.4"
     pako: "npm:2.1.0"
   peerDependencies:
-    "@datadog/browser-logs": 6.24.1
+    "@openobserve/browser-logs": 6.24.1
   peerDependenciesMeta:
-    "@datadog/browser-logs":
+    "@openobserve/browser-logs":
       optional: true
   languageName: unknown
   linkType: soft
 
-"@datadog/browser-sdk-developer-extension@workspace:developer-extension":
+"@openobserve/browser-sdk-developer-extension@workspace:developer-extension":
   version: 0.0.0-use.local
-  resolution: "@datadog/browser-sdk-developer-extension@workspace:developer-extension"
+  resolution: "@openobserve/browser-sdk-developer-extension@workspace:developer-extension"
   dependencies:
-    "@datadog/browser-core": "workspace:*"
-    "@datadog/browser-logs": "workspace:*"
-    "@datadog/browser-rum": "workspace:*"
+    "@openobserve/browser-core": "workspace:*"
+    "@openobserve/browser-logs": "workspace:*"
+    "@openobserve/browser-rum": "workspace:*"
     "@mantine/core": "npm:8.3.7"
     "@mantine/hooks": "npm:8.3.7"
     "@pmmmwh/react-refresh-webpack-plugin": "npm:^0.6.0"
@@ -360,11 +360,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@datadog/browser-worker@workspace:packages/worker":
+"@openobserve/browser-worker@workspace:packages/worker":
   version: 0.0.0-use.local
-  resolution: "@datadog/browser-worker@workspace:packages/worker"
+  resolution: "@openobserve/browser-worker@workspace:packages/worker"
   dependencies:
-    "@datadog/browser-core": "npm:6.24.1"
+    "@openobserve/browser-core": "npm:6.24.1"
     webpack: "npm:5.102.1"
   languageName: unknown
   linkType: soft
