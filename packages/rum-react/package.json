@@ -10,8 +10,8 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.2.12-beta.11",
-    "@openobserve/browser-rum-core": "0.2.12-beta.11"
+    "@openobserve/browser-core": "0.2.12-beta.13",
+    "@openobserve/browser-rum-core": "0.2.12-beta.13"
   },
   "peerDependencies": {
     "react": "18 || 19",

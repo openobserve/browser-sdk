@@ -8,7 +8,7 @@
     "build:bundle": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.2.12-beta.11"
+    "@openobserve/browser-core": "0.2.12-beta.13"
   },
   "repository": {
     "type": "git",
