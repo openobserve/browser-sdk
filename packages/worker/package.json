@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-worker",
-  "version": "0.2.12-beta.11",
+  "version": "0.2.12-beta.13",
   "license": "Apache-2.0",
   "main": "bundle/worker.js",
   "scripts": {
