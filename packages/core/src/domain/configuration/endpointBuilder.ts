@@ -44,8 +44,14 @@ function createEndpointUrlWithParametersBuilder(
   initConfiguration: InitConfiguration,
   trackType: TrackType
 ): (parameters: string) => string {
-  const path = `/api/v2/${trackType}`
-  const proxy = initConfiguration.proxy
+  // const path = `/api/v2/${trackType}`
+  const { proxy, apiVersion, organizationIdentifier, insecureHTTP } = initConfiguration
+
+  console.log('apiVersion', apiVersion)
+  console.log('organizationIdentifier', organizationIdentifier)
+  console.log('insecureHTTP', insecureHTTP)
+  const path = `/rum/${apiVersion}/${organizationIdentifier}/${trackType}`
+  console.log('path', path)
   if (typeof proxy === 'string') {
     const normalizedProxyUrl = normalizeUrl(proxy)
     return (parameters) => `${normalizedProxyUrl}?ooforward=${encodeURIComponent(`${path}?${parameters}`)}`
@@ -54,7 +60,8 @@ function createEndpointUrlWithParametersBuilder(
     return (parameters) => proxy({ path, parameters })
   }
   const host = buildEndpointHost(trackType, initConfiguration)
-  return (parameters) => `https://${host}${path}?${parameters}`
+  const protocol = insecureHTTP ? 'http' : 'https'
+  return (parameters) => `${protocol}://${host}${path}?${parameters}`
 }
 
 export function buildEndpointHost(
@@ -62,6 +69,8 @@ export function buildEndpointHost(
   initConfiguration: InitConfiguration & { usePciIntake?: boolean }
 ) {
   const { site = INTAKE_SITE_US1, internalAnalyticsSubdomain } = initConfiguration
+
+  return site
 
   if (trackType === 'logs' && initConfiguration.usePciIntake && site === INTAKE_SITE_US1) {
     return PCI_INTAKE_HOST_US1
