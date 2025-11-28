@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-rum-react",
-  "version": "0.2.12-beta.21",
+  "version": "0.2.12-beta.22",
   "license": "Apache-2.0",
   "main": "cjs/entries/main.js",
   "module": "esm/entries/main.js",
@@ -10,8 +10,8 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.2.12-beta.21",
-    "@openobserve/browser-rum-core": "0.2.12-beta.21"
+    "@openobserve/browser-core": "0.2.12-beta.22",
+    "@openobserve/browser-rum-core": "0.2.12-beta.22"
   },
   "peerDependencies": {
     "react": "18 || 19",
