@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-sdk-developer-extension",
-  "version": "0.2.12-beta.20",
+  "version": "0.2.12-beta.21",
   "private": true,
   "scripts": {
     "build": "rm -rf dist && webpack --disable-interpret --mode production",
