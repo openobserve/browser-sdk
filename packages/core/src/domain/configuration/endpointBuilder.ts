@@ -101,22 +101,22 @@ function buildEndpointParameters(
   extraParameters: string[] = []
 ) {
   const parameters = [
-    `oosource=${source}`,
-    `oo-api-key=${clientToken}`,
-    `oo-evp-origin-version=${encodeURIComponent(__BUILD_ENV__SDK_VERSION__)}`,
-    'oo-evp-origin=browser',
-    `oo-request-id=${generateUUID()}`,
+    `o2source=${source}`,
+    `o2-api-key=${clientToken}`,
+    `o2-evp-origin-version=${encodeURIComponent(__BUILD_ENV__SDK_VERSION__)}`,
+    'o2-evp-origin=browser',
+    `o2-request-id=${generateUUID()}`,
   ].concat(extraParameters)
 
   if (encoding) {
-    parameters.push(`oo-evp-encoding=${encoding}`)
+    parameters.push(`o2-evp-encoding=${encoding}`)
   }
 
   if (trackType === 'rum') {
-    parameters.push(`batch_time=${timeStampNow()}`, `_oo.api=${api}`)
+    parameters.push(`batch_time=${timeStampNow()}`, `_o2.api=${api}`)
 
     if (retry) {
-      parameters.push(`_oo.retry_count=${retry.count}`, `_oo.retry_after=${retry.lastFailureStatus}`)
+      parameters.push(`_o2.retry_count=${retry.count}`, `_o2.retry_after=${retry.lastFailureStatus}`)
     }
   }
 
