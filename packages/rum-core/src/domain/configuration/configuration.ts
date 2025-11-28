@@ -18,7 +18,7 @@ import type { RumPlugin } from '../plugins'
 import { isTracingOption } from '../tracing/tracer'
 import type { PropagatorType, TracingOption } from '../tracing/tracer.types'
 
-export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext', 'datadog']
+export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext']
 
 /**
  * Init Configuration for the RUM browser SDK.
@@ -37,7 +37,7 @@ export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext', 'data
  * ```
  * @example CDN
  * ```ts
- * DD_RUM.init({
+ * OO_RUM.init({
  *   applicationId: '<DATADOG_APPLICATION_ID>',
  *   clientToken: '<DATADOG_CLIENT_TOKEN>',
  *   site: '<DATADOG_SITE>',

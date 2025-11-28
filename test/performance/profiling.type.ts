@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test'
 import type { RumPublicApi } from '@openobserve/browser-rum-core'
 
 export interface BrowserWindow extends Window {
-  DD_RUM?: RumPublicApi
+  OO_RUM?: RumPublicApi
   __webVitalsMetrics__?: WebVitalsMetrics
 }
 

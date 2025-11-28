@@ -94,13 +94,13 @@ async function injectSDK(page: Page, scenarioConfiguration: ScenarioConfiguratio
           s.async = true
           s.src = n
           o.head.appendChild(s)
-        })(window, document, 'script', sdkBundleUrl, 'DD_RUM')
-        browserWindow.DD_RUM?.onReady(function () {
-          browserWindow.DD_RUM!.setGlobalContextProperty('scenario', {
+        })(window, document, 'script', sdkBundleUrl, 'OO_RUM')
+        browserWindow.OO_RUM?.onReady(function () {
+          browserWindow.OO_RUM!.setGlobalContextProperty('scenario', {
             configuration: scenarioConfiguration,
             name: scenarioName,
           })
-          browserWindow.DD_RUM!.init(configuration as RumInitConfiguration)
+          browserWindow.OO_RUM!.init(configuration as RumInitConfiguration)
         })
       }
 
@@ -116,7 +116,7 @@ async function injectSDK(page: Page, scenarioConfiguration: ScenarioConfiguratio
 }
 
 async function getSDKVersion(page: Page) {
-  return await page.evaluate(() => (window as BrowserWindow).DD_RUM?.version || '')
+  return await page.evaluate(() => (window as BrowserWindow).OO_RUM?.version || '')
 }
 
 function shouldInjectSDK(scenarioConfiguration: ScenarioConfiguration): boolean {
@@ -139,7 +139,7 @@ async function flushEvents(page: Page) {
   await page.evaluate(() => {
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' })
     const hiddenEvent = new Event('visibilitychange', { bubbles: true })
-    ;(hiddenEvent as unknown as { __ddIsTrusted: boolean }).__ddIsTrusted = true
+    ;(hiddenEvent as unknown as { __ooIsTrusted: boolean }).__ooIsTrusted = true
     document.dispatchEvent(hiddenEvent)
   })
 }

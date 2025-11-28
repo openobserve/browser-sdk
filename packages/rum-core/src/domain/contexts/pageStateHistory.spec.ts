@@ -101,7 +101,7 @@ describe('pageStateHistory', () => {
 
         expect(defaultRumEventAttributes).toEqual({
           type: 'view',
-          _dd: {
+          _oo: {
             page_states: [
               {
                 state: PageState.PASSIVE,
@@ -128,7 +128,7 @@ describe('pageStateHistory', () => {
         })
         expect(defaultRumEventAttributes).toEqual({
           type: 'view',
-          _dd: { page_states: jasmine.any(Array) },
+          _oo: { page_states: jasmine.any(Array) },
         })
       })
 
@@ -141,7 +141,7 @@ describe('pageStateHistory', () => {
 
         expect(defaultRumEventAttributes).toEqual({
           type: 'view',
-          _dd: { page_states: undefined },
+          _oo: { page_states: undefined },
         })
       })
 
@@ -163,7 +163,7 @@ describe('pageStateHistory', () => {
 
         expect(defaultRumEventAttributes).toEqual({
           type: 'view',
-          _dd: {
+          _oo: {
             page_states: [
               {
                 state: PageState.PASSIVE,

@@ -647,7 +647,7 @@ describe('serializeRumConfiguration', () => {
       use_allowed_graph_ql_urls: true,
       use_track_graph_ql_payload: false,
       use_track_graph_ql_response_errors: false,
-      selected_tracing_propagators: ['tracecontext', 'datadog'],
+      selected_tracing_propagators: ['tracecontext'],
       use_excluded_activity_urls: true,
       track_user_interactions: true,
       track_views_manually: true,

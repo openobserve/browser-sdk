@@ -373,7 +373,7 @@
 - 👷 Bump chrome to 138.0.7204.49-1 ([#3658](https://github.com/DataDog/browser-sdk/pull/3658))
 - ♻️ [RUM-10005] Exposes `addEvent` instead of `strategy` to plugins ([#3567](https://github.com/DataDog/browser-sdk/pull/3567)) [FLAGGING] [LOGS] [RUM] [RUM-REACT] [RUM-SLIM] [WORKER]
 - ♻️ [RUM-10407] Use hooks for Logs SDK to decouple session ([#3643](https://github.com/DataDog/browser-sdk/pull/3643)) [LOGS]
-- 👷 [RUM Profiler] Add `_dd.profiling` context to Long Task and View events ([#3583](https://github.com/DataDog/browser-sdk/pull/3583)) [RUM] [RUM-REACT] [RUM-SLIM]
+- 👷 [RUM Profiler] Add `_oo.profiling` context to Long Task and View events ([#3583](https://github.com/DataDog/browser-sdk/pull/3583)) [RUM] [RUM-REACT] [RUM-SLIM]
 
 ## v6.12.3
 
@@ -430,7 +430,7 @@
 - 👷[RUM-9996] move ap2 deployment to minor dcs ([#3601](https://github.com/DataDog/browser-sdk/pull/3601))
 - 👷 fix update-branch script success condition ([#3612](https://github.com/DataDog/browser-sdk/pull/3612))
 - 👌 [RUM-10290] Remove built extensions from ignored in eslint.config ([#3609](https://github.com/DataDog/browser-sdk/pull/3609))
-- 👷 [Events] Add `_dd.sdk_name` to common context ([#3611](https://github.com/DataDog/browser-sdk/pull/3611)) [FLAGGING] [LOGS] [RUM] [RUM-REACT] [RUM-SLIM] [WORKER]
+- 👷 [Events] Add `_oo.sdk_name` to common context ([#3611](https://github.com/DataDog/browser-sdk/pull/3611)) [FLAGGING] [LOGS] [RUM] [RUM-REACT] [RUM-SLIM] [WORKER]
 - 🔈 [RUM-10284] collect telemetry before starting the session manager ([#3602](https://github.com/DataDog/browser-sdk/pull/3602)) [FLAGGING] [LOGS] [RUM] [RUM-REACT] [RUM-SLIM] [WORKER]
 
 ## v6.10.1
@@ -1134,7 +1134,7 @@ See our [upgrade guide](https://docs.datadoghq.com/real_user_monitoring/guide/br
 ## v5.22.0
 
 - ✨⚗️ [RUM-4469] introduce a plugin system ([#2809](https://github.com/DataDog/browser-sdk/pull/2809))
-- ✨ [RUM-4014] DD_LOGS: add handling stack in beforeSend context ([#2786](https://github.com/DataDog/browser-sdk/pull/2786))
+- ✨ [RUM-4014] OO_LOGS: add handling stack in beforeSend context ([#2786](https://github.com/DataDog/browser-sdk/pull/2786))
 - ✨ [RUM-3902] Add privacy control for action names ([#2707](https://github.com/DataDog/browser-sdk/pull/2707))
 - 🐛 Fix developer extension crashing when dev mode enabled ([#2810](https://github.com/DataDog/browser-sdk/pull/2810))
 - 🔮 [HADXVI-53] Browser SDK extension search bar improvement ([#2771](https://github.com/DataDog/browser-sdk/pull/2771))
@@ -1155,7 +1155,7 @@ See our [upgrade guide](https://docs.datadoghq.com/real_user_monitoring/guide/br
 
 ## v5.20.0
 
-- ✨ [RUM-4013] DD_RUM: add handling stack in beforeSend context ([#2730](https://github.com/DataDog/browser-sdk/pull/2730))
+- ✨ [RUM-4013] OO_RUM: add handling stack in beforeSend context ([#2730](https://github.com/DataDog/browser-sdk/pull/2730))
 - ✨[RUM-4178] Report memory impact to Datadog ([#2724](https://github.com/DataDog/browser-sdk/pull/2724))
 - 🐛 [RUM-98] Warn when SDK is loaded multiple times ([#2785](https://github.com/DataDog/browser-sdk/pull/2785))
 - ⚡️ [RUM-4468] improve CSS selector computation performance ([#2782](https://github.com/DataDog/browser-sdk/pull/2782))
@@ -1797,7 +1797,7 @@ See our [upgrade guide](https://docs.datadoghq.com/real_user_monitoring/guide/br
 - 🐛 frustration signals: track window open ([#1631](https://github.com/DataDog/browser-sdk/pull/1631))
 - 🐛 [RUMF-1327] rum synthetics: fix logs session conflict ([#1629](https://github.com/DataDog/browser-sdk/pull/1629))
 - 🔊 Add feature flags to telemetry events ([#1625](https://github.com/DataDog/browser-sdk/pull/1625))
-- ✨[RUMF-1314] Expose a DD_LOGS.getInternalContext ([#1626](https://github.com/DataDog/browser-sdk/pull/1626))
+- ✨[RUMF-1314] Expose a OO_LOGS.getInternalContext ([#1626](https://github.com/DataDog/browser-sdk/pull/1626))
 - 🐛 [RUMF-1273] fix BUILD_MODE scope ([#1627](https://github.com/DataDog/browser-sdk/pull/1627))
 
 ## v4.14.0

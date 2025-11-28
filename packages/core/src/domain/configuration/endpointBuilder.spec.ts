@@ -103,10 +103,10 @@ describe('endpointBuilder', () => {
             lastFailureStatus: 408,
           },
         })
-      ).toContain('_dd.retry_count=5&_dd.retry_after=408')
+      ).toContain('_oo.retry_count=5&_oo.retry_after=408')
     })
 
-    it('should not contain any _dd attributes for non rum endpoints', () => {
+    it('should not contain any _oo attributes for non rum endpoints', () => {
       expect(
         createEndpointBuilder(initConfiguration, 'logs').build('fetch', {
           ...DEFAULT_PAYLOAD,

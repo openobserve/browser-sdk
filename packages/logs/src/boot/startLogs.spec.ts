@@ -287,7 +287,7 @@ describe('logs', () => {
 
     it('RUM context should take precedence over global context', () => {
       const { handleLog, logger, globalContext } = startLogsWithDefaults()
-      window.DD_RUM = {
+      window.OO_RUM = {
         getInternalContext: () => ({ view: { url: 'from-rum-context' } }),
       }
       globalContext.setContext({ view: { url: 'from-global-context' } })

@@ -213,14 +213,14 @@ export function workerSetup(options: WorkerOptions, servers: Servers) {
   return js`
       ${options.importScripts ? js`importScripts('/datadog-logs.js');` : js`import '/datadog-logs.js';`}
       
-      // Initialize DD_LOGS in service worker
-      DD_LOGS.init(${formatConfiguration({ ...DEFAULT_LOGS_CONFIGURATION, forwardConsoleLogs: 'all', forwardErrorsToLogs: true }, servers)})
+      // Initialize OO_LOGS in service worker
+      OO_LOGS.init(${formatConfiguration({ ...DEFAULT_LOGS_CONFIGURATION, forwardConsoleLogs: 'all', forwardErrorsToLogs: true }, servers)})
 
       // Handle messages from main thread
       self.addEventListener('message', (event) => {
         const message = event.data;
         
-        ${options.nativeLog ? js`console.log(message);` : js`DD_LOGS.logger.log(message);`}
+        ${options.nativeLog ? js`console.log(message);` : js`OO_LOGS.logger.log(message);`}
       });
     `
 }

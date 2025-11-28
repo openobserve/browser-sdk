@@ -217,7 +217,7 @@ export interface LogsPublicApi extends PublicApi {
   clearAccount: () => void
 
   /**
-   * The Datadog browser logs SDK contains a default logger `DD_LOGS.logger`, but this API allows to create different ones.
+   * The Datadog browser logs SDK contains a default logger `OO_LOGS.logger`, but this API allows to create different ones.
    *
    * See [Define multiple loggers](https://docs.datadoghq.com/logs/log_collection/javascript/#define-multiple-loggers) for further information.
    *

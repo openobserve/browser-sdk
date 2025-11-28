@@ -15,7 +15,7 @@ export function startDefaultContext(
 
     return {
       type: eventType,
-      _dd: {
+      _oo: {
         format_version: 2,
         drift: currentDrift(),
         configuration: {

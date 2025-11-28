@@ -822,7 +822,7 @@ test.describe('recorder', () => {
       .withRum({ sessionReplaySampleRate: 0 })
       .run(async ({ intakeRegistry, page, flushEvents }) => {
         await page.evaluate(() => {
-          window.DD_RUM!.startSessionReplayRecording()
+          window.OO_RUM!.startSessionReplayRecording()
         })
 
         await flushEvents()
@@ -834,7 +834,7 @@ test.describe('recorder', () => {
       .withRum({ sessionReplaySampleRate: 0 })
       .run(async ({ intakeRegistry, page, flushEvents, browserContext }) => {
         await page.evaluate(() => {
-          window.DD_RUM!.startSessionReplayRecording({ force: true })
+          window.OO_RUM!.startSessionReplayRecording({ force: true })
         })
         const [cookie] = await browserContext.cookies()
         expect(cookie.value).toContain('forcedReplay=1')
@@ -849,8 +849,8 @@ test.describe('recorder', () => {
     .withRum()
     .run(async ({ intakeRegistry, page, flushEvents }) => {
       await page.evaluate(() => {
-        window.DD_RUM!.stopSessionReplayRecording()
-        window.DD_RUM!.startSessionReplayRecording()
+        window.OO_RUM!.stopSessionReplayRecording()
+        window.OO_RUM!.startSessionReplayRecording()
       })
 
       await flushEvents()

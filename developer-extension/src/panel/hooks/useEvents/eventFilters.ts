@@ -73,7 +73,7 @@ function filterOutdatedVersions(events: SdkEvent[]): SdkEvent[] {
       const otherEvent = upToDateEvents.get(event.view.id)
       if (!otherEvent) {
         upToDateEvents.set(event.view.id, event)
-      } else if (otherEvent._dd.document_version < event._dd.document_version) {
+      } else if (otherEvent._oo.document_version < event._oo.document_version) {
         upToDateEvents.set(event.view.id, event)
         outdatedEvents.add(otherEvent)
       } else {

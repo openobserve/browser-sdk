@@ -70,7 +70,7 @@ test.describe('rum sessions', () => {
         expect(anonymousId).not.toBeNull()
 
         await page.evaluate(() => {
-          window.DD_RUM!.stopSession()
+          window.OO_RUM!.stopSession()
         })
         await page.locator('html').click()
 
@@ -88,7 +88,7 @@ test.describe('rum sessions', () => {
         expect((await findSessionCookie(browserContext))?.aid).toBeDefined()
 
         await page.evaluate(() => {
-          window.DD_RUM!.setTrackingConsent('not-granted')
+          window.OO_RUM!.setTrackingConsent('not-granted')
         })
 
         expect((await findSessionCookie(browserContext))?.aid).toBeUndefined()
@@ -102,14 +102,14 @@ test.describe('rum sessions', () => {
         await page.evaluate(
           () =>
             new Promise<void>((resolve) => {
-              window.DD_RUM!.stopSession()
+              window.OO_RUM!.stopSession()
               setTimeout(() => {
                 // If called directly after `stopSession`, the action start time may be the same as the
                 // session end time. In this case, the sopped session is used, and the action is
                 // collected.
                 // We might want to improve this by having a strict comparison between the event start
                 // time and session end time.
-                window.DD_RUM!.addAction('foo')
+                window.OO_RUM!.addAction('foo')
                 resolve()
               }, 5)
             })
@@ -179,7 +179,7 @@ test.describe('rum sessions', () => {
         await page.waitForTimeout(1100)
 
         await page.evaluate(() => {
-          window.DD_RUM!.addAction('foo')
+          window.OO_RUM!.addAction('foo')
         })
 
         await flushEvents()

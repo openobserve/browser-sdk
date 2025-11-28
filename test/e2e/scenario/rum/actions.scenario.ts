@@ -432,10 +432,10 @@ test.describe('action collection', () => {
         const button = document.querySelector('button')
         function click() {
           const down = new PointerEvent('pointerdown', { isPrimary: true })
-          down.__ddIsTrusted = true
+          down.__ooIsTrusted = true
 
           const up = new PointerEvent('pointerup', { isPrimary: true })
-          up.__ddIsTrusted = true
+          up.__ooIsTrusted = true
 
           button.dispatchEvent(down)
           button.dispatchEvent(up)

@@ -112,7 +112,7 @@ describe('viewCollection', () => {
 
     expect(rawRumEvents[rawRumEvents.length - 1].startTime).toBe(1234 as RelativeTime)
     expect(rawRumEvents[rawRumEvents.length - 1].rawRumEvent).toEqual({
-      _dd: {
+      _oo: {
         document_version: 3,
         replay_stats: undefined,
         configuration: {
@@ -233,7 +233,7 @@ describe('viewCollection', () => {
       lifeCycle.notify(LifeCycleEventType.VIEW_UPDATED, VIEW)
 
       expect(
-        (rawRumEvents[rawRumEvents.length - 1].rawRumEvent as RawRumViewEvent)._dd.configuration
+        (rawRumEvents[rawRumEvents.length - 1].rawRumEvent as RawRumViewEvent)._oo.configuration
           .start_session_replay_recording_manually
       ).toBe(false)
     })
@@ -244,7 +244,7 @@ describe('viewCollection', () => {
       lifeCycle.notify(LifeCycleEventType.VIEW_UPDATED, VIEW)
 
       expect(
-        (rawRumEvents[rawRumEvents.length - 1].rawRumEvent as RawRumViewEvent)._dd.configuration
+        (rawRumEvents[rawRumEvents.length - 1].rawRumEvent as RawRumViewEvent)._oo.configuration
           .start_session_replay_recording_manually
       ).toBe(true)
     })

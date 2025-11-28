@@ -111,7 +111,7 @@ test.describe('bridge present', () => {
 
       const preStopRecordsCount = intakeRegistry.replayRecords.length
       await page.evaluate(() => {
-        window.DD_RUM!.stopSessionReplayRecording()
+        window.OO_RUM!.stopSessionReplayRecording()
 
         // trigger a new record
         document.body.appendChild(document.createElement('li'))

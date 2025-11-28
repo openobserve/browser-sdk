@@ -291,7 +291,7 @@ export interface RawRumLongAnimationFrameEvent {
       window_attribution: string
     }>
   }
-  _dd: {
+  _oo: {
     discarded: boolean
   }
 }
@@ -362,7 +362,7 @@ export interface RawRumVitalEvent {
     description?: string
     duration?: number
   }
-  _dd?: {
+  _oo?: {
     vital: {
       computed_value: true
     }

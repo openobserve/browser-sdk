@@ -26,7 +26,7 @@ export function startLongTaskCollection(lifeCycle: LifeCycle, configuration: Rum
           duration: toServerDuration(entry.duration),
         },
         type: RumEventType.LONG_TASK,
-        _dd: {
+        _oo: {
           discarded: false,
         },
       }

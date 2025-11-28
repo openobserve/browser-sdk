@@ -21,7 +21,7 @@ export const startProfilingContext = (hooks: Hooks): ProfilingContextManager => 
 
     return {
       type: eventType,
-      _dd: {
+      _oo: {
         profiling: currentContext,
       },
     }

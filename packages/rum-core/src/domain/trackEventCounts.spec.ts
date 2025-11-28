@@ -48,7 +48,7 @@ describe('trackEventCounts', () => {
 
   it('does not track discarded resources', () => {
     const { eventCounts } = trackEventCounts({ lifeCycle, isChildEvent: () => true })
-    notifyCollectedRawRumEvent({ type: RumEventType.RESOURCE, _dd: { discarded: true, format_version: 2 } })
+    notifyCollectedRawRumEvent({ type: RumEventType.RESOURCE, _oo: { discarded: true, format_version: 2 } })
     expect(eventCounts.resourceCount).toBe(0)
   })
 

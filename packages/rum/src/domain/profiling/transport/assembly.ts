@@ -13,7 +13,7 @@ export interface ProfileEvent extends ProfileEventAttributes {
   format: 'json'
   version: 4
   tags_profiler: string
-  _dd: {
+  _oo: {
     clock_drift: number
   }
 }
@@ -55,7 +55,7 @@ function buildProfileEvent(
     format: 'json',
     version: 4, // Ingestion event version (not the version application tag)
     tags_profiler: profileEventTags.join(','),
-    _dd: {
+    _oo: {
       clock_drift: currentDrift(),
     },
   }

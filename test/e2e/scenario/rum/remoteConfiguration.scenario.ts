@@ -15,7 +15,7 @@ test.describe('remote configuration', () => {
     })
     .run(async ({ page }) => {
       await waitForRemoteConfigurationToBeApplied(page)
-      const initConfiguration = await page.evaluate(() => window.DD_RUM!.getInitConfiguration()!)
+      const initConfiguration = await page.evaluate(() => window.OO_RUM!.getInitConfiguration()!)
       expect(initConfiguration.sessionSampleRate).toBe(1)
     })
 
@@ -33,7 +33,7 @@ test.describe('remote configuration', () => {
     `)
     .run(async ({ page }) => {
       await waitForRemoteConfigurationToBeApplied(page)
-      const initConfiguration = await page.evaluate(() => window.DD_RUM!.getInitConfiguration()!)
+      const initConfiguration = await page.evaluate(() => window.OO_RUM!.getInitConfiguration()!)
       expect(initConfiguration.version).toBe('my-version')
     })
 
@@ -50,7 +50,7 @@ test.describe('remote configuration', () => {
     .withBody(html`<span id="version">123</span>`)
     .run(async ({ page }) => {
       await waitForRemoteConfigurationToBeApplied(page)
-      const initConfiguration = await page.evaluate(() => window.DD_RUM!.getInitConfiguration()!)
+      const initConfiguration = await page.evaluate(() => window.OO_RUM!.getInitConfiguration()!)
       expect(initConfiguration.version).toBe('123')
     })
 
@@ -67,7 +67,7 @@ test.describe('remote configuration', () => {
     .withBody(html`<span id="version" data-version="123"></span>`)
     .run(async ({ page }) => {
       await waitForRemoteConfigurationToBeApplied(page)
-      const initConfiguration = await page.evaluate(() => window.DD_RUM!.getInitConfiguration()!)
+      const initConfiguration = await page.evaluate(() => window.OO_RUM!.getInitConfiguration()!)
       expect(initConfiguration.version).toBe('123')
     })
 
@@ -89,7 +89,7 @@ test.describe('remote configuration', () => {
       </script>
     `)
     .run(async ({ page }) => {
-      const initConfiguration = await page.evaluate(() => window.DD_RUM!.getInitConfiguration()!)
+      const initConfiguration = await page.evaluate(() => window.OO_RUM!.getInitConfiguration()!)
       expect(initConfiguration.version).toBe('js-version')
     })
 
@@ -110,7 +110,7 @@ test.describe('remote configuration', () => {
     `)
     .run(async ({ page }) => {
       await waitForRemoteConfigurationToBeApplied(page)
-      const user = await page.evaluate(() => window.DD_RUM!.getUser())
+      const user = await page.evaluate(() => window.OO_RUM!.getUser())
       expect(user.id).toBe('my-user-id')
     })
 
@@ -136,14 +136,14 @@ test.describe('remote configuration', () => {
     `)
     .run(async ({ page }) => {
       await waitForRemoteConfigurationToBeApplied(page)
-      const globalContext = await page.evaluate(() => window.DD_RUM!.getGlobalContext())
+      const globalContext = await page.evaluate(() => window.OO_RUM!.getGlobalContext())
       expect(globalContext.foo).toEqual('bar')
     })
 })
 
 async function waitForRemoteConfigurationToBeApplied(page: Page) {
   for (let i = 0; i < 20; i++) {
-    const initConfiguration = await page.evaluate(() => window.DD_RUM!.getInitConfiguration()!)
+    const initConfiguration = await page.evaluate(() => window.OO_RUM!.getInitConfiguration()!)
     if (initConfiguration.applicationId === RC_APP_ID) {
       break
     }

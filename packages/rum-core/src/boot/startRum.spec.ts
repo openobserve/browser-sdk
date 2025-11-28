@@ -405,6 +405,6 @@ describe('view events', () => {
       lastRumEvents,
       (serverRumEvent): serverRumEvent is RumViewEvent => serverRumEvent.type === RumEventType.VIEW
     )!
-    expect(lastRumViewEvent._dd.sdk_name).toBe('rum')
+    expect(lastRumViewEvent._oo.sdk_name).toBe('rum')
   })
 })

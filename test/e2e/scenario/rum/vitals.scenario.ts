@@ -7,10 +7,10 @@ test.describe('vital collection', () => {
     .withRum()
     .run(async ({ flushEvents, intakeRegistry, page }) => {
       await page.evaluate(() => {
-        const vital = window.DD_RUM!.startDurationVital('foo')
+        const vital = window.OO_RUM!.startDurationVital('foo')
         return new Promise<void>((resolve) => {
           setTimeout(() => {
-            window.DD_RUM!.stopDurationVital(vital)
+            window.OO_RUM!.stopDurationVital(vital)
             resolve()
           }, 5)
         })
@@ -28,7 +28,7 @@ test.describe('vital collection', () => {
     })
     .run(async ({ flushEvents, intakeRegistry, page }) => {
       await page.evaluate(() => {
-        window.DD_RUM!.startFeatureOperation('foo')
+        window.OO_RUM!.startFeatureOperation('foo')
       })
       await flushEvents()
 

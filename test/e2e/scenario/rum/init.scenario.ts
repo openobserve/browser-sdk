@@ -7,7 +7,7 @@ test.describe('API calls and events around init', () => {
   createTest('should display a console log when calling init without configuration')
     .withRum()
     .withRumInit(() => {
-      ;(window.DD_RUM! as unknown as { init(): void }).init()
+      ;(window.OO_RUM! as unknown as { init(): void }).init()
     })
     .run(({ withBrowserLogs }) => {
       withBrowserLogs((logs) => {
@@ -123,19 +123,19 @@ test.describe('API calls and events around init', () => {
     .withRum()
     .withRumSlim()
     .withRumInit((configuration) => {
-      window.DD_RUM!.init(configuration)
-      window.DD_RUM!.setViewContext({ foo: 'bar' })
-      window.DD_RUM!.setViewContextProperty('bar', 'foo')
+      window.OO_RUM!.init(configuration)
+      window.OO_RUM!.setViewContext({ foo: 'bar' })
+      window.OO_RUM!.setViewContextProperty('bar', 'foo')
 
       // context should populate the context of the children events
-      window.DD_RUM!.addAction('custom action')
-      window.DD_RUM!.addError('custom error')
+      window.OO_RUM!.addAction('custom action')
+      window.OO_RUM!.addError('custom error')
 
       // context should not populate the context of the next view
-      setTimeout(() => window.DD_RUM!.startView('manual view'), 10)
+      setTimeout(() => window.OO_RUM!.startView('manual view'), 10)
       setTimeout(() => {
-        window.DD_RUM!.addAction('after manual view')
-        window.DD_RUM!.addError('after manual view')
+        window.OO_RUM!.addAction('after manual view')
+        window.OO_RUM!.addError('after manual view')
       }, 20)
     })
     .run(async ({ intakeRegistry, flushEvents }) => {
@@ -176,11 +176,11 @@ test.describe('API calls and events around init', () => {
   createTest('get the view context')
     .withRum()
     .withRumInit((configuration) => {
-      window.DD_RUM!.init(configuration)
-      window.DD_RUM!.setViewContext({ foo: 'bar' })
+      window.OO_RUM!.init(configuration)
+      window.OO_RUM!.setViewContext({ foo: 'bar' })
     })
     .run(async ({ page }) => {
-      const viewContext = await page.evaluate(() => window.DD_RUM?.getViewContext())
+      const viewContext = await page.evaluate(() => window.OO_RUM?.getViewContext())
       expect(viewContext).toEqual({ foo: 'bar' })
     })
 })
@@ -231,7 +231,7 @@ test.describe('allowedTrackingOrigins', () => {
     .withRum()
     .withRumInit((configuration) => {
       const currentOrigin = window.location.origin
-      window.DD_RUM!.init({
+      window.OO_RUM!.init({
         ...configuration,
         allowedTrackingOrigins: [currentOrigin],
       })
@@ -247,7 +247,7 @@ test.describe('allowedTrackingOrigins', () => {
     .withRumInit((configuration) => {
       const currentOrigin = window.location.origin
       const escapedOrigin = currentOrigin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      window.DD_RUM!.init({
+      window.OO_RUM!.init({
         ...configuration,
         allowedTrackingOrigins: [new RegExp(`^${escapedOrigin}$`)],
       })
@@ -262,7 +262,7 @@ test.describe('allowedTrackingOrigins', () => {
     .withRum()
     .withRumInit((configuration) => {
       const currentOrigin = window.location.origin
-      window.DD_RUM!.init({
+      window.OO_RUM!.init({
         ...configuration,
         allowedTrackingOrigins: [(origin: string) => origin === currentOrigin],
       })
@@ -284,7 +284,7 @@ test.describe('allowedTrackingOrigins', () => {
   createTest('should warn when allowedTrackingOrigins does not match current domain')
     .withRum()
     .withRumInit((configuration) => {
-      window.DD_RUM!.init({
+      window.OO_RUM!.init({
         ...configuration,
         allowedTrackingOrigins: ['https://different-domain.com'],
       })
@@ -308,7 +308,7 @@ test.describe('Synthetics Browser Test', () => {
     .withRum()
     .withRumInit((configuration) => {
       ;(window as any)._DATADOG_SYNTHETICS_INJECTS_RUM = true
-      window.DD_RUM!.init(configuration)
+      window.OO_RUM!.init(configuration)
     })
     .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()

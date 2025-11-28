@@ -58,7 +58,7 @@ export interface AddDurationVitalOptions extends DurationVitalOptions {
 }
 
 export interface DurationVitalReference {
-  __dd_vital_reference: true
+  __oo_vital_reference: true
 }
 
 export interface DurationVitalStart extends DurationVitalOptions {
@@ -156,7 +156,7 @@ export function startDurationVital(
   }
 
   // To avoid leaking implementation details of the vital, we return a reference to it.
-  const reference: DurationVitalReference = { __dd_vital_reference: true }
+  const reference: DurationVitalReference = { __oo_vital_reference: true }
 
   vitalsByName.set(name, vital)
 

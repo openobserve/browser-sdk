@@ -29,7 +29,7 @@ describe('startDefaultContext', () => {
         },
         date: timeStampNow(),
         source: 'browser',
-        _dd: jasmine.objectContaining({
+        _oo: jasmine.objectContaining({
           format_version: 2,
           drift: jasmine.any(Number),
         }),
@@ -50,8 +50,8 @@ describe('startDefaultContext', () => {
         startTime: 0 as RelativeTime,
       }) as DefaultRumEventAttributes
 
-      expect(eventWithEventBridge._dd!.browser_sdk_version).toBeDefined()
-      expect(eventWithoutEventBridge._dd!.browser_sdk_version).toBeUndefined()
+      expect(eventWithEventBridge._oo!.browser_sdk_version).toBeDefined()
+      expect(eventWithoutEventBridge._oo!.browser_sdk_version).toBeUndefined()
     })
 
     it('should set the configured sample rates', () => {
@@ -66,11 +66,11 @@ describe('startDefaultContext', () => {
         startTime: 0 as RelativeTime,
       }) as DefaultRumEventAttributes
 
-      expect(event._dd!.configuration!.session_sample_rate).toBe(10)
-      expect(event._dd!.configuration!.session_replay_sample_rate).toBe(20)
-      expect(event._dd!.configuration!.trace_sample_rate).toBe(30)
-      expect(event._dd!.configuration!.profiling_sample_rate).toBe(0)
-      expect(event._dd!.sdk_name).toBe('rum')
+      expect(event._oo!.configuration!.session_sample_rate).toBe(10)
+      expect(event._oo!.configuration!.session_replay_sample_rate).toBe(20)
+      expect(event._oo!.configuration!.trace_sample_rate).toBe(30)
+      expect(event._oo!.configuration!.profiling_sample_rate).toBe(0)
+      expect(event._oo!.sdk_name).toBe('rum')
     })
   })
 

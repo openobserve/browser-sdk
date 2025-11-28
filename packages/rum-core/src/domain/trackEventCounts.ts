@@ -50,7 +50,7 @@ export function trackEventCounts({
         callback()
         break
       case RumEventType.RESOURCE:
-        if (!event._dd?.discarded) {
+        if (!event._oo?.discarded) {
           eventCounts.resourceCount += 1
           callback()
         }

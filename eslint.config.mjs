@@ -83,7 +83,7 @@ export default tseslint.config(
 
     rules: {
       'arrow-body-style': 'error',
-      camelcase: ['error', { properties: 'never', allow: ['_dd_temp_'] }],
+      camelcase: ['error', { properties: 'never', allow: ['_oo_temp_'] }],
       curly: 'error',
       eqeqeq: ['error', 'smart'],
       'guard-for-in': 'error',

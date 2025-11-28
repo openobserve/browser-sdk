@@ -24,7 +24,7 @@ export function collectAndValidateRawRumEvents(lifeCycle: LifeCycle) {
 function validateRumEventFormat(rawRumEvent: RawRumEvent) {
   const fakeId = '00000000-aaaa-0000-aaaa-000000000000'
   const fakeContext: Partial<CommonProperties> = {
-    _dd: {
+    _oo: {
       format_version: 2,
       drift: 0,
       configuration: {

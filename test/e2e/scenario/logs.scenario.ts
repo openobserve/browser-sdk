@@ -237,7 +237,7 @@ test.describe('logs', () => {
         throw new Error('oh snap')
       })
       // Simulate a late initialization of the RUM SDK
-      setTimeout(() => window.DD_LOGS!.init(configuration))
+      setTimeout(() => window.OO_LOGS!.init(configuration))
     })
     .run(async ({ intakeRegistry, flushEvents, withBrowserLogs }) => {
       await flushEvents()

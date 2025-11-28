@@ -28,7 +28,7 @@ import type { LogsEventDomainContext } from '../domainContext.types'
  * ```
  * @example CDN
  * ```ts
- * DD_LOGS.init({
+ * OO_LOGS.init({
  *   clientToken: '<DATADOG_CLIENT_TOKEN>',
  *   site: '<DATADOG_SITE>',
  *   // ...

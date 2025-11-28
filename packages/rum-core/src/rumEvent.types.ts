@@ -1231,7 +1231,7 @@ export type RumViewEvent = CommonProperties &
     /**
      * Internal properties
      */
-    readonly _dd: {
+    readonly _oo: {
       /**
        * Version of the update of the view event
        */

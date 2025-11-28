@@ -40,7 +40,7 @@ export function startLongAnimationFrameCollection(lifeCycle: LifeCycle, configur
           })),
         },
         type: RumEventType.LONG_TASK,
-        _dd: {
+        _oo: {
           discarded: false,
         },
       }

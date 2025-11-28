@@ -56,7 +56,7 @@ export function makeProfilerApi(): ProfilerApi {
       .then((createRumProfiler) => {
         if (!createRumProfiler) {
           // monitor-until: 2026-01-01, reconsider after profiling GA
-          addTelemetryDebug('[DD_RUM] Failed to lazy load the RUM Profiler')
+          addTelemetryDebug('[OO_RUM] Failed to lazy load the RUM Profiler')
           profilingContextManager.set({ status: 'error', error_reason: 'failed-to-lazy-load' })
           return
         }

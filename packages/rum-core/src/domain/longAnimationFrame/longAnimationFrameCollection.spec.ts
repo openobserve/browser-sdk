@@ -47,7 +47,7 @@ describe('long animation frames collection', () => {
         ],
       },
       type: RumEventType.LONG_TASK,
-      _dd: {
+      _oo: {
         discarded: false,
       },
     })

@@ -156,7 +156,7 @@ function assembleResource(
         graphql,
       },
       type: RumEventType.RESOURCE,
-      _dd: {
+      _oo: {
         discarded: !configuration.trackResources,
       },
     },
@@ -234,7 +234,7 @@ function computeRequestTracingInfo(request: RequestCompleteEvent, configuration:
     return undefined
   }
   return {
-    _dd: {
+    _oo: {
       span_id: request.spanId!.toString(),
       trace_id: request.traceId!.toString(),
       rule_psr: configuration.rulePsr,
@@ -248,7 +248,7 @@ function computeResourceEntryTracingInfo(entry: RumPerformanceResourceTiming, co
     return undefined
   }
   return {
-    _dd: {
+    _oo: {
       trace_id: entry.traceId,
       span_id: createSpanIdentifier().toString(),
       rule_psr: configuration.rulePsr,

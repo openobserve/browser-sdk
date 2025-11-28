@@ -44,11 +44,9 @@ function createEndpointUrlWithParametersBuilder(
   initConfiguration: InitConfiguration,
   trackType: TrackType
 ): (parameters: string) => string {
-  const { proxy, proxyUrl, apiVersion, organizationIdentifier, insecureHTTP } = initConfiguration
-
-  const path = `/rum/${apiVersion}/${organizationIdentifier}/${INTAKE_TRACKS[trackType]}`
-
-  if (proxy) {
+  const path = `/api/v2/${trackType}`
+  const proxy = initConfiguration.proxy
+  if (typeof proxy === 'string') {
     const normalizedProxyUrl = normalizeUrl(proxy)
     return (parameters) => `${normalizedProxyUrl}?ooforward=${encodeURIComponent(`${path}?${parameters}`)}`
   }
@@ -65,7 +63,10 @@ export function buildEndpointHost(
 ) {
   const { site = INTAKE_SITE_US1, internalAnalyticsSubdomain } = initConfiguration
 
-  return site
+  if (trackType === 'logs' && initConfiguration.usePciIntake && site === INTAKE_SITE_US1) {
+    return PCI_INTAKE_HOST_US1
+  }
+
   if (internalAnalyticsSubdomain && site === INTAKE_SITE_US1) {
     return `${internalAnalyticsSubdomain}.${INTAKE_SITE_US1}`
   }
@@ -91,22 +92,22 @@ function buildEndpointParameters(
   extraParameters: string[] = []
 ) {
   const parameters = [
-    'o2source=browser',
-    `o2-api-key=${clientToken}`,
-    `o2-evp-origin-version=${encodeURIComponent(__BUILD_ENV__SDK_VERSION__)}`,
-    'o2-evp-origin=browser',
-    `o2-request-id=${generateUUID()}`,
+    `oosource=${source}`,
+    `oo-api-key=${clientToken}`,
+    `oo-evp-origin-version=${encodeURIComponent(__BUILD_ENV__SDK_VERSION__)}`,
+    'oo-evp-origin=browser',
+    `oo-request-id=${generateUUID()}`,
   ].concat(extraParameters)
 
   if (encoding) {
-    parameters.push(`dd-evp-encoding=${encoding}`)
+    parameters.push(`oo-evp-encoding=${encoding}`)
   }
 
   if (trackType === 'rum') {
-    parameters.push(`batch_time=${timeStampNow()}`, `_dd.api=${api}`)
+    parameters.push(`batch_time=${timeStampNow()}`, `_oo.api=${api}`)
 
     if (retry) {
-      parameters.push(`_dd.retry_count=${retry.count}`, `_dd.retry_after=${retry.lastFailureStatus}`)
+      parameters.push(`_oo.retry_count=${retry.count}`, `_oo.retry_after=${retry.lastFailureStatus}`)
     }
   }
 

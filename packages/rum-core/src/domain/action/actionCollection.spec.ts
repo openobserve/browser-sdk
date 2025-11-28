@@ -88,7 +88,7 @@ describe('actionCollection', () => {
       },
       date: jasmine.any(Number),
       type: RumEventType.ACTION,
-      _dd: {
+      _oo: {
         action: {
           target: {
             selector: '#foo',
