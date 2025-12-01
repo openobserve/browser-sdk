@@ -104,9 +104,11 @@ export function doStartSegmentCollection(
   )
 
   function flushSegment(flushReason: FlushReason) {
+    console.log('flushSegment called', { flushReason, status: state.status })
     if (state.status === SegmentCollectionStatus.SegmentPending) {
       state.segment.flush((metadata, stats, encoderResult) => {
         const payload = buildReplayPayload(encoderResult.output, metadata, stats, encoderResult.rawBytesCount)
+        console.log('About to send replay payload', { flushReason, payloadSize: payload.bytesCount })
 
         if (isPageExitReason(flushReason)) {
           httpRequest.sendOnExit(payload)
@@ -137,7 +139,9 @@ export function doStartSegmentCollection(
 
       if (state.status === SegmentCollectionStatus.WaitingForInitialRecord) {
         const context = getSegmentContext()
+        console.log('Getting segment context for replay', { context })
         if (!context) {
+          console.warn('No segment context available - replay records will be dropped')
           return
         }
 
@@ -148,6 +152,7 @@ export function doStartSegmentCollection(
             flushSegment('segment_duration_limit')
           }, SEGMENT_DURATION_LIMIT),
         }
+        console.log('Created new segment, will auto-flush in', SEGMENT_DURATION_LIMIT, 'ms')
       }
 
       state.segment.addRecord(record, stats, (encodedBytesCount) => {
