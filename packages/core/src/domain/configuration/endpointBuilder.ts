@@ -25,6 +25,10 @@ export function createEndpointBuilder(
   extraParameters?: string[]
 ) {
   const buildUrlWithParameters = createEndpointUrlWithParametersBuilder(initConfiguration, trackType)
+  console.log('extraParameters', extraParameters);
+  console.log('initConfiguration', initConfiguration);
+  console.log('trackType', trackType);
+  console.log('buildUrlWithParameters', buildUrlWithParameters);
 
   return {
     build(api: ApiType, payload: Payload) {
@@ -54,7 +58,7 @@ function createEndpointUrlWithParametersBuilder(
   console.log('path', path)
   if (typeof proxy === 'string') {
     const normalizedProxyUrl = normalizeUrl(proxy)
-    return (parameters) => `${normalizedProxyUrl}?ooforward=${encodeURIComponent(`${path}?${parameters}`)}`
+    return (parameters) => `${normalizedProxyUrl}?o2forward=${encodeURIComponent(`${path}?${parameters}`)}`
   }
   if (typeof proxy === 'function') {
     return (parameters) => proxy({ path, parameters })
