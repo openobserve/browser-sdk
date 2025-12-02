@@ -81,7 +81,6 @@ export function createHttpRequest<Body extends Payload = Payload>(
   return {
     observable,
     send: (payload: Body) => {
-      console.log('httpRequest.send called', { trackTypes: endpointBuilders.map(eb => eb.trackType), payloadSize: payload.bytesCount })
       for (const endpointBuilder of endpointBuilders) {
         sendWithRetryStrategy(
           payload,
@@ -145,12 +144,10 @@ export function fetchKeepAliveStrategy(
   onResponse?: (r: HttpResponse) => void
 ) {
   const canUseKeepAlive = isKeepAliveSupported() && payload.bytesCount < bytesLimit
-  console.log('fetchKeepAliveStrategy', { trackType: endpointBuilder.trackType, canUseKeepAlive, bytesCount: payload.bytesCount, bytesLimit })
-
+  
   if (canUseKeepAlive) {
     const fetchUrl = endpointBuilder.build('fetch-keepalive', payload)
-    console.log('Making fetch request to:', fetchUrl)
-
+    
     fetch(fetchUrl, { method: 'POST', body: payload.data, keepalive: true, mode: 'cors' })
       .then(monitor((response: Response) => onResponse?.({ status: response.status, type: response.type })))
       .catch(monitor(() => fetchStrategy(endpointBuilder, payload, onResponse)))
@@ -165,8 +162,7 @@ export function fetchStrategy(
   onResponse?: (r: HttpResponse) => void
 ) {
   const fetchUrl = endpointBuilder.build('fetch', payload)
-  console.log('fetchStrategy - Making fetch request to:', fetchUrl)
-
+  
   fetch(fetchUrl, { method: 'POST', body: payload.data, mode: 'cors' })
     .then(monitor((response: Response) => onResponse?.({ status: response.status, type: response.type })))
     .catch(monitor(() => onResponse?.({ status: 0 })))

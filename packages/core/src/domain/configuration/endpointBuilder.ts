@@ -25,11 +25,7 @@ export function createEndpointBuilder(
   extraParameters?: string[]
 ) {
   const buildUrlWithParameters = createEndpointUrlWithParametersBuilder(initConfiguration, trackType)
-  console.log('extraParameters', extraParameters);
-  console.log('initConfiguration', initConfiguration);
-  console.log('trackType', trackType);
-  console.log('buildUrlWithParameters', buildUrlWithParameters);
-
+  
   return {
     build(api: ApiType, payload: Payload) {
       const parameters = buildEndpointParameters(initConfiguration, trackType, api, payload, extraParameters)
@@ -51,11 +47,7 @@ function createEndpointUrlWithParametersBuilder(
   // const path = `/api/v2/${trackType}`
   const { proxy, apiVersion, organizationIdentifier, insecureHTTP } = initConfiguration
 
-  console.log('apiVersion', apiVersion)
-  console.log('organizationIdentifier', organizationIdentifier)
-  console.log('insecureHTTP', insecureHTTP)
   const path = `/rum/${apiVersion}/${organizationIdentifier}/${trackType}`
-  console.log('path', path)
   if (typeof proxy === 'string') {
     const normalizedProxyUrl = normalizeUrl(proxy)
     return (parameters) => `${normalizedProxyUrl}?o2forward=${encodeURIComponent(`${path}?${parameters}`)}`
