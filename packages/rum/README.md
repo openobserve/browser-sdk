@@ -27,7 +27,10 @@ openobserveRum.init({
 })
 ```
 
-**Note**: The `trackUserInteractions` parameter enables the automatic collection of user clicks in your application. **Sensitive and private data** contained in your pages may be included to identify the elements interacted with.
+**Note**: 
+1. The `trackUserInteractions` parameter enables the automatic collection of user clicks in your application.
+2. In some scenarios, you may want to begin recording, even if it was initially sampled out of replay. To force Session Replay recording for the rest of the current session, call startSessionReplayRecording({ force: true })
+**Sensitive and private data** contained in your pages may be included to identify the elements interacted with.
 
 <!-- Note: all URLs should be absolute -->
 
