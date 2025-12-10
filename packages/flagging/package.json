@@ -10,10 +10,10 @@
     "build:bundle": "node ../../scripts/build/build-package.ts --bundle openobserve-flagging.js"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.2.12-beta.28"
+    "@openobserve/browser-core": "0.3.0"
   },
   "peerDependencies": {
-    "@openobserve/browser-rum": "0.2.12-beta.28"
+    "@openobserve/browser-rum": "0.3.0"
   },
   "peerDependenciesMeta": {
     "@openobserve/browser-rum": {
