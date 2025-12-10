@@ -10,6 +10,9 @@ specs.log
 browserstack.err
 .env
 .npmrc
+package.tgz
+docs/
+*.tsbuildinfo
 
 # https://yarnpkg.com/getting-started/qa#which-files-should-be-gitignored
 .pnp.*
@@ -19,3 +22,8 @@ browserstack.err
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+/blob-report/
+/playwright/.cache/
+test-results/
+playwright-report/
+.vscode

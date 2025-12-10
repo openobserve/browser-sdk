@@ -1,6 +1,8 @@
 import type { RumConfiguration } from '@openobserve/browser-rum-core'
-import type { InputCallback, MutationCallBack } from './observers'
-import { initInputObserver, initMutationObserver } from './observers'
+import type { BrowserIncrementalSnapshotRecord } from '../../types'
+import { trackInput, trackMutation, trackScroll } from './trackers'
+import type { ElementsScrollPositions } from './elementsScrollPositions'
+import type { SerializationScope } from './serialization'
 
 interface ShadowRootController {
   stop: () => void
@@ -18,31 +20,28 @@ export interface ShadowRootsController {
 
 export const initShadowRootsController = (
   configuration: RumConfiguration,
-  {
-    mutationCb,
-    inputCb,
-  }: {
-    mutationCb: MutationCallBack
-    inputCb: InputCallback
-  }
+  scope: SerializationScope,
+  callback: (record: BrowserIncrementalSnapshotRecord) => void,
+  elementsScrollPositions: ElementsScrollPositions
 ): ShadowRootsController => {
   const controllerByShadowRoot = new Map<ShadowRoot, ShadowRootController>()
 
   const shadowRootsController: ShadowRootsController = {
     addShadowRoot: (shadowRoot: ShadowRoot) => {
-      const { stop: stopMutationObserver, flush } = initMutationObserver(
-        mutationCb,
-        configuration,
-        shadowRootsController,
-        shadowRoot
-      )
-      // the change event no do bubble up across the shadow root, we have to listen on the shadow root
-      const stopInputObserver = initInputObserver(configuration, inputCb, shadowRoot)
+      if (controllerByShadowRoot.has(shadowRoot)) {
+        return
+      }
+      const mutationTracker = trackMutation(callback, configuration, scope, shadowRootsController, shadowRoot)
+      // The change event does not bubble up across the shadow root, we have to listen on the shadow root
+      const inputTracker = trackInput(configuration, scope, callback, shadowRoot)
+      // The scroll event does not bubble up across the shadow root, we have to listen on the shadow root
+      const scrollTracker = trackScroll(configuration, scope, callback, elementsScrollPositions, shadowRoot)
       controllerByShadowRoot.set(shadowRoot, {
-        flush,
+        flush: () => mutationTracker.flush(),
         stop: () => {
-          stopMutationObserver()
-          stopInputObserver()
+          mutationTracker.stop()
+          inputTracker.stop()
+          scrollTracker.stop()
         },
       })
     },

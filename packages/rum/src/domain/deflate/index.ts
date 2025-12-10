@@ -1,9 +1,8 @@
-export { DeflateEncoderStreamId, DeflateEncoder, createDeflateEncoder } from './deflateEncoder'
+export { createDeflateEncoder } from './deflateEncoder'
+export type { CreateDeflateWorker } from './deflateWorker'
 export {
-  DeflateWorker,
   startDeflateWorker,
   DeflateWorkerStatus,
   getDeflateWorkerStatus,
   resetDeflateWorkerState,
-  CreateDeflateWorker,
 } from './deflateWorker'

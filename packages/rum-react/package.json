@@ -1,0 +1,58 @@
+{
+  "name": "@openobserve/browser-rum-react",
+  "version": "0.3.0",
+  "license": "Apache-2.0",
+  "main": "cjs/entries/main.js",
+  "module": "esm/entries/main.js",
+  "types": "cjs/entries/main.d.ts",
+  "scripts": {
+    "build": "node ../../scripts/build/build-package.ts --modules",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@openobserve/browser-core": "0.3.0",
+    "@openobserve/browser-rum-core": "0.3.0"
+  },
+  "peerDependencies": {
+    "react": "18 || 19",
+    "react-router": "6 || 7",
+    "react-router-dom": "6 || 7"
+  },
+  "peerDependenciesMeta": {
+    "@openobserve/browser-rum": {
+      "optional": true
+    },
+    "@openobserve/browser-rum-slim": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-router": {
+      "optional": true
+    },
+    "react-router-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-router": "7.9.5",
+    "react-router-dom": "7.9.5",
+    "react-router-dom-6": "npm:react-router-dom@6.30.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openobserve/browser-sdk.git",
+    "directory": "packages/rum-react"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

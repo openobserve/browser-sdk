@@ -1,26 +1,60 @@
 // Keep the following in sync with packages/rum/src/entries/main.ts
-import type { RelativeTime } from '@openobserve/browser-core'
-import { Observable, defineGlobal, getGlobalObject, noop } from '@openobserve/browser-core'
+import { defineGlobal, getGlobalObject } from '@openobserve/browser-core'
 import type { RumPublicApi } from '@openobserve/browser-rum-core'
 import { makeRumPublicApi, startRum } from '@openobserve/browser-rum-core'
-import { getSessionReplayLink } from '../domain/getSessionReplayLink'
+import { makeRecorderApiStub } from '../boot/stubRecorderApi'
+import { makeProfilerApiStub } from '../boot/stubProfilerApi'
 
-export {
-  CommonProperties,
-  RumPublicApi as RumGlobal,
+export type {
+  User,
+  Account,
+  TraceContextInjection,
+  SessionPersistence,
+  TrackingConsent,
+  MatchOption,
+  ProxyFn,
+  Site,
+  Context,
+  ContextValue,
+  ContextArray,
+  RumInternalContext,
+} from '@openobserve/browser-core'
+
+/**
+ * @deprecated Use {@link DatadogRum} instead
+ */
+export type RumGlobal = RumPublicApi
+
+export type {
+  RumPublicApi as DatadogRum,
   RumInitConfiguration,
+  ViewOptions,
+  StartRecordingOptions,
+  AddDurationVitalOptions,
+  DurationVitalOptions,
+  DurationVitalReference,
+  TracingOption,
+  RumPlugin,
+  OnRumStartOptions,
+  PropagatorType,
+  FeatureFlagsForEvents,
+
   // Events
+  CommonProperties,
   RumEvent,
   RumActionEvent,
   RumErrorEvent,
   RumLongTaskEvent,
   RumResourceEvent,
   RumViewEvent,
+  RumVitalEvent,
+
   // Events context
   RumEventDomainContext,
   RumViewEventDomainContext,
   RumErrorEventDomainContext,
   RumActionEventDomainContext,
+  RumVitalEventDomainContext,
   RumFetchResourceEventDomainContext,
   RumXhrResourceEventDomainContext,
   RumOtherResourceEventDomainContext,
@@ -28,15 +62,15 @@ export {
 } from '@openobserve/browser-rum-core'
 export { DefaultPrivacyLevel } from '@openobserve/browser-core'
 
-export const openobserveRum = makeRumPublicApi(startRum, {
-  start: noop,
-  stop: noop,
-  onRumStart: noop,
-  isRecording: () => false,
-  getReplayStats: () => undefined,
-  getSessionReplayLink,
-  getSerializedNodeId: () => undefined,
-  recorderStartObservable: new Observable<RelativeTime>(),
+/**
+ * The global RUM instance. Use this to call RUM methods.
+ *
+ * @category Main
+ * @see {@link DatadogRum}
+ * @see [RUM Browser Monitoring Setup](https://docs.datadoghq.com/real_user_monitoring/browser/)
+ */
+export const openobserveRum = makeRumPublicApi(startRum, makeRecorderApiStub(), makeProfilerApiStub(), {
+  sdkName: 'rum-slim',
 })
 
 interface BrowserWindow extends Window {

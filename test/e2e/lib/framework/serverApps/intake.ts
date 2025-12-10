@@ -1,35 +1,42 @@
-import { createInflate } from 'zlib'
+import { createInflate, inflateSync } from 'zlib'
 import https from 'https'
 import connectBusboy from 'connect-busboy'
 import express from 'express'
 
 import cors from 'cors'
 import type { BrowserSegmentMetadataAndSegmentSizes } from '@openobserve/browser-rum/src/domain/segmentCollection'
-import type { SegmentFile } from '../../types/serverEvents'
-import type { EventRegistry, IntakeType } from '../eventsRegistry'
+import type { BrowserSegment } from '@openobserve/browser-rum/src/types'
+import type {
+  IntakeRegistry,
+  IntakeRequest,
+  LogsIntakeRequest,
+  ReplayIntakeRequest,
+  RumIntakeRequest,
+} from '../intakeRegistry'
 
-export function createIntakeServerApp(serverEvents: EventRegistry, bridgeEvents: EventRegistry) {
+interface IntakeRequestInfos {
+  isBridge: boolean
+  intakeType: IntakeRequest['intakeType']
+  encoding: string | null
+}
+
+export function createIntakeServerApp(intakeRegistry: IntakeRegistry) {
   const app = express()
 
   app.use(cors())
-  app.use(express.text())
   app.use(connectBusboy({ immediate: true }))
 
   app.post('/', (async (req, res) => {
-    const { isBridge, intakeType } = computeIntakeType(req)
-    const events = isBridge ? bridgeEvents : serverEvents
+    const infos = computeIntakeRequestInfos(req)
 
     try {
-      if (intakeType === 'sessionReplay') {
-        await Promise.all([storeReplayData(req, events), forwardReplayToIntake(req)])
-      } else {
-        storeEventsData(events, intakeType, req.body as string)
-        if (!isBridge) {
-          await forwardEventsToIntake(req)
-        }
-      }
+      const [intakeRequest] = await Promise.all([
+        readIntakeRequest(req, infos),
+        !infos.isBridge && forwardIntakeRequestToDatadog(req),
+      ])
+      intakeRegistry.push(intakeRequest)
     } catch (error) {
-      console.error(`Error while processing request: ${String(error)}`)
+      console.error('Error while processing request:', error)
     }
     res.end()
   }) as express.RequestHandler)
@@ -37,64 +44,89 @@ export function createIntakeServerApp(serverEvents: EventRegistry, bridgeEvents:
   return app
 }
 
-function computeIntakeType(
-  req: express.Request
-): { isBridge: true; intakeType: 'logs' | 'rum' } | { isBridge: false; intakeType: IntakeType } {
+function computeIntakeRequestInfos(req: express.Request): IntakeRequestInfos {
   const ooforward = req.query.ooforward as string | undefined
   if (!ooforward) {
     throw new Error('ooforward is missing')
   }
+  const { pathname, searchParams } = new URL(ooforward, 'https://example.org')
+
+  const encoding = req.headers['content-encoding'] || searchParams.get('oo-evp-encoding')
 
   if (req.query.bridge === 'true') {
     const eventType = req.query.event_type
     return {
       isBridge: true,
-      intakeType: eventType === 'log' ? 'logs' : 'rum',
+      encoding,
+      intakeType: eventType === 'log' ? 'logs' : eventType === 'record' ? 'replay' : 'rum',
     }
   }
 
-  let intakeType: IntakeType
-  // ooforward = /rum/v2/rum?key=value
-  const endpoint = ooforward.split(/[/?]/)[3]
-  if (endpoint === 'logs' || endpoint === 'rum') {
+  let intakeType: IntakeRequest['intakeType']
+  // pathname = /api/v2/rum
+  const endpoint = pathname.split(/[/?]/)[3]
+  if (endpoint === 'logs' || endpoint === 'rum' || endpoint === 'replay') {
     intakeType = endpoint
-  } else if (endpoint === 'replay' && req.busboy) {
-    intakeType = 'sessionReplay'
   } else {
     throw new Error("Can't find intake type")
   }
   return {
     isBridge: false,
+    encoding,
     intakeType,
   }
 }
 
-function storeEventsData(events: EventRegistry, intakeType: 'logs' | 'rum' | 'telemetry', data: string) {
-  data.split('\n').map((rawEvent) => {
-    const event = JSON.parse(rawEvent)
-    if (intakeType === 'rum' && event.type === 'telemetry') {
-      events.push('telemetry', event)
-    } else {
-      events.push(intakeType, event)
+function readIntakeRequest(req: express.Request, infos: IntakeRequestInfos): Promise<IntakeRequest> {
+  return infos.intakeType === 'replay'
+    ? readReplayIntakeRequest(req, infos as IntakeRequestInfos & { intakeType: 'replay' })
+    : readRumOrLogsIntakeRequest(req, infos as IntakeRequestInfos & { intakeType: 'rum' | 'logs' })
+}
+
+async function readRumOrLogsIntakeRequest(
+  req: express.Request,
+  infos: IntakeRequestInfos & { intakeType: 'rum' | 'logs' }
+): Promise<RumIntakeRequest | LogsIntakeRequest> {
+  const rawBody = await readStream(req)
+  const encodedBody = infos.encoding === 'deflate' ? inflateSync(rawBody) : rawBody
+
+  return {
+    ...infos,
+    events: encodedBody
+      .toString('utf-8')
+      .split('\n')
+      .map((line): any => JSON.parse(line)),
+  }
+}
+
+function readReplayIntakeRequest(
+  req: express.Request,
+  infos: IntakeRequestInfos & { intakeType: 'replay' }
+): Promise<ReplayIntakeRequest> {
+  return new Promise((resolve, reject) => {
+    if (infos.isBridge) {
+      readStream(req)
+        .then((rawBody) => {
+          resolve({
+            ...infos,
+            segment: {
+              records: rawBody
+                .toString('utf-8')
+                .split('\n')
+                .map((line): unknown => JSON.parse(line)),
+            },
+          } as ReplayIntakeRequest)
+        })
+        .catch(reject)
+      return
     }
-  })
-}
 
-function forwardEventsToIntake(req: express.Request): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const intakeRequest = prepareIntakeRequest(req)
-    intakeRequest.on('response', resolve)
-    intakeRequest.on('error', reject)
-    // can't directly pipe the request since
-    // the stream has already been read by express body parser
-    intakeRequest.write(req.body)
-    intakeRequest.end()
-  })
-}
-
-function storeReplayData(req: express.Request, events: EventRegistry): Promise<any> {
-  return new Promise((resolve, reject) => {
-    let segmentPromise: Promise<SegmentFile>
+    let segmentPromise: Promise<{
+      encoding: string
+      filename: string
+      mimetype: string
+      segment: BrowserSegment
+    }>
     let metadataPromise: Promise<BrowserSegmentMetadataAndSegmentSizes>
 
     req.busboy.on('file', (name, stream, info) => {
@@ -104,7 +136,7 @@ function storeReplayData(req: express.Request, events: EventRegistry): Promise<a
           encoding,
           filename,
           mimetype: mimeType,
-          data: JSON.parse(data.toString()),
+          segment: JSON.parse(data.toString()),
         }))
       } else if (name === 'event') {
         metadataPromise = readStream(stream).then(
@@ -115,38 +147,36 @@ function storeReplayData(req: express.Request, events: EventRegistry): Promise<a
 
     req.busboy.on('finish', () => {
       Promise.all([segmentPromise, metadataPromise])
-        .then(([segment, metadata]) => {
-          events.push('sessionReplay', { metadata, segment })
-        })
-        .then(resolve)
-        .catch((e) => reject(e))
+        .then(([{ segment, ...segmentFile }, metadata]) => ({
+          ...infos,
+          segmentFile,
+          metadata,
+          segment,
+        }))
+        .then(resolve, reject)
     })
   })
 }
 
-function forwardReplayToIntake(req: express.Request): Promise<any> {
+function forwardIntakeRequestToDatadog(req: express.Request): Promise<any> {
   return new Promise((resolve, reject) => {
-    const intakeRequest = prepareIntakeRequest(req)
-    req.pipe(intakeRequest)
-    intakeRequest.on('response', resolve)
-    intakeRequest.on('error', reject)
+    const ooforward = req.query.ooforward! as string
+    if (!/^\/api\/v2\//.test(ooforward)) {
+      throw new Error(`Unsupported ooforward: ${ooforward}`)
+    }
+    const options = {
+      method: 'POST',
+      headers: {
+        'X-Forwarded-For': req.socket.remoteAddress,
+        'Content-Type': req.headers['content-type'],
+        'User-Agent': req.headers['user-agent'],
+      },
+    }
+    const datadogIntakeRequest = https.request(new URL(ooforward, 'https://api.openobserve.ai'), options)
+    req.pipe(datadogIntakeRequest)
+    datadogIntakeRequest.on('response', resolve)
+    datadogIntakeRequest.on('error', reject)
   })
-}
-
-function prepareIntakeRequest(req: express.Request) {
-  const ooforward = req.query.ooforward! as string
-  if (!/^\/api\/v2\//.test(ooforward)) {
-    throw new Error(`Unsupported ooforward: ${ooforward}`)
-  }
-  const options = {
-    method: 'POST',
-    headers: {
-      'X-Forwarded-For': req.socket.remoteAddress,
-      'Content-Type': req.headers['content-type'],
-      'User-Agent': req.headers['user-agent'],
-    },
-  }
-  return https.request(new URL(ooforward, 'https://api.openobserve.ai'), options)
 }
 
 function readStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
@@ -156,6 +186,7 @@ function readStream(stream: NodeJS.ReadableStream): Promise<Buffer> {
       buffers.push(data)
     })
     stream.on('error', (error) => {
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
       reject(error)
     })
     stream.on('end', () => {

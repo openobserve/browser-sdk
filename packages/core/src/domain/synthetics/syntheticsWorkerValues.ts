@@ -1,4 +1,5 @@
-import { getCookie } from '../../browser/cookie'
+import { getInitCookie } from '../../browser/cookie'
+import { globalObject, isWorkerEnvironment } from '../../tools/globalObject'
 
 export const SYNTHETICS_TEST_ID_COOKIE_NAME = 'openobserve-synthetics-public-id'
 export const SYNTHETICS_RESULT_ID_COOKIE_NAME = 'openobserve-synthetics-result-id'
@@ -11,17 +12,27 @@ export interface BrowserWindow extends Window {
 }
 
 export function willSyntheticsInjectRum(): boolean {
+  if (isWorkerEnvironment) {
+    // We don't expect to run synthetics tests in a worker environment
+    return false
+  }
+
   return Boolean(
-    (window as BrowserWindow)._OO_SYNTHETICS_INJECTS_RUM || getCookie(SYNTHETICS_INJECTS_RUM_COOKIE_NAME)
+    (globalObject as BrowserWindow)._OO_SYNTHETICS_INJECTS_RUM || getInitCookie(SYNTHETICS_INJECTS_RUM_COOKIE_NAME)
   )
 }
 
 export function getSyntheticsTestId(): string | undefined {
-  const value = (window as BrowserWindow)._OO_SYNTHETICS_PUBLIC_ID || getCookie(SYNTHETICS_TEST_ID_COOKIE_NAME)
+  const value = (window as BrowserWindow)._OO_SYNTHETICS_PUBLIC_ID || getInitCookie(SYNTHETICS_TEST_ID_COOKIE_NAME)
   return typeof value === 'string' ? value : undefined
 }
 
 export function getSyntheticsResultId(): string | undefined {
-  const value = (window as BrowserWindow)._OO_SYNTHETICS_RESULT_ID || getCookie(SYNTHETICS_RESULT_ID_COOKIE_NAME)
+  const value =
+    (window as BrowserWindow)._OO_SYNTHETICS_RESULT_ID || getInitCookie(SYNTHETICS_RESULT_ID_COOKIE_NAME)
   return typeof value === 'string' ? value : undefined
+}
+
+export function isSyntheticsTest(): boolean {
+  return Boolean(getSyntheticsTestId() && getSyntheticsResultId())
 }

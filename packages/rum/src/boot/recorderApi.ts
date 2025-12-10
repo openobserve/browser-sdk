@@ -1,63 +1,37 @@
-import type { RelativeTime } from '@openobserve/browser-core'
-import { Observable, canUseEventBridge, noop, runOnReadyState, relativeNow } from '@openobserve/browser-core'
+import type { DeflateEncoder, DeflateWorker, Telemetry } from '@openobserve/browser-core'
+import {
+  canUseEventBridge,
+  noop,
+  BridgeCapability,
+  bridgeSupports,
+  DeflateEncoderStreamId,
+} from '@openobserve/browser-core'
 import type {
   LifeCycle,
-  ViewContexts,
+  ViewHistory,
   RumSessionManager,
   RecorderApi,
   RumConfiguration,
+  StartRecordingOptions,
 } from '@openobserve/browser-rum-core'
-import { LifeCycleEventType } from '@openobserve/browser-rum-core'
 import { getReplayStats as getReplayStatsImpl } from '../domain/replayStats'
-import { getSessionReplayLink } from '../domain/getSessionReplayLink'
 import type { CreateDeflateWorker } from '../domain/deflate'
 import {
-  DeflateEncoderStreamId,
   createDeflateEncoder,
-  startDeflateWorker,
   DeflateWorkerStatus,
   getDeflateWorkerStatus,
+  startDeflateWorker,
 } from '../domain/deflate'
-
-import { getSerializedNodeId } from '../domain/record'
-import type { startRecording } from './startRecording'
 import { isBrowserSupported } from './isBrowserSupported'
-
-export type StartRecording = typeof startRecording
-
-const enum RecorderStatus {
-  // The recorder is stopped.
-  Stopped,
-  // The user started the recording while it wasn't possible yet. The recorder should start as soon
-  // as possible.
-  IntentToStart,
-  // The recorder is starting. It does not record anything yet.
-  Starting,
-  // The recorder is started, it records the session.
-  Started,
-}
-type RecorderState =
-  | {
-    status: RecorderStatus.Stopped
-  }
-  | {
-    status: RecorderStatus.IntentToStart
-  }
-  | {
-    status: RecorderStatus.Starting
-  }
-  | {
-    status: RecorderStatus.Started
-    stopRecording: () => void
-  }
+import type { StartRecording } from './postStartStrategy'
+import { createPostStartStrategy } from './postStartStrategy'
+import { createPreStartStrategy } from './preStartStrategy'
 
 export function makeRecorderApi(
-  startRecordingImpl: StartRecording,
+  loadRecorder: () => Promise<StartRecording | undefined>,
   createDeflateWorkerImpl?: CreateDeflateWorker
 ): RecorderApi {
-  const recorderStartObservable = new Observable<RelativeTime>()
-
-  if (canUseEventBridge() || !isBrowserSupported()) {
+  if ((canUseEventBridge() && !bridgeSupports(BridgeCapability.RECORDS)) || !isBrowserSupported()) {
     return {
       start: noop,
       stop: noop,
@@ -65,114 +39,17 @@ export function makeRecorderApi(
       onRumStart: noop,
       isRecording: () => false,
       getSessionReplayLink: () => undefined,
-      getSerializedNodeId: () => undefined,
-      recorderStartObservable,
     }
   }
 
-  let state: RecorderState = {
-    status: RecorderStatus.Stopped,
-  }
+  // eslint-disable-next-line prefer-const
+  let { strategy, shouldStartImmediately } = createPreStartStrategy()
 
-  let startStrategy = () => {
-    state = { status: RecorderStatus.IntentToStart }
-  }
-  let stopStrategy = () => {
-    state = { status: RecorderStatus.Stopped }
-  }
   return {
-    start: () => startStrategy(),
-    stop: () => stopStrategy(),
-    getSessionReplayLink: (configuration, sessionManager, viewContexts) =>
-      getSessionReplayLink(configuration, sessionManager, viewContexts, state.status !== RecorderStatus.Stopped),
-    recorderStartObservable,
-    getSerializedNodeId,
-    onRumStart: (
-      lifeCycle: LifeCycle,
-      configuration: RumConfiguration,
-      sessionManager: RumSessionManager,
-      viewContexts: ViewContexts
-    ) => {
-      lifeCycle.subscribe(LifeCycleEventType.SESSION_EXPIRED, () => {
-        if (state.status === RecorderStatus.Starting || state.status === RecorderStatus.Started) {
-          stopStrategy()
-          state = { status: RecorderStatus.IntentToStart }
-        }
-      })
-
-      lifeCycle.subscribe(LifeCycleEventType.SESSION_RENEWED, () => {
-        if (state.status === RecorderStatus.IntentToStart) {
-          startStrategy()
-        }
-      })
-
-      startStrategy = () => {
-        const session = sessionManager.findTrackedSession()
-        if (!session || !session.sessionReplayAllowed) {
-          state = { status: RecorderStatus.IntentToStart }
-          return
-        }
-
-        if (state.status === RecorderStatus.Starting || state.status === RecorderStatus.Started) {
-          return
-        }
-
-        state = { status: RecorderStatus.Starting }
-
-        runOnReadyState(configuration, 'interactive', () => {
-          if (state.status !== RecorderStatus.Starting) {
-            return
-          }
-
-          const worker = startDeflateWorker(
-            configuration,
-            () => {
-              stopStrategy()
-            },
-            createDeflateWorkerImpl
-          )
-
-          if (!worker) {
-            state = {
-              status: RecorderStatus.Stopped,
-            }
-            return
-          }
-
-          const { stop: stopRecording } = startRecordingImpl(
-            lifeCycle,
-            configuration,
-            sessionManager,
-            viewContexts,
-            createDeflateEncoder(configuration, worker, DeflateEncoderStreamId.REPLAY)
-          )
-          recorderStartObservable.notify(relativeNow())
-          state = {
-            status: RecorderStatus.Started,
-            stopRecording,
-          }
-        })
-      }
-
-      stopStrategy = () => {
-        if (state.status === RecorderStatus.Stopped) {
-          return
-        }
-
-        if (state.status === RecorderStatus.Started) {
-          state.stopRecording()
-        }
-
-        state = {
-          status: RecorderStatus.Stopped,
-        }
-      }
-
-      if (state.status === RecorderStatus.IntentToStart) {
-        startStrategy()
-      }
-    },
-
+    start: (options?: StartRecordingOptions) => strategy.start(options),
+    stop: () => strategy.stop(),
+    getSessionReplayLink: () => strategy.getSessionReplayLink(),
+    onRumStart,
     isRecording: () =>
       // The worker is started optimistically, meaning we could have started to record but its
       // initialization fails a bit later. This could happen when:
@@ -196,9 +73,52 @@ export function makeRecorderApi(
       //
       // In the future, when the compression worker will also be used for RUM data, this will be
       // less important since no RUM event will be sent when the worker fails to initialize.
-      getDeflateWorkerStatus() === DeflateWorkerStatus.Initialized && state.status === RecorderStatus.Started,
+      getDeflateWorkerStatus() === DeflateWorkerStatus.Initialized && strategy.isRecording(),
 
     getReplayStats: (viewId) =>
       getDeflateWorkerStatus() === DeflateWorkerStatus.Initialized ? getReplayStatsImpl(viewId) : undefined,
+  }
+
+  function onRumStart(
+    lifeCycle: LifeCycle,
+    configuration: RumConfiguration,
+    sessionManager: RumSessionManager,
+    viewHistory: ViewHistory,
+    worker: DeflateWorker | undefined,
+    telemetry: Telemetry
+  ) {
+    let cachedDeflateEncoder: DeflateEncoder | undefined
+
+    function getOrCreateDeflateEncoder() {
+      if (!cachedDeflateEncoder) {
+        worker ??= startDeflateWorker(
+          configuration,
+          'Datadog Session Replay',
+          () => {
+            strategy.stop()
+          },
+          createDeflateWorkerImpl
+        )
+
+        if (worker) {
+          cachedDeflateEncoder = createDeflateEncoder(configuration, worker, DeflateEncoderStreamId.REPLAY)
+        }
+      }
+      return cachedDeflateEncoder
+    }
+
+    strategy = createPostStartStrategy(
+      configuration,
+      lifeCycle,
+      sessionManager,
+      viewHistory,
+      loadRecorder,
+      getOrCreateDeflateEncoder,
+      telemetry
+    )
+
+    if (shouldStartImmediately(configuration)) {
+      strategy.start()
+    }
   }
 }

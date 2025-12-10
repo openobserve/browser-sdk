@@ -19,8 +19,22 @@ export function isNodeShadowRoot(node: Node): node is ShadowRoot {
   return !!shadowRoot.host && shadowRoot.nodeType === Node.DOCUMENT_FRAGMENT_NODE && isElementNode(shadowRoot.host)
 }
 
-export function getChildNodes(node: Node) {
-  return isNodeShadowHost(node) ? node.shadowRoot.childNodes : node.childNodes
+export function hasChildNodes(node: Node) {
+  return node.childNodes.length > 0 || isNodeShadowHost(node)
+}
+
+export function forEachChildNodes(node: Node, callback: (child: Node) => void) {
+  let child = node.firstChild
+
+  while (child) {
+    callback(child)
+
+    child = child.nextSibling
+  }
+
+  if (isNodeShadowHost(node)) {
+    callback(node.shadowRoot)
+  }
 }
 
 /**

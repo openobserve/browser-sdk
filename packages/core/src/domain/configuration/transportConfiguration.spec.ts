@@ -1,19 +1,33 @@
-import { computeTransportConfiguration } from './transportConfiguration'
+import { INTAKE_SITE_FED_STAGING } from '../intakeSites'
+import type { Payload } from '../../transport'
+import { computeTransportConfiguration, isIntakeUrl } from './transportConfiguration'
+
+const DEFAULT_PAYLOAD = {} as Payload
 
 describe('transportConfiguration', () => {
   const clientToken = 'some_client_token'
   const internalAnalyticsSubdomain = 'ia-rum-intake'
+  const intakeParameters = 'ddsource=browser&dd-api-key=xxxx&dd-request-id=1234567890'
+
   describe('site', () => {
     it('should use US site by default', () => {
       const configuration = computeTransportConfiguration({ clientToken })
-      expect(configuration.rumEndpointBuilder.build('xhr')).toContain('openobserve.ai')
+      expect(configuration.rumEndpointBuilder.build('fetch', DEFAULT_PAYLOAD)).toContain('openobserve.ai')
       expect(configuration.site).toBe('openobserve.ai')
     })
 
+    it('should use logs intake domain for fed staging', () => {
+      const configuration = computeTransportConfiguration({ clientToken, site: INTAKE_SITE_FED_STAGING })
+      expect(configuration.rumEndpointBuilder.build('fetch', DEFAULT_PAYLOAD)).toContain(
+        'http-intake.logs.dd0g-gov.com'
+      )
+      expect(configuration.site).toBe(INTAKE_SITE_FED_STAGING)
+    })
+
     it('should use site value when set', () => {
-      const configuration = computeTransportConfiguration({ clientToken, site: 'foo.com' })
-      expect(configuration.rumEndpointBuilder.build('xhr')).toContain('foo.com')
-      expect(configuration.site).toBe('foo.com')
+      const configuration = computeTransportConfiguration({ clientToken, site: 'openobserve.ai' })
+      expect(configuration.rumEndpointBuilder.build('fetch', DEFAULT_PAYLOAD)).toContain('openobserve.ai')
+      expect(configuration.site).toBe('openobserve.ai')
     })
   })
 
@@ -23,45 +37,35 @@ describe('transportConfiguration', () => {
         clientToken,
         internalAnalyticsSubdomain,
       })
-      expect(configuration.rumEndpointBuilder.build('xhr')).toContain(internalAnalyticsSubdomain)
+      expect(configuration.rumEndpointBuilder.build('fetch', DEFAULT_PAYLOAD)).toContain(internalAnalyticsSubdomain)
     })
 
     it('should not use internal analytics subdomain value when set for other sites', () => {
       const configuration = computeTransportConfiguration({
         clientToken,
-        site: 'foo.bar',
+        site: 'us3.datadoghq.com',
         internalAnalyticsSubdomain,
       })
-      expect(configuration.rumEndpointBuilder.build('xhr')).not.toContain(internalAnalyticsSubdomain)
+      expect(configuration.rumEndpointBuilder.build('fetch', DEFAULT_PAYLOAD)).not.toContain(internalAnalyticsSubdomain)
     })
   })
 
-  describe('sdk_version, env, version and service', () => {
-    it('should not modify the logs and rum endpoints tags when not defined', () => {
-      const configuration = computeTransportConfiguration({ clientToken })
-      expect(decodeURIComponent(configuration.rumEndpointBuilder.build('xhr'))).not.toContain(',env:')
-      expect(decodeURIComponent(configuration.rumEndpointBuilder.build('xhr'))).not.toContain(',service:')
-      expect(decodeURIComponent(configuration.rumEndpointBuilder.build('xhr'))).not.toContain(',version:')
-      expect(decodeURIComponent(configuration.rumEndpointBuilder.build('xhr'))).not.toContain(',datacenter:')
-
-      expect(decodeURIComponent(configuration.logsEndpointBuilder.build('xhr'))).not.toContain(',env:')
-      expect(decodeURIComponent(configuration.logsEndpointBuilder.build('xhr'))).not.toContain(',service:')
-      expect(decodeURIComponent(configuration.logsEndpointBuilder.build('xhr'))).not.toContain(',version:')
-      expect(decodeURIComponent(configuration.logsEndpointBuilder.build('xhr'))).not.toContain(',datacenter:')
+  it('adds the replica application id to the rum replica endpoint', () => {
+    const replicaApplicationId = 'replica-application-id'
+    const configuration = computeTransportConfiguration({
+      clientToken,
+      replica: {
+        clientToken: 'replica-client-token',
+        applicationId: replicaApplicationId,
+      },
     })
-
-    it('should be set as tags in the logs and rum endpoints', () => {
-      const configuration = computeTransportConfiguration({ clientToken, env: 'foo', service: 'bar', version: 'baz' })
-      expect(decodeURIComponent(configuration.rumEndpointBuilder.build('xhr'))).toContain(
-        'env:foo,service:bar,version:baz'
-      )
-      expect(decodeURIComponent(configuration.logsEndpointBuilder.build('xhr'))).toContain(
-        'env:foo,service:bar,version:baz'
-      )
-    })
+    expect(configuration.replica!.rumEndpointBuilder.build('fetch', DEFAULT_PAYLOAD)).toContain(
+      `application.id=${replicaApplicationId}`
+    )
   })
 
   describe('isIntakeUrl', () => {
+    const v1IntakePath = `/v1/input/${clientToken}`
     ;[
       { expectSubdomain: true, site: 'api.openobserve.ai', intakeDomain: 'api.openobserve.ai' },
     ].forEach(({ site, intakeDomain, expectSubdomain }) => {
@@ -89,64 +93,38 @@ describe('transportConfiguration', () => {
     })
 
     it('should not detect non intake request', () => {
-      const configuration = computeTransportConfiguration({ clientToken })
-      expect(configuration.isIntakeUrl('https://www.foo.com')).toBe(false)
+      expect(isIntakeUrl('https://www.foo.com')).toBe(false)
     })
-      ;[
-        {
-          proxyConfigurationName: 'proxy' as const,
-          intakeUrl: '/rum/v2/rum',
-        },
-        {
-          proxyConfigurationName: 'proxyUrl' as const,
-          intakeUrl: 'https://api.openobserve.ai/rum/v2/rum',
-        },
-      ].forEach(({ proxyConfigurationName, intakeUrl }) => {
-        describe(`${proxyConfigurationName} configuration`, () => {
-          it('should detect proxy intake request', () => {
-            let configuration = computeTransportConfiguration({
-              clientToken,
-              [proxyConfigurationName]: 'https://www.proxy.com',
-            })
-            expect(
-              configuration.isIntakeUrl(`https://www.proxy.com/?ooforward=${encodeURIComponent(`${intakeUrl}?foo=bar`)}`)
-            ).toBe(true)
 
-            configuration = computeTransportConfiguration({
-              clientToken,
-              [proxyConfigurationName]: 'https://www.proxy.com/custom/path',
-            })
-            expect(
-              configuration.isIntakeUrl(
-                `https://www.proxy.com/custom/path?ooforward=${encodeURIComponent(`${intakeUrl}?foo=bar`)}`
-              )
-            ).toBe(true)
-          })
-
-          it('should not detect request done on the same host as the proxy', () => {
-            const configuration = computeTransportConfiguration({
-              clientToken,
-              [proxyConfigurationName]: 'https://www.proxy.com',
-            })
-            expect(configuration.isIntakeUrl('https://www.proxy.com/foo')).toBe(false)
-          })
-        })
-      })
-      ;[
-        { site: 'openobserve.ai' },
-      ].forEach(({ site }) => {
-        it(`should detect replica intake request for site ${site}`, () => {
-          const configuration = computeTransportConfiguration({
-            clientToken,
-            site,
-            replica: { clientToken },
-            internalAnalyticsSubdomain,
-          })
-
-          expect(configuration.isIntakeUrl(`https://api.openobserve.ai/rum/v2/rum?xxx`)).toBe(
-            true
+    describe('proxy configuration', () => {
+      it('should detect proxy intake request', () => {
+        expect(
+          isIntakeUrl(`https://www.proxy.com/?ooforward=${encodeURIComponent(`/api/v2/rum?${intakeParameters}`)}`)
+        ).toBe(true)
+        expect(
+          isIntakeUrl(
+            `https://www.proxy.com/custom/path?ooforward=${encodeURIComponent(`/api/v2/rum?${intakeParameters}`)}`
           )
-        })
+        ).toBe(true)
+      })
+
+      it('should not detect request done on the same host as the proxy', () => {
+        expect(isIntakeUrl('https://www.proxy.com/foo')).toBe(false)
+      })
+    })
+    ;[
+      { site: 'openobserve.ai' },
+    ].forEach(({ site }) => {
+      it(`should detect replica intake request for site ${site}`, () => {
+        expect(isIntakeUrl(`https://${internalAnalyticsSubdomain}.openobserve.ai/api/v2/rum?${intakeParameters}`)).toBe(
+          true
+        )
+        expect(isIntakeUrl(`https://${internalAnalyticsSubdomain}.openobserve.ai/api/v2/logs?${intakeParameters}`)).toBe(
+          true
+        )
+        expect(
+          isIntakeUrl(`https://${internalAnalyticsSubdomain}.openobserve.ai/api/v2/replay?${intakeParameters}`)
+        ).toBe(true)
       })
   })
 })

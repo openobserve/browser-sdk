@@ -1,12 +1,14 @@
 variables:
-  CURRENT_STAGING: staging-36
+  CURRENT_STAGING: staging-47
   APP: "browser-sdk"
-  CURRENT_CI_IMAGE: 51
+  CURRENT_CI_IMAGE: 93
   BUILD_STABLE_REGISTRY: "486234852809.dkr.ecr.us-east-1.amazonaws.com"
   CI_IMAGE: "$BUILD_STABLE_REGISTRY/ci/$APP:$CURRENT_CI_IMAGE"
   GIT_REPOSITORY: "git@github.com:openobserve/browser-sdk.git"
   MAIN_BRANCH: "main"
-  CHROME_PACKAGE_VERSION: 116.0.5845.110-1
+  NEXT_MAJOR_BRANCH: ''
+  CHROME_PACKAGE_VERSION: 139.0.7258.66-1
+  FF_TIMESTAMPS: 'true' # Enable timestamps for gitlab-ci logs
 
 cache:
   key:
@@ -22,15 +24,22 @@ stages:
   - after-tests
   - browserstack
   - pre-deploy
-  - pre-deploy-notify
   - deploy:canary
   - notify:canary
   - deploy
   - notify
 
 .base-configuration:
-  tags: ["runner:main", "size:large"]
+  tags:
+    - 'arch:amd64'
   image: $CI_IMAGE
+  id_tokens:
+    DDOCTOSTS_ID_TOKEN:
+      aud: dd-octo-sts
+  retry:
+    max: 2
+    when:
+      - runner_system_failure
 
 ########################################################################################################################
 # Branch selection helpers
@@ -59,6 +68,13 @@ stages:
       - /^staging-[0-9]+$/
       - /^release\//
       - schedules
+    variables:
+      - $CI_COMMIT_REF_NAME == $NEXT_MAJOR_BRANCH
+
+.next-major-branch:
+  only:
+    variables:
+      - $CI_COMMIT_REF_NAME == $NEXT_MAJOR_BRANCH
 
 .staging:
   only:
@@ -79,6 +95,18 @@ stages:
   only:
     refs:
       - tags
+
+###########################################################################################################################
+# Resource allocation
+###########################################################################################################################
+.resource-allocation-4-cpus:
+  variables:
+    WORKERS: 2
+    KUBERNETES_CPU_REQUEST: 4
+    KUBERNETES_CPU_LIMIT: 4
+    KUBERNETES_MEMORY_REQUEST: 16Gi
+    KUBERNETES_MEMORY_LIMIT: 16Gi
+    NODE_OPTIONS: '--max-old-space-size=16000'
 
 ########################################################################################################################
 # CI image
@@ -127,7 +155,7 @@ typecheck:
     - yarn
     - yarn build
     - yarn typecheck
-    - scripts/cli typecheck test/app
+    - scripts/cli typecheck test/apps/vanilla
     - scripts/cli typecheck test/e2e
 
 build-and-lint:
@@ -139,7 +167,22 @@ build-and-lint:
     - yarn
     - yarn build
     - yarn lint
-    - node scripts/check-packages.js
+    - node scripts/check-packages.ts
+
+test-performance:
+  extends:
+    - .base-configuration
+    - .test-allowed-branches
+  except:
+    variables:
+      - $CI_COMMIT_REF_NAME == $CURRENT_STAGING
+  interruptible: true
+  allow_failure: true
+  script:
+    - yarn
+    - yarn build:bundle
+    - node ./scripts/deploy/deploy.ts staging pull-request pull-request
+    - node ./scripts/performance/index.ts
 
 build-bundle:
   extends:
@@ -171,9 +214,8 @@ unit:
   script:
     - yarn
     - yarn test:unit
-    - ./scripts/test/codecov.sh
   after_script:
-    - node ./scripts/test/export-test-result.js unit
+    - node ./scripts/test/export-test-result.ts unit
 
 e2e:
   extends:
@@ -182,14 +224,13 @@ e2e:
   interruptible: true
   artifacts:
     when: always
-    paths: ["test-report/e2e/specs.log"]
     reports:
       junit: test-report/e2e/*.xml
   script:
     - yarn
-    - yarn test:e2e
+    - FORCE_COLOR=1 yarn test:e2e:ci
   after_script:
-    - node ./scripts/test/export-test-result.js e2e
+    - node ./scripts/test/export-test-result.ts e2e
 
 check-licenses:
   extends:
@@ -198,7 +239,16 @@ check-licenses:
   interruptible: true
   script:
     - yarn
-    - node --no-warnings scripts/check-licenses.js
+    - node scripts/check-licenses.ts
+
+check-node-version:
+  extends:
+    - .base-configuration
+    - .test-allowed-branches
+  interruptible: true
+  script:
+    - yarn
+    - node scripts/check-node-version.ts
 
 check-release:
   extends:
@@ -208,10 +258,20 @@ check-release:
   script:
     - yarn
     - BUILD_MODE=release yarn build
-    - node scripts/release/check-release.js
+    - node scripts/release/check-release.ts
+
+check-schemas:
+  extends:
+    - .base-configuration
+    - .test-allowed-branches
+  interruptible: true
+  script:
+    - yarn
+    - node scripts/check-schemas.ts
 
 unit-bs:
   stage: browserstack
+  needs: ['unit']
   extends:
     - .base-configuration
     - .bs-allowed-branches
@@ -224,26 +284,37 @@ unit-bs:
     - yarn
     - ./scripts/test/ci-bs.sh test:unit
   after_script:
-    - node ./scripts/test/export-test-result.js unit-bs
+    - node ./scripts/test/export-test-result.ts unit-bs
 
 e2e-bs:
   stage: browserstack
+  needs: ['e2e']
   extends:
     - .base-configuration
     - .bs-allowed-branches
+    - .resource-allocation-4-cpus
   interruptible: true
   resource_group: browserstack
+  timeout: 35 minutes
   artifacts:
     when: always
-    paths: ["test-report/e2e-bs/specs.log"]
     reports:
       junit: test-report/e2e-bs/*.xml
   script:
     - yarn
-    - ./scripts/test/ci-bs.sh test:e2e
+    - FORCE_COLOR=1 ./scripts/test/ci-bs.sh test:e2e:ci
   after_script:
-    - node ./scripts/test/export-test-result.js e2e-bs
+    - node ./scripts/test/export-test-result.ts e2e-bs
 
+script-tests:
+  extends:
+    - .base-configuration
+    - .test-allowed-branches
+  interruptible: true
+  script:
+    - yarn
+    - yarn build:bundle
+    - yarn test:script
 ########################################################################################################################
 # Deploy
 ########################################################################################################################
@@ -260,7 +331,7 @@ deploy-feature:
     - export BUILD_MODE=canary
     - yarn
     - yarn build:bundle
-    - node ./scripts/deploy/deploy.js staging $SUFFIX root
+    - node ./scripts/deploy/deploy.ts staging $SUFFIX root
 
 deploy-staging:
   stage: deploy
@@ -271,8 +342,8 @@ deploy-staging:
     - export BUILD_MODE=canary
     - yarn
     - yarn build:bundle
-    - node ./scripts/deploy/deploy.js staging staging root
-    - node ./scripts/deploy/upload-source-maps.js staging root
+    - node ./scripts/deploy/deploy.ts staging staging root
+    - node ./scripts/deploy/upload-source-maps.ts staging root
 
 deploy-prod-canary:
   stage: deploy:canary
@@ -283,64 +354,43 @@ deploy-prod-canary:
     - export BUILD_MODE=canary
     - yarn
     - yarn build:bundle
-    - node ./scripts/deploy/deploy.js prod canary root
-    - node ./scripts/deploy/upload-source-maps.js canary root
+    - node ./scripts/deploy/deploy.ts prod canary root
+    - node ./scripts/deploy/upload-source-maps.ts canary root
 
-.deploy-prod:
+deploy-next-major-canary:
   stage: deploy
   extends:
     - .base-configuration
-    - .tags
-  when: manual
-  allow_failure: false
+    - .next-major-branch
   script:
-    - export BUILD_MODE=release
+    - export BUILD_MODE=canary
     - VERSION=$(node -p -e "require('./lerna.json').version")
     - yarn
     - yarn build:bundle
-    - node ./scripts/deploy/deploy.js prod v${VERSION%%.*} $UPLOAD_PATH
-    - node ./scripts/deploy/upload-source-maps.js v${VERSION%%.*} $UPLOAD_PATH
+    - node ./scripts/deploy/deploy.ts prod v${VERSION%%.*}-canary root
+    - node ./scripts/deploy/upload-source-maps.ts v${VERSION%%.*}-canary root
 
-step-1_deploy-prod-minor-dcs:
-  extends:
-    - .deploy-prod
-  variables:
-    UPLOAD_PATH: us3,us5,ap1
-
-step-2_deploy-prod-eu1:
-  extends:
-    - .deploy-prod
-  variables:
-    UPLOAD_PATH: eu1
-
-step-3_deploy-prod-us1:
-  extends:
-    - .deploy-prod
-  variables:
-    UPLOAD_PATH: us1
-
-step-4_deploy-prod-root:
-  extends:
-    - .deploy-prod
-  variables:
-    UPLOAD_PATH: root
-
-step-5_publish-npm:
+deploy-manual:
   stage: deploy
   extends:
-    - .base-configuration
     - .tags
-  when: manual
-  allow_failure: false
-  script:
-    - yarn
-    - ./scripts/deploy/publish-npm.sh
+  trigger:
+    include:
+      - local: .gitlab/deploy-manual.yml
+
+deploy-auto:
+  stage: deploy
+  extends:
+    - .tags
+  trigger:
+    include:
+      - local: .gitlab/deploy-auto.yml
 
 ########################################################################################################################
 # Notify
 ########################################################################################################################
 
-include: "https://gitlab-templates.ddbuild.io/slack-notifier/v1/template.yml"
+include: 'https://gitlab-templates.ddbuild.io/slack-notifier/v3-sdm/template.yml'
 
 notify-feature-branch-failure:
   extends:
@@ -363,15 +413,6 @@ notify-staging-failure:
     - 'MESSAGE_TEXT=":host-red: $CI_PROJECT_NAME main pipeline for <$BUILD_URL|$COMMIT_MESSAGE> failed."'
     - postmessage "#browser-sdk-deploy" "$MESSAGE_TEXT"
 
-notify-release-ready:
-  stage: pre-deploy-notify
-  extends:
-    - .prepare_notification
-    - .tags
-  script:
-    - 'MESSAGE_TEXT=":i: $CI_PROJECT_NAME <$BUILD_URL|$COMMIT_MESSAGE> ready to be deployed to :openobserve:"'
-    - postmessage "#browser-sdk-deploy" "$MESSAGE_TEXT"
-
 notify-prod-canary-success:
   stage: notify:canary
   extends:
@@ -392,24 +433,6 @@ notify-prod-canary-failure:
     - 'MESSAGE_TEXT=":host-red: $CI_PROJECT_NAME release pipeline <$BUILD_URL|$COMMIT_MESSAGE> failed."'
     - postmessage "#browser-sdk-deploy" "$MESSAGE_TEXT"
 
-notify-prod-stable-success:
-  extends:
-    - .prepare_notification
-    - .tags
-  script:
-    - 'MESSAGE_TEXT=":rocket: $CI_PROJECT_NAME <$COMMIT_URL|$COMMIT_MESSAGE> deployed to :earth_americas:."'
-    - postmessage "#browser-sdk-deploy" "$MESSAGE_TEXT"
-    - postmessage "#rum-browser-sdk-ops" "$MESSAGE_TEXT"
-
-notify-prod-stable-failure:
-  extends:
-    - .prepare_notification
-    - .tags
-  when: on_failure
-  script:
-    - 'MESSAGE_TEXT=":host-red: $CI_PROJECT_NAME release pipeline <$BUILD_URL|$COMMIT_MESSAGE> failed."'
-    - postmessage "#browser-sdk-deploy" "$MESSAGE_TEXT"
-
 ########################################################################################################################
 # To staging CI
 ########################################################################################################################
@@ -424,7 +447,7 @@ staging-reset-scheduled:
     - eval $(ssh-agent -s)
   script:
     - yarn
-    - node scripts/staging-ci/staging-reset.js
+    - node scripts/staging-ci/staging-reset.ts
   artifacts:
     reports:
       dotenv: build.env
@@ -454,6 +477,7 @@ staging-reset-scheduled-failure:
 
 merge-into-staging:
   stage: pre-deploy
+  allow_failure: true
   extends:
     - .base-configuration
     - .main
@@ -461,7 +485,26 @@ merge-into-staging:
     - eval $(ssh-agent -s)
   script:
     - yarn
-    - node scripts/staging-ci/merge-into-staging.js
+    - node scripts/update-branch.ts $CURRENT_STAGING
+
+merge-into-next-major:
+  stage: pre-deploy
+  allow_failure: true
+  extends:
+    - .base-configuration
+  only:
+    refs:
+      - main
+    variables:
+      - $NEXT_MAJOR_BRANCH
+  except:
+    refs:
+      - schedules
+  before_script:
+    - eval $(ssh-agent -s)
+  script:
+    - yarn
+    - node scripts/update-branch.ts $NEXT_MAJOR_BRANCH
 
 check-staging-merge:
   stage: test
@@ -473,7 +516,7 @@ check-staging-merge:
     - eval $(ssh-agent -s)
   script:
     - yarn
-    - node scripts/staging-ci/check-staging-merge.js
+    - node scripts/staging-ci/check-staging-merge.ts
 
 # A noop job that's used to signal to `to-staging` that it can merge to the
 # staging branch, even though the pipeline is still running
@@ -498,7 +541,7 @@ check-squash-into-staging:
     - eval $(ssh-agent -s)
   script:
     - yarn
-    - node scripts/staging-ci/check-squash-into-staging.js
+    - node scripts/staging-ci/check-squash-into-staging.ts
 
 ########################################################################################################################
 # Bump e2e chrome version
@@ -514,7 +557,7 @@ bump-chrome-version-scheduled:
     - eval $(ssh-agent -s)
   script:
     - yarn
-    - node scripts/test/bump-chrome-version.js
+    - node scripts/test/bump-chrome-version.ts
   artifacts:
     reports:
       dotenv: build.env
@@ -543,3 +586,44 @@ bump-chrome-version-scheduled-failure:
     - postmessage "#browser-sdk-deploy" "$MESSAGE_TEXT"
   dependencies:
     - bump-chrome-version-scheduled
+
+########################################################################################################################
+# Performance benchmark
+########################################################################################################################
+
+performance-benchmark:
+  stage: task
+  extends: .base-configuration
+  only:
+    variables:
+      - $TARGET_TASK_NAME == "performance-benchmark-scheduled"
+  script:
+    - yarn
+    - yarn test:performance
+
+########################################################################################################################
+# Check expired telemetry
+########################################################################################################################
+
+check-expired-telemetry-scheduled:
+  stage: task
+  extends: .base-configuration
+  only:
+    variables:
+      - $TARGET_TASK_NAME == "check-expired-telemetry"
+  script:
+    - yarn
+    - yarn build
+    - MONITOR_UNTIL_COMMENT_EXPIRED_LEVEL=error yarn lint
+
+check-expired-telemetry-scheduled-failure:
+  extends: .prepare_notification
+  only:
+    variables:
+      - $TARGET_TASK_NAME == "check-expired-telemetry"
+  when: on_failure
+  script:
+    - 'MESSAGE_TEXT=":fire: [*$CI_PROJECT_NAME*] <$BUILD_URL|Expired telemetry detected> :fire:"'
+    - postmessage "#rum-browser-sdk-ops" "$MESSAGE_TEXT"
+  dependencies:
+    - check-expired-telemetry-scheduled

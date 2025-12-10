@@ -1,5 +1,5 @@
-import type { Context, ErrorSource, TimeStamp, User } from '@openobserve/browser-core'
-import type { StatusType } from './domain/logger'
+import type { ErrorSource, RawErrorCause, TimeStamp, ErrorHandling } from '@openobserve/browser-core'
+import type { StatusType } from './domain/logger/isAuthorized'
 
 export type RawLogsEvent =
   | RawConsoleLogsEvent
@@ -9,12 +9,13 @@ export type RawLogsEvent =
   | RawReportLogsEvent
   | RawRuntimeLogsEvent
 
-type Error = {
+interface Error {
+  message?: string
   kind?: string
-  origin: ErrorSource // Todo: Remove in the next major release
   stack?: string
   fingerprint?: string
-  [k: string]: unknown
+  causes?: RawErrorCause[]
+  handling: ErrorHandling | undefined
 }
 
 interface CommonRawLogsEvent {
@@ -22,6 +23,7 @@ interface CommonRawLogsEvent {
   message: string
   status: StatusType
   error?: Error
+  origin: ErrorSource
 }
 
 export interface RawConsoleLogsEvent extends CommonRawLogsEvent {
@@ -57,14 +59,11 @@ export interface RawRuntimeLogsEvent extends CommonRawLogsEvent {
 export interface RawAgentLogsEvent extends CommonRawLogsEvent {
   origin: typeof ErrorSource.AGENT
   status: typeof StatusType.error
-  error: Error
 }
 
 export interface CommonContext {
-  view: {
+  view?: {
     referrer: string
     url: string
   }
-  context: Context
-  user: User
 }

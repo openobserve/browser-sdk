@@ -1,5 +1,5 @@
-import { isIE } from '@openobserve/browser-core'
-import type { RumConfiguration, ViewContexts } from '@openobserve/browser-rum-core'
+import type { RumConfiguration, ViewHistory } from '@openobserve/browser-rum-core'
+import { registerCleanupTask } from '@openobserve/browser-core/test'
 import { createRumSessionManagerMock } from '../../../rum-core/test'
 import { getSessionReplayLink } from './getSessionReplayLink'
 import { addRecord, resetReplayStats } from './replayStats'
@@ -14,104 +14,134 @@ describe('getReplayLink', () => {
   })
   it('should return url without query param if no view', () => {
     const sessionManager = createRumSessionManagerMock().setId('session-id-1')
-    const viewContexts = { findView: () => undefined } as ViewContexts
+    const viewHistory = { findView: () => undefined } as ViewHistory
 
-    const link = getSessionReplayLink(DEFAULT_CONFIGURATION, sessionManager, viewContexts, true)
+    const link = getSessionReplayLink(DEFAULT_CONFIGURATION, sessionManager, viewHistory, true)
 
-    expect(link).toBe(
-      isIE()
-        ? 'https://api.openobserve.ai/rum/replay/sessions/session-id-1?error-type=browser-not-supported'
-        : 'https://api.openobserve.ai/rum/replay/sessions/session-id-1?'
-    )
+    expect(link).toBe('https://api.openobserve.ai/rum/replay/sessions/session-id-1?')
   })
 
   it('should return the replay link', () => {
     const sessionManager = createRumSessionManagerMock().setId('session-id-1')
-    const viewContexts = {
+    const viewHistory = {
       findView: () => ({
         id: 'view-id-1',
         startClocks: {
           timeStamp: 123456,
         },
       }),
-    } as ViewContexts
+    } as ViewHistory
     addRecord('view-id-1')
 
     const link = getSessionReplayLink(
-      { ...DEFAULT_CONFIGURATION, site: 'api.openobserve.ai', subdomain: '' },
+      { ...DEFAULT_CONFIGURATION, subdomain: 'toto' },
       sessionManager,
-      viewContexts,
+      viewHistory,
       true
     )
 
-    expect(link).toBe(
-      isIE()
-        ? 'https://api.openobserve.ai/rum/replay/sessions/session-id-1?error-type=browser-not-supported&seed=view-id-1&from=123456'
-        : 'https://api.openobserve.ai/rum/replay/sessions/session-id-1?seed=view-id-1&from=123456'
-    )
+    expect(link).toBe('https://toto.api.openobserve.ai/rum/replay/sessions/session-id-1?seed=view-id-1&from=123456')
   })
 
-  it('return a param if replay is sampled out', () => {
-    const sessionManager = createRumSessionManagerMock().setId('session-id-1').setPlanWithoutSessionReplay()
-    const viewContexts = {
+  it('should return link when replay is forced', () => {
+    const sessionManager = createRumSessionManagerMock()
+      .setId('session-id-1')
+      .setTrackedWithoutSessionReplay()
+      .setForcedReplay()
+
+    const viewHistory = {
       findView: () => ({
         id: 'view-id-1',
         startClocks: {
           timeStamp: 123456,
         },
       }),
-    } as ViewContexts
+    } as ViewHistory
+    addRecord('view-id-1')
 
     const link = getSessionReplayLink(
-      { ...DEFAULT_CONFIGURATION, site: 'api.openobserve.ai' },
+      { ...DEFAULT_CONFIGURATION, subdomain: 'toto' },
       sessionManager,
-      viewContexts,
+      viewHistory,
       true
     )
-    const errorType = isIE() ? 'browser-not-supported' : 'incorrect-session-plan'
+
+    expect(link).toBe('https://toto.api.openobserve.ai/rum/replay/sessions/session-id-1?seed=view-id-1&from=123456')
+  })
+
+  it('return a param if replay is sampled out', () => {
+    const sessionManager = createRumSessionManagerMock().setId('session-id-1').setTrackedWithoutSessionReplay()
+    const viewHistory = {
+      findView: () => ({
+        id: 'view-id-1',
+        startClocks: {
+          timeStamp: 123456,
+        },
+      }),
+    } as ViewHistory
+
+    const link = getSessionReplayLink(DEFAULT_CONFIGURATION, sessionManager, viewHistory, true)
     expect(link).toBe(
-      `https://api.openobserve.ai/rum/replay/sessions/session-id-1?error-type=${errorType}&seed=view-id-1&from=123456`
+      'https://api.openobserve.ai/rum/replay/sessions/session-id-1?error-type=incorrect-session-plan&seed=view-id-1&from=123456'
     )
   })
 
   it('return a param if rum is sampled out', () => {
     const sessionManager = createRumSessionManagerMock().setNotTracked()
-    const viewContexts = {
+    const viewHistory = {
       findView: () => undefined,
-    } as ViewContexts
+    } as ViewHistory
 
-    const link = getSessionReplayLink(
-      { ...DEFAULT_CONFIGURATION, site: 'api.openobserve.ai' },
-      sessionManager,
-      viewContexts,
-      true
-    )
+    const link = getSessionReplayLink(DEFAULT_CONFIGURATION, sessionManager, viewHistory, true)
 
-    const errorType = isIE() ? 'browser-not-supported' : 'rum-not-tracked'
-    expect(link).toBe(`https://api.openobserve.ai/rum/replay/sessions/no-session-id?error-type=${errorType}`)
+    expect(link).toBe('https://api.openobserve.ai/rum/replay/sessions/no-session-id?error-type=rum-not-tracked')
   })
 
   it('should add a param if the replay was not started', () => {
     const sessionManager = createRumSessionManagerMock().setId('session-id-1')
-    const viewContexts = {
+    const viewHistory = {
       findView: () => ({
         id: 'view-id-1',
         startClocks: {
           timeStamp: 123456,
         },
       }),
-    } as ViewContexts
+    } as ViewHistory
 
-    const link = getSessionReplayLink(
-      { ...DEFAULT_CONFIGURATION, site: 'api.openobserve.ai' },
-      sessionManager,
-      viewContexts,
-      false
-    )
+    const link = getSessionReplayLink(DEFAULT_CONFIGURATION, sessionManager, viewHistory, false)
 
-    const errorType = isIE() ? 'browser-not-supported' : 'replay-not-started'
     expect(link).toBe(
-      `https://api.openobserve.ai/rum/replay/sessions/session-id-1?error-type=${errorType}&seed=view-id-1&from=123456`
+      'https://api.openobserve.ai/rum/replay/sessions/session-id-1?error-type=replay-not-started&seed=view-id-1&from=123456'
     )
+  })
+
+  describe('browser not supported', () => {
+    beforeEach(() => {
+      // browser support function rely on Array.from being a function.
+      const original = Array.from
+      Array.from = undefined as any
+
+      registerCleanupTask(() => {
+        Array.from = original
+      })
+    })
+
+    it('should add a param if the browser is not supported', () => {
+      const sessionManager = createRumSessionManagerMock().setId('session-id-1')
+      const viewContexts = {
+        findView: () => ({
+          id: 'view-id-1',
+          startClocks: {
+            timeStamp: 123456,
+          },
+        }),
+      } as ViewHistory
+
+      const link = getSessionReplayLink(DEFAULT_CONFIGURATION, sessionManager, viewContexts, false)
+
+      expect(link).toBe(
+        'https://api.openobserve.ai/rum/replay/sessions/session-id-1?error-type=browser-not-supported&seed=view-id-1&from=123456'
+      )
+    })
   })
 })

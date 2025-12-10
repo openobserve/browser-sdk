@@ -1,8 +1,9 @@
-import type { DeflateWorkerAction, DeflateWorkerResponse } from '@openobserve/browser-core'
-import { addTelemetryError, display, includes, addEventListener, setTimeout, ONE_SECOND } from '@openobserve/browser-core'
+import type { DeflateWorker, DeflateWorkerResponse } from '@openobserve/browser-core'
+import { addTelemetryError, display, addEventListener, setTimeout, ONE_SECOND } from '@openobserve/browser-core'
 import type { RumConfiguration } from '@openobserve/browser-rum-core'
+import { reportScriptLoadingError } from '../scriptLoadingError'
 
-export const INITIALIZATION_TIME_OUT_DELAY = 10 * ONE_SECOND
+export const INITIALIZATION_TIME_OUT_DELAY = 30 * ONE_SECOND
 
 declare const __BUILD_ENV__WORKER_STRING__: string
 
@@ -23,22 +24,20 @@ type DeflateWorkerState =
     status: DeflateWorkerStatus.Nil
   }
   | {
-    status: DeflateWorkerStatus.Loading
-    worker: DeflateWorker
-    initializationFailureCallbacks: Array<() => void>
-  }
+      status: DeflateWorkerStatus.Loading
+      worker: DeflateWorker
+      stop: () => void
+      initializationFailureCallbacks: Array<() => void>
+    }
   | {
     status: DeflateWorkerStatus.Error
   }
   | {
-    status: DeflateWorkerStatus.Initialized
-    worker: DeflateWorker
-    version: string
-  }
-
-export interface DeflateWorker extends Worker {
-  postMessage(message: DeflateWorkerAction): void
-}
+      status: DeflateWorkerStatus.Initialized
+      worker: DeflateWorker
+      stop: () => void
+      version: string
+    }
 
 export type CreateDeflateWorker = typeof createDeflateWorker
 
@@ -50,12 +49,13 @@ let state: DeflateWorkerState = { status: DeflateWorkerStatus.Nil }
 
 export function startDeflateWorker(
   configuration: RumConfiguration,
+  source: string,
   onInitializationFailure: () => void,
   createDeflateWorkerImpl = createDeflateWorker
 ) {
   if (state.status === DeflateWorkerStatus.Nil) {
     // doStartDeflateWorker updates the state to "loading" or "error"
-    doStartDeflateWorker(configuration, createDeflateWorkerImpl)
+    doStartDeflateWorker(configuration, source, createDeflateWorkerImpl)
   }
 
   switch (state.status) {
@@ -68,6 +68,9 @@ export function startDeflateWorker(
 }
 
 export function resetDeflateWorkerState() {
+  if (state.status === DeflateWorkerStatus.Initialized || state.status === DeflateWorkerStatus.Loading) {
+    state.stop()
+  }
   state = { status: DeflateWorkerStatus.Nil }
 }
 
@@ -84,30 +87,44 @@ export function getDeflateWorkerStatus() {
  *
  * more details: https://bugzilla.mozilla.org/show_bug.cgi?id=1736865#c2
  */
-export function doStartDeflateWorker(configuration: RumConfiguration, createDeflateWorkerImpl = createDeflateWorker) {
+export function doStartDeflateWorker(
+  configuration: RumConfiguration,
+  source: string,
+  createDeflateWorkerImpl = createDeflateWorker
+) {
   try {
     const worker = createDeflateWorkerImpl(configuration)
-    addEventListener(configuration, worker, 'error', (error) => {
-      onError(configuration, error)
+    const { stop: removeErrorListener } = addEventListener(configuration, worker, 'error', (error) => {
+      onError(configuration, source, error)
     })
-    addEventListener(configuration, worker, 'message', ({ data }: MessageEvent<DeflateWorkerResponse>) => {
-      if (data.type === 'errored') {
-        onError(configuration, data.error, data.streamId)
-      } else if (data.type === 'initialized') {
-        onInitialized(data.version)
+    const { stop: removeMessageListener } = addEventListener(
+      configuration,
+      worker,
+      'message',
+      ({ data }: MessageEvent<DeflateWorkerResponse>) => {
+        if (data.type === 'errored') {
+          onError(configuration, source, data.error, data.streamId)
+        } else if (data.type === 'initialized') {
+          onInitialized(data.version)
+        }
       }
-    })
+    )
     worker.postMessage({ action: 'init' })
-    setTimeout(onTimeout, INITIALIZATION_TIME_OUT_DELAY)
-    state = { status: DeflateWorkerStatus.Loading, worker, initializationFailureCallbacks: [] }
+    setTimeout(() => onTimeout(source), INITIALIZATION_TIME_OUT_DELAY)
+    const stop = () => {
+      removeErrorListener()
+      removeMessageListener()
+    }
+
+    state = { status: DeflateWorkerStatus.Loading, worker, stop, initializationFailureCallbacks: [] }
   } catch (error) {
-    onError(configuration, error)
+    onError(configuration, source, error)
   }
 }
 
-function onTimeout() {
+function onTimeout(source: string) {
   if (state.status === DeflateWorkerStatus.Loading) {
-    display.error('Session Replay recording failed to start: a timeout occurred while initializing the Worker')
+    display.error(`${source} failed to start: a timeout occurred while initializing the Worker`)
     state.initializationFailureCallbacks.forEach((callback) => callback())
     state = { status: DeflateWorkerStatus.Error }
   }
@@ -115,26 +132,18 @@ function onTimeout() {
 
 function onInitialized(version: string) {
   if (state.status === DeflateWorkerStatus.Loading) {
-    state = { status: DeflateWorkerStatus.Initialized, worker: state.worker, version }
+    state = { status: DeflateWorkerStatus.Initialized, worker: state.worker, stop: state.stop, version }
   }
 }
 
-function onError(configuration: RumConfiguration, error: unknown, streamId?: number) {
+function onError(configuration: RumConfiguration, source: string, error: unknown, streamId?: number) {
   if (state.status === DeflateWorkerStatus.Loading || state.status === DeflateWorkerStatus.Nil) {
-    display.error('Session Replay recording failed to start: an error occurred while creating the Worker:', error)
-    if (error instanceof Event || (error instanceof Error && isMessageCspRelated(error.message))) {
-      let baseMessage
-      if (configuration.workerUrl) {
-        baseMessage = `Please make sure the Worker URL ${configuration.workerUrl} is correct and CSP is correctly configured.`
-      } else {
-        baseMessage = 'Please make sure CSP is correctly configured.'
-      }
-      display.error(
-        `${baseMessage} See documentation at https://docs.openobserve.ai/integrations/content_security_policy_logs/#use-csp-with-real-user-monitoring-and-session-replay`
-      )
-    } else {
-      addTelemetryError(error)
-    }
+    reportScriptLoadingError({
+      configuredUrl: configuration.workerUrl,
+      error,
+      source,
+      scriptType: 'worker',
+    })
     if (state.status === DeflateWorkerStatus.Loading) {
       state.initializationFailureCallbacks.forEach((callback) => callback())
     }
@@ -145,12 +154,4 @@ function onError(configuration: RumConfiguration, error: unknown, streamId?: num
       stream_id: streamId,
     })
   }
-}
-
-function isMessageCspRelated(message: string) {
-  return (
-    includes(message, 'Content Security Policy') ||
-    // Related to `require-trusted-types-for` CSP: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/require-trusted-types-for
-    includes(message, "requires 'TrustedScriptURL'")
-  )
 }

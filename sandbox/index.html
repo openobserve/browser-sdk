@@ -5,6 +5,7 @@
     <title>Sandbox</title>
     <script src="http://localhost:8080/datadog-rum.js"></script>
     <script src="http://localhost:8080/datadog-logs.js"></script>
+    <script src="http://localhost:8080/datadog-flagging.js"></script>
     <script>
       DD_RUM.init({
         clientToken: 'xxx',
@@ -14,16 +15,19 @@
         trackLongTasks: true,
         telemetrySampleRate: 100,
         telemetryConfigurationSampleRate: 100,
+        telemetryUsageSampleRate: 100,
         enableExperimentalFeatures: [],
       })
-      DD_RUM.startSessionReplayRecording()
       DD_LOGS.init({
         clientToken: 'xxx',
         telemetrySampleRate: 100,
         telemetryConfigurationSampleRate: 100,
+        telemetryUsageSampleRate: 100,
         enableExperimentalFeatures: [],
       })
+      DD_FLAGGING.init()
     </script>
   </head>
+
   <body></body>
 </html>

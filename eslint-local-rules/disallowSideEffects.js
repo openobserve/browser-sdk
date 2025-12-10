@@ -1,6 +1,6 @@
-const path = require('path')
+import path from 'node:path'
 
-module.exports = {
+export default {
   meta: {
     docs: {
       description:
@@ -22,17 +22,23 @@ module.exports = {
   },
 }
 
-const packagesRoot = path.resolve(__dirname, '..', 'packages')
+const packagesRoot = path.resolve(import.meta.dirname, '..', 'packages')
 
 // Those modules are known to have side effects when evaluated
 const pathsWithSideEffect = new Set([
   `${packagesRoot}/logs/src/entries/main.ts`,
+  `${packagesRoot}/flagging/src/entries/main.ts`,
   `${packagesRoot}/rum/src/entries/main.ts`,
   `${packagesRoot}/rum-slim/src/entries/main.ts`,
 ])
 
 // Those packages are known to have no side effects when evaluated
-const packagesWithoutSideEffect = new Set(['@openobserve/browser-core', '@openobserve/browser-rum-core'])
+const packagesWithoutSideEffect = new Set([
+  '@openobserve/browser-core', 
+  '@openobserve/browser-rum-core', 
+  'react', 
+  'react-router-dom',
+])
 
 /**
  * Iterate over the given node and its children, and report any node that may have a side effect
@@ -111,6 +117,7 @@ function reportPotentialSideEffect(context, node) {
       reportPotentialSideEffect(context, node.object)
       reportPotentialSideEffect(context, node.property)
       return
+    case 'ConditionalExpression':
     case 'FunctionExpression':
     case 'ArrowFunctionExpression':
     case 'FunctionDeclaration':

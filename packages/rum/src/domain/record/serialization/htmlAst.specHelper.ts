@@ -1,8 +1,15 @@
 import type { RumConfiguration } from '@openobserve/browser-rum-core'
+import { NodePrivacyLevel, PRIVACY_ATTR_NAME } from '@openobserve/browser-rum-core'
 import { display, noop, objectValues } from '@openobserve/browser-core'
 import type { SerializedNodeWithId } from '../../../types'
-import { serializeNodeWithId, SerializationContextStatus, createElementsScrollPositions } from '..'
-import { NodePrivacyLevel, PRIVACY_ATTR_NAME } from '../../../constants'
+import {
+  serializeNodeWithId,
+  SerializationContextStatus,
+  createElementsScrollPositions,
+  createSerializationStats,
+} from '..'
+import { createNodeIds } from '../nodeIds'
+import { createSerializationScope } from './serializationScope'
 
 export const makeHtmlDoc = (htmlContent: string, privacyTag: string) => {
   try {
@@ -36,14 +43,15 @@ const DEFAULT_SHADOW_ROOT_CONTROLLER = {
 export const generateLeanSerializedDoc = (htmlContent: string, privacyTag: string) => {
   const newDoc = makeHtmlDoc(htmlContent, privacyTag)
   const serializedDoc = removeIdFieldsRecursivelyClone(
-    serializeNodeWithId(newDoc, {
-      parentNodePrivacyLevel: NodePrivacyLevel.ALLOW,
+    serializeNodeWithId(newDoc, NodePrivacyLevel.ALLOW, {
       serializationContext: {
+        serializationStats: createSerializationStats(),
         shadowRootsController: DEFAULT_SHADOW_ROOT_CONTROLLER,
         status: SerializationContextStatus.INITIAL_FULL_SNAPSHOT,
         elementsScrollPositions: createElementsScrollPositions(),
       },
       configuration: {} as RumConfiguration,
+      scope: createSerializationScope(createNodeIds()),
     })! as unknown as Record<string, unknown>
   ) as unknown as SerializedNodeWithId
   return serializedDoc
@@ -53,7 +61,7 @@ export const HTML = `
 <head>
     <link href="https://public.com/path/nested?query=param#hash" rel="stylesheet">
     <style>
-      .example {content: "anything";}
+      .example {color: red;}
     </style>
     <script>private</script>
     <meta>
@@ -68,6 +76,11 @@ export const HTML = `
       Click https://private.com/path/nested?query=param#hash
     </a>
     <img src='https://private.com/path/nested?query=param#hash'>
+    <video controls>
+      <source src="https://private.com/path/nested?query=param#hash" type="video/webm">
+      <source src="https://private.com/path/nested?query=param#hash" type="video/mp4">
+      <p>Your browser cannot play the provided video file.</p>
+    </video>
     <select>
       <option>private option A</option>
       <option>private option B</option>
@@ -142,14 +155,8 @@ export const AST_MASK = {
             {
               type: 2,
               tagName: 'style',
-              attributes: {},
-              childNodes: [
-                {
-                  type: 3,
-                  textContent: '\n      .example {content: "anything";}\n    ',
-                  isStyle: true,
-                },
-              ],
+              attributes: { _cssText: '.example { color: red; }' },
+              childNodes: [],
             },
             {
               type: 2,
@@ -258,6 +265,65 @@ export const AST_MASK = {
                 src: 'data:image/gif;base64,R0lGODlhAQABAIAAAMLCwgAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==',
               },
               childNodes: [],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'video',
+              attributes: {
+                controls: '',
+                rr_mediaState: 'paused',
+              },
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'source',
+                  attributes: {
+                    src: 'data:image/gif;base64,R0lGODlhAQABAIAAAMLCwgAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==',
+                    type: 'video/webm',
+                  },
+                  childNodes: [],
+                },
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'source',
+                  attributes: {
+                    src: 'data:image/gif;base64,R0lGODlhAQABAIAAAMLCwgAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==',
+                    type: 'video/mp4',
+                  },
+                  childNodes: [],
+                },
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'p',
+                  attributes: {},
+                  childNodes: [
+                    {
+                      type: 3,
+                      textContent: 'xxxx xxxxxxx xxxxxx xxxx xxx xxxxxxxx xxxxx xxxxx',
+                    },
+                  ],
+                },
+                {
+                  type: 3,
+                  textContent: '\n    ',
+                },
+              ],
             },
             {
               type: 3,
@@ -455,14 +521,8 @@ export const AST_MASK_USER_INPUT = {
             {
               type: 2,
               tagName: 'style',
-              attributes: {},
-              childNodes: [
-                {
-                  type: 3,
-                  textContent: '\n      .example {content: "anything";}\n    ',
-                  isStyle: true,
-                },
-              ],
+              attributes: { _cssText: '.example { color: red; }' },
+              childNodes: [],
             },
             {
               type: 2,
@@ -571,6 +631,65 @@ export const AST_MASK_USER_INPUT = {
                 src: 'https://private.com/path/nested?query=param#hash',
               },
               childNodes: [],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'video',
+              attributes: {
+                controls: '',
+                rr_mediaState: 'paused',
+              },
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'source',
+                  attributes: {
+                    src: 'https://private.com/path/nested?query=param#hash',
+                    type: 'video/webm',
+                  },
+                  childNodes: [],
+                },
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'source',
+                  attributes: {
+                    src: 'https://private.com/path/nested?query=param#hash',
+                    type: 'video/mp4',
+                  },
+                  childNodes: [],
+                },
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'p',
+                  attributes: {},
+                  childNodes: [
+                    {
+                      type: 3,
+                      textContent: 'Your browser cannot play the provided video file.',
+                    },
+                  ],
+                },
+                {
+                  type: 3,
+                  textContent: '\n    ',
+                },
+              ],
             },
             {
               type: 3,
@@ -735,6 +854,372 @@ export const AST_MASK_USER_INPUT = {
   ],
 }
 
+export const AST_MASK_UNLESS_ALLOWLISTED = {
+  type: 0,
+  childNodes: [
+    {
+      type: 1,
+      name: 'html',
+      publicId: '',
+      systemId: '',
+    },
+    {
+      type: 2,
+      tagName: 'html',
+      attributes: {
+        'data-dd-privacy': 'mask-unless-allowlisted',
+      },
+      childNodes: [
+        {
+          type: 2,
+          tagName: 'head',
+          attributes: {},
+          childNodes: [
+            {
+              type: 2,
+              tagName: 'link',
+              attributes: {
+                href: 'https://public.com/path/nested?query=param#hash',
+                rel: 'stylesheet',
+              },
+              childNodes: [],
+            },
+            {
+              type: 2,
+              tagName: 'style',
+              attributes: { _cssText: '.example { color: red; }' },
+              childNodes: [],
+            },
+            {
+              type: 2,
+              tagName: 'meta',
+              attributes: {},
+              childNodes: [],
+            },
+            {
+              type: 2,
+              tagName: 'base',
+              attributes: {},
+              childNodes: [],
+            },
+            {
+              type: 2,
+              tagName: 'title',
+              attributes: {},
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: 'xxxxxxx xxxxx',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: 3,
+          textContent: '\n',
+        },
+        {
+          type: 2,
+          tagName: 'body',
+          attributes: {},
+          childNodes: [
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'h1',
+              attributes: {},
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: 'xxxxx xxxxxxx xxxxx',
+                },
+              ],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'p',
+              attributes: {},
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: 'xxxxxx xxxxx xxxxxxx xxxx',
+                },
+              ],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'noscript',
+              attributes: {},
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: 'xxxxx xxxxxxx xxxxx',
+                },
+              ],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'a',
+              attributes: {
+                href: '***',
+              },
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: '\n      xxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n    ',
+                },
+              ],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'img',
+              attributes: {
+                src: 'data:image/gif;base64,R0lGODlhAQABAIAAAMLCwgAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==',
+              },
+              childNodes: [],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'video',
+              attributes: {
+                controls: '',
+                rr_mediaState: 'paused',
+              },
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'source',
+                  attributes: {
+                    src: 'data:image/gif;base64,R0lGODlhAQABAIAAAMLCwgAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==',
+                    type: 'video/webm',
+                  },
+                  childNodes: [],
+                },
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'source',
+                  attributes: {
+                    src: 'data:image/gif;base64,R0lGODlhAQABAIAAAMLCwgAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==',
+                    type: 'video/mp4',
+                  },
+                  childNodes: [],
+                },
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'p',
+                  attributes: {},
+                  childNodes: [
+                    {
+                      type: 3,
+                      textContent: 'xxxx xxxxxxx xxxxxx xxxx xxx xxxxxxxx xxxxx xxxxx',
+                    },
+                  ],
+                },
+                {
+                  type: 3,
+                  textContent: '\n    ',
+                },
+              ],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'select',
+              attributes: {
+                value: '***',
+              },
+              childNodes: [
+                {
+                  type: 2,
+                  tagName: 'option',
+                  attributes: {},
+                  childNodes: [
+                    {
+                      type: 3,
+                      textContent: '***',
+                    },
+                  ],
+                },
+                {
+                  type: 2,
+                  tagName: 'option',
+                  attributes: {},
+                  childNodes: [
+                    {
+                      type: 3,
+                      textContent: '***',
+                    },
+                  ],
+                },
+                {
+                  type: 2,
+                  tagName: 'option',
+                  attributes: {},
+                  childNodes: [
+                    {
+                      type: 3,
+                      textContent: '***',
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'input',
+              attributes: {
+                type: 'password',
+              },
+              childNodes: [],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'input',
+              attributes: {
+                type: 'text',
+              },
+              childNodes: [],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'input',
+              attributes: {
+                type: 'checkbox',
+                name: 'inputFoo',
+                value: '***',
+              },
+              childNodes: [],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'label',
+              attributes: {
+                for: 'inputFoo',
+              },
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: 'xxxxxxxx xxxxx',
+                },
+              ],
+            },
+            {
+              type: 3,
+              textContent: '\n\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'input',
+              attributes: {
+                type: 'radio',
+                name: 'radioGroup',
+                value: '***',
+              },
+              childNodes: [],
+            },
+            {
+              type: 3,
+              textContent: '\n\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'textarea',
+              attributes: {
+                name: 'baz',
+                rows: '2',
+                cols: '20',
+                value: '***',
+              },
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: '      xxxxxx xxxxx xxxxxxx xxx\n    ',
+                },
+              ],
+            },
+            {
+              type: 3,
+              textContent: '\n\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'div',
+              attributes: {
+                contenteditable: '',
+              },
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: 'xxxxxxxx xxxxxxx xxx',
+                },
+              ],
+            },
+            {
+              type: 3,
+              textContent: '\n',
+            },
+          ],
+        },
+      ],
+    },
+  ],
+}
+
 export const AST_ALLOW = {
   type: 0,
   childNodes: [
@@ -768,14 +1253,8 @@ export const AST_ALLOW = {
             {
               type: 2,
               tagName: 'style',
-              attributes: {},
-              childNodes: [
-                {
-                  type: 3,
-                  textContent: '\n      .example {content: "anything";}\n    ',
-                  isStyle: true,
-                },
-              ],
+              attributes: { _cssText: '.example { color: red; }' },
+              childNodes: [],
             },
             {
               type: 2,
@@ -884,6 +1363,65 @@ export const AST_ALLOW = {
                 src: 'https://private.com/path/nested?query=param#hash',
               },
               childNodes: [],
+            },
+            {
+              type: 3,
+              textContent: '\n    ',
+            },
+            {
+              type: 2,
+              tagName: 'video',
+              attributes: {
+                controls: '',
+                rr_mediaState: 'paused',
+              },
+              childNodes: [
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'source',
+                  attributes: {
+                    src: 'https://private.com/path/nested?query=param#hash',
+                    type: 'video/webm',
+                  },
+                  childNodes: [],
+                },
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'source',
+                  attributes: {
+                    src: 'https://private.com/path/nested?query=param#hash',
+                    type: 'video/mp4',
+                  },
+                  childNodes: [],
+                },
+                {
+                  type: 3,
+                  textContent: '\n      ',
+                },
+                {
+                  type: 2,
+                  tagName: 'p',
+                  attributes: {},
+                  childNodes: [
+                    {
+                      type: 3,
+                      textContent: 'Your browser cannot play the provided video file.',
+                    },
+                  ],
+                },
+                {
+                  type: 3,
+                  textContent: '\n    ',
+                },
+              ],
             },
             {
               type: 3,

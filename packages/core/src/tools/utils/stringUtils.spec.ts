@@ -1,4 +1,9 @@
-import { safeTruncate, findCommaSeparatedValue } from './stringUtils'
+import {
+  safeTruncate,
+  findCommaSeparatedValue,
+  findCommaSeparatedValues,
+  findAllCommaSeparatedValues,
+} from './stringUtils'
 
 describe('stringUtils', () => {
   describe('safeTruncate', () => {
@@ -31,8 +36,39 @@ describe('stringUtils', () => {
       expect(findCommaSeparatedValue('foo=a;bar=b', 'bar')).toBe('b')
     })
 
+    it('is white-spaces tolerant', () => {
+      expect(findCommaSeparatedValue('   foo  =   a;  bar  =   b', 'foo')).toBe('a')
+      expect(findCommaSeparatedValue('   foo  =   a;  bar  =   b', 'bar')).toBe('b')
+    })
+
+    it('supports values containing an = character', () => {
+      expect(findCommaSeparatedValue('foo=a=b', 'foo')).toBe('a=b')
+    })
+
+    it('supports keys containing `-`', () => {
+      expect(findCommaSeparatedValue('foo-bar=baz', 'foo-bar')).toBe('baz')
+    })
+
     it('returns undefined if the value is not found', () => {
       expect(findCommaSeparatedValue('foo=a;bar=b', 'baz')).toBe(undefined)
+    })
+  })
+
+  describe('findCommaSeparatedValues', () => {
+    it('returns the values from a comma separated hash', () => {
+      const expectedValues = new Map<string, string>()
+      expectedValues.set('foo', 'a')
+      expectedValues.set('bar', 'b')
+      expect(findCommaSeparatedValues('foo=a;bar=b')).toEqual(expectedValues)
+    })
+  })
+
+  describe('findAllCommaSeparatedValues', () => {
+    it('returns all the values from a comma separated hash', () => {
+      const expectedValues = new Map<string, string[]>()
+      expectedValues.set('foo', ['a', 'c'])
+      expectedValues.set('bar', ['b'])
+      expect(findAllCommaSeparatedValues('foo=a;bar=b;foo=c')).toEqual(expectedValues)
     })
   })
 })

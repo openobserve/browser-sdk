@@ -1,50 +1,25 @@
-import type { Context, RawError, EventRateLimiter, User } from '@openobserve/browser-core'
+import type { RawError, EventRateLimiter } from '@openobserve/browser-core'
 import {
   combine,
   isEmptyObject,
-  timeStampNow,
-  currentDrift,
   display,
   createEventRateLimiter,
-  canUseEventBridge,
-  assign,
-  round,
-  dateNow,
+  HookNames,
+  DISCARDED,
+  buildTags,
 } from '@openobserve/browser-core'
 import type { RumEventDomainContext } from '../domainContext.types'
-import type {
-  RawRumErrorEvent,
-  RawRumEvent,
-  RawRumLongTaskEvent,
-  RawRumResourceEvent,
-  RumContext,
-} from '../rawRumEvent.types'
+import type { AssembledRumEvent } from '../rawRumEvent.types'
 import { RumEventType } from '../rawRumEvent.types'
-import type { RumEvent } from '../rumEvent.types'
-import { getSyntheticsContext } from './contexts/syntheticsContext'
-import { getCiTestContext } from './contexts/ciTestContext'
 import type { LifeCycle } from './lifeCycle'
 import { LifeCycleEventType } from './lifeCycle'
-import type { ViewContexts } from './contexts/viewContexts'
-import type { RumSessionManager } from './rumSessionManager'
-import type { UrlContexts } from './contexts/urlContexts'
 import type { RumConfiguration } from './configuration'
-import type { ActionContexts } from './rumEventsCollection/action/actionCollection'
-import { getDisplayContext } from './contexts/displayContext'
-import type { CommonContext } from './contexts/commonContext'
 import type { ModifiableFieldPaths } from './limitModification'
 import { limitModification } from './limitModification'
-
-// replaced at build time
-declare const __BUILD_ENV__SDK_VERSION__: string
-
-const enum SessionType {
-  SYNTHETICS = 'synthetics',
-  USER = 'user',
-  CI_TEST = 'ci_test',
-}
+import type { Hooks } from './hooks'
 
 const VIEW_MODIFIABLE_FIELD_PATHS: ModifiableFieldPaths = {
+  'view.name': 'string',
   'view.url': 'string',
   'view.referrer': 'string',
 }
@@ -53,160 +28,92 @@ const USER_CUSTOMIZABLE_FIELD_PATHS: ModifiableFieldPaths = {
   context: 'object',
 }
 
-let modifiableFieldPathsByEvent: { [key in RumEventType]: ModifiableFieldPaths }
+const ROOT_MODIFIABLE_FIELD_PATHS: ModifiableFieldPaths = {
+  service: 'string',
+  version: 'string',
+}
 
-type Mutable<T> = { -readonly [P in keyof T]: T[P] }
+let modifiableFieldPathsByEvent: { [key in RumEventType]: ModifiableFieldPaths }
 
 type StartTimeObject = { [key: string]: string };
 
 export function startRumAssembly(
   configuration: RumConfiguration,
   lifeCycle: LifeCycle,
-  sessionManager: RumSessionManager,
-  viewContexts: ViewContexts,
-  urlContexts: UrlContexts,
-  actionContexts: ActionContexts,
-  buildCommonContext: () => CommonContext,
-  reportError: (error: RawError) => void
+  hooks: Hooks,
+  reportError: (error: RawError) => void,
+  eventRateLimit?: number
 ) {
   modifiableFieldPathsByEvent = {
-    [RumEventType.VIEW]: VIEW_MODIFIABLE_FIELD_PATHS,
-    [RumEventType.ERROR]: assign(
-      {
-        'error.message': 'string',
-        'error.stack': 'string',
-        'error.resource.url': 'string',
-        'error.fingerprint': 'string',
-      },
-      USER_CUSTOMIZABLE_FIELD_PATHS,
-      VIEW_MODIFIABLE_FIELD_PATHS
-    ),
-    [RumEventType.RESOURCE]: assign(
-      {
-        'resource.url': 'string',
-      },
-      USER_CUSTOMIZABLE_FIELD_PATHS,
-      VIEW_MODIFIABLE_FIELD_PATHS
-    ),
-    [RumEventType.ACTION]: assign(
-      {
-        'action.target.name': 'string',
-      },
-      USER_CUSTOMIZABLE_FIELD_PATHS,
-      VIEW_MODIFIABLE_FIELD_PATHS
-    ),
-    [RumEventType.LONG_TASK]: assign({}, USER_CUSTOMIZABLE_FIELD_PATHS, VIEW_MODIFIABLE_FIELD_PATHS),
+    [RumEventType.VIEW]: {
+      'view.performance.lcp.resource_url': 'string',
+      ...USER_CUSTOMIZABLE_FIELD_PATHS,
+      ...VIEW_MODIFIABLE_FIELD_PATHS,
+      ...ROOT_MODIFIABLE_FIELD_PATHS,
+    },
+    [RumEventType.ERROR]: {
+      'error.message': 'string',
+      'error.stack': 'string',
+      'error.resource.url': 'string',
+      'error.fingerprint': 'string',
+      ...USER_CUSTOMIZABLE_FIELD_PATHS,
+      ...VIEW_MODIFIABLE_FIELD_PATHS,
+      ...ROOT_MODIFIABLE_FIELD_PATHS,
+    },
+    [RumEventType.RESOURCE]: {
+      'resource.url': 'string',
+      'resource.graphql.variables': 'string',
+      ...USER_CUSTOMIZABLE_FIELD_PATHS,
+      ...VIEW_MODIFIABLE_FIELD_PATHS,
+      ...ROOT_MODIFIABLE_FIELD_PATHS,
+    },
+    [RumEventType.ACTION]: {
+      'action.target.name': 'string',
+      ...USER_CUSTOMIZABLE_FIELD_PATHS,
+      ...VIEW_MODIFIABLE_FIELD_PATHS,
+      ...ROOT_MODIFIABLE_FIELD_PATHS,
+    },
+    [RumEventType.LONG_TASK]: {
+      'long_task.scripts[].source_url': 'string',
+      'long_task.scripts[].invoker': 'string',
+      ...USER_CUSTOMIZABLE_FIELD_PATHS,
+      ...VIEW_MODIFIABLE_FIELD_PATHS,
+      ...ROOT_MODIFIABLE_FIELD_PATHS,
+    },
+    [RumEventType.VITAL]: {
+      ...USER_CUSTOMIZABLE_FIELD_PATHS,
+      ...VIEW_MODIFIABLE_FIELD_PATHS,
+      ...ROOT_MODIFIABLE_FIELD_PATHS,
+    },
   }
   const eventRateLimiters = {
-    [RumEventType.ERROR]: createEventRateLimiter(
-      RumEventType.ERROR,
-      configuration.eventRateLimiterThreshold,
-      reportError
-    ),
-    [RumEventType.ACTION]: createEventRateLimiter(
-      RumEventType.ACTION,
-      configuration.eventRateLimiterThreshold,
-      reportError
-    ),
+    [RumEventType.ERROR]: createEventRateLimiter(RumEventType.ERROR, reportError, eventRateLimit),
+    [RumEventType.ACTION]: createEventRateLimiter(RumEventType.ACTION, reportError, eventRateLimit),
+    [RumEventType.VITAL]: createEventRateLimiter(RumEventType.VITAL, reportError, eventRateLimit),
   }
-
-  const syntheticsContext = getSyntheticsContext()
-  const ciTestContext = getCiTestContext()
 
   lifeCycle.subscribe(
     LifeCycleEventType.RAW_RUM_EVENT_COLLECTED,
-    ({ startTime, rawRumEvent, domainContext, savedCommonContext, customerContext }) => {
-      const viewContext = viewContexts.findView(startTime)
-      const urlContext = urlContexts.findUrl(startTime)
-      const session = sessionManager.findTrackedSession(startTime)
+    ({ startTime, duration, rawRumEvent, domainContext }) => {
+      const defaultRumEventAttributes = hooks.triggerHook(HookNames.Assemble, {
+        eventType: rawRumEvent.type,
+        startTime,
+        duration,
+      })!
 
-      let objStartTime: StartTimeObject = {};
-      const strStartTime = sessionStorage.getItem('oo_rum_session_starttime');
-
-      if (strStartTime) {
-          try {
-              // Safely parsing the JSON string without using eval
-              objStartTime = JSON.parse(strStartTime);
-          } catch (error) {
-            console.log('Error parsing session start time:', error);
-          }
+      if (defaultRumEventAttributes === DISCARDED) {
+        return
       }
 
-      let sessionStartTime = '';
+      const serverRumEvent = combine(defaultRumEventAttributes, rawRumEvent, {
+        ootags: buildTags(configuration).join(','),
+      }) as AssembledRumEvent
 
-      // Check if 'session' and 'session.id' are defined
-      if (session && session.id) {
-          // Use nullish coalescing operator (??) to provide a default object if objStartTime[session.id] is undefined
-          sessionStartTime = objStartTime[session.id] ?? '';
-
-          // Check if a new session start time needs to be created
-          if (sessionStartTime === '') {
-              objStartTime[session.id] = (new Date().getTime()).toString();
-              sessionStorage.setItem('oo_rum_session_starttime', JSON.stringify(objStartTime));
-              sessionStartTime = objStartTime[session.id];
-              // Invoke the cleanup function
-              cleanupOldSessions();
-          }
-      }
-
-      if (session && viewContext && urlContext) {
-        const commonContext = savedCommonContext || buildCommonContext()
-        const actionId = actionContexts.findActionId(startTime)
-
-        const rumContext: RumContext = {
-          _oo: {
-            format_version: 2,
-            drift: currentDrift(),
-            session: {
-              plan: session.plan,
-            },
-            configuration: {
-              session_sample_rate: round(configuration.sessionSampleRate, 3),
-              session_replay_sample_rate: round(configuration.sessionReplaySampleRate, 3),
-            },
-            browser_sdk_version: canUseEventBridge() ? __BUILD_ENV__SDK_VERSION__ : undefined,
-          },
-          application: {
-            id: configuration.applicationId,
-          },
-          date: timeStampNow(),
-          service: viewContext.service || configuration.service,
-          version: viewContext.version || configuration.version,
-          source: 'browser',
-          session: {
-            id: session.id,
-            type: syntheticsContext ? SessionType.SYNTHETICS : ciTestContext ? SessionType.CI_TEST : SessionType.USER,
-            start_time: sessionStartTime,
-          },
-          view: {
-            id: viewContext.id,
-            name: viewContext.name,
-            url: urlContext.url,
-            referrer: urlContext.referrer,
-          },
-          action: needToAssembleWithAction(rawRumEvent) && actionId ? { id: actionId } : undefined,
-          synthetics: syntheticsContext,
-          ci_test: ciTestContext,
-          display: getDisplayContext(configuration),
+      if (shouldSend(serverRumEvent, configuration.beforeSend, domainContext, eventRateLimiters)) {
+        if (isEmptyObject(serverRumEvent.context!)) {
+          delete serverRumEvent.context
         }
-
-        const serverRumEvent = combine(rumContext as RumContext & Context, rawRumEvent) as RumEvent & Context
-        serverRumEvent.context = combine(commonContext.context, customerContext)
-
-        if (!('has_replay' in serverRumEvent.session)) {
-          ; (serverRumEvent.session as Mutable<RumEvent['session']>).has_replay = commonContext.hasReplay
-        }
-
-        if (!isEmptyObject(commonContext.user)) {
-          ; (serverRumEvent.usr as Mutable<RumEvent['usr']>) = commonContext.user as User & Context
-        }
-
-        if (shouldSend(serverRumEvent, configuration.beforeSend, domainContext, eventRateLimiters)) {
-          if (isEmptyObject(serverRumEvent.context)) {
-            delete serverRumEvent.context
-          }
-          lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, serverRumEvent)
-        }
+        lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, serverRumEvent)
       }
     }
   )
@@ -244,7 +151,7 @@ function cleanupOldSessions(): void {
 }
 
 function shouldSend(
-  event: RumEvent & Context,
+  event: AssembledRumEvent,
   beforeSend: RumConfiguration['beforeSend'],
   domainContext: RumEventDomainContext,
   eventRateLimiters: { [key in RumEventType]?: EventRateLimiter }
@@ -262,11 +169,6 @@ function shouldSend(
   }
 
   const rateLimitReached = eventRateLimiters[event.type]?.isLimitReached()
-  return !rateLimitReached
-}
 
-function needToAssembleWithAction(
-  event: RawRumEvent
-): event is RawRumErrorEvent | RawRumResourceEvent | RawRumLongTaskEvent {
-  return [RumEventType.ERROR, RumEventType.RESOURCE, RumEventType.LONG_TASK].indexOf(event.type) !== -1
+  return !rateLimitReached
 }

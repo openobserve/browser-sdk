@@ -1,13 +1,8 @@
 import type { Subscription, TimeoutId, TimeStamp } from '@openobserve/browser-core'
-import {
-  instrumentMethodAndCallOriginal,
-  matchList,
-  monitor,
-  Observable,
-  timeStampNow,
-  setTimeout,
-  clearTimeout,
-} from '@openobserve/browser-core'
+import { matchList, monitor, Observable, timeStampNow, setTimeout, clearTimeout } from '@openobserve/browser-core'
+import { createPerformanceObservable, RumPerformanceEntryType } from '../browser/performanceObservable'
+import type { RumMutationRecord } from '../browser/domMutationObservable'
+import { isElementNode } from '../browser/htmlDomUtils'
 import type { RumConfiguration } from './configuration'
 import type { LifeCycle } from './lifeCycle'
 import { LifeCycleEventType } from './lifeCycle'
@@ -16,6 +11,8 @@ import { LifeCycleEventType } from './lifeCycle'
 export const PAGE_ACTIVITY_VALIDATION_DELAY = 100
 // Delay to wait after a page activity to end the tracking process
 export const PAGE_ACTIVITY_END_DELAY = 100
+
+export const EXCLUDED_MUTATIONS_ATTRIBUTE = 'data-dd-excluded-activity-mutations'
 
 export interface PageActivityEvent {
   isBusy: boolean
@@ -55,12 +52,18 @@ export type PageActivityEndEvent = { hadActivity: true; end: TimeStamp } | { had
  */
 export function waitPageActivityEnd(
   lifeCycle: LifeCycle,
-  domMutationObservable: Observable<void>,
+  domMutationObservable: Observable<RumMutationRecord[]>,
+  windowOpenObservable: Observable<void>,
   configuration: RumConfiguration,
   pageActivityEndCallback: (event: PageActivityEndEvent) => void,
   maxDuration?: number
 ) {
-  const pageActivityObservable = createPageActivityObservable(lifeCycle, domMutationObservable, configuration)
+  const pageActivityObservable = createPageActivityObservable(
+    lifeCycle,
+    domMutationObservable,
+    windowOpenObservable,
+    configuration
+  )
   return doWaitPageActivityEnd(pageActivityObservable, pageActivityEndCallback, maxDuration)
 }
 
@@ -116,18 +119,24 @@ export function doWaitPageActivityEnd(
 
 export function createPageActivityObservable(
   lifeCycle: LifeCycle,
-  domMutationObservable: Observable<void>,
+  domMutationObservable: Observable<RumMutationRecord[]>,
+  windowOpenObservable: Observable<void>,
   configuration: RumConfiguration
 ): Observable<PageActivityEvent> {
-  const observable = new Observable<PageActivityEvent>(() => {
+  return new Observable<PageActivityEvent>((observable) => {
     const subscriptions: Subscription[] = []
     let firstRequestIndex: undefined | number
     let pendingRequestsCount = 0
 
     subscriptions.push(
-      domMutationObservable.subscribe(notifyPageActivity),
-      lifeCycle.subscribe(LifeCycleEventType.PERFORMANCE_ENTRIES_COLLECTED, (entries) => {
-        if (entries.some((entry) => entry.entryType === 'resource' && !isExcludedUrl(configuration, entry.name))) {
+      domMutationObservable.subscribe((mutations) => {
+        if (!mutations.every(isExcludedMutation)) {
+          notifyPageActivity()
+        }
+      }),
+      windowOpenObservable.subscribe(notifyPageActivity),
+      createPerformanceObservable(configuration, { type: RumPerformanceEntryType.RESOURCE }).subscribe((entries) => {
+        if (entries.some((entry) => !isExcludedUrl(configuration, entry.name))) {
           notifyPageActivity()
         }
       }),
@@ -155,10 +164,7 @@ export function createPageActivityObservable(
       })
     )
 
-    const { stop: stopTrackingWindowOpen } = trackWindowOpen(notifyPageActivity)
-
     return () => {
-      stopTrackingWindowOpen()
       subscriptions.forEach((s) => s.unsubscribe())
     }
 
@@ -166,14 +172,18 @@ export function createPageActivityObservable(
       observable.notify({ isBusy: pendingRequestsCount > 0 })
     }
   })
-
-  return observable
 }
 
 function isExcludedUrl(configuration: RumConfiguration, requestUrl: string): boolean {
   return matchList(configuration.excludedActivityUrls, requestUrl)
 }
 
-function trackWindowOpen(callback: () => void) {
-  return instrumentMethodAndCallOriginal(window, 'open', { before: callback })
+function isExcludedMutation(mutation: RumMutationRecord): boolean {
+  const targetElement = mutation.type === 'characterData' ? mutation.target.parentElement : mutation.target
+
+  return Boolean(
+    targetElement &&
+      isElementNode(targetElement) &&
+      targetElement.matches(`[${EXCLUDED_MUTATIONS_ATTRIBUTE}], [${EXCLUDED_MUTATIONS_ATTRIBUTE}] *`)
+  )
 }

@@ -1,0 +1,21 @@
+{
+  "name": "rum-testing-extension",
+  "private": true,
+  "scripts": {
+    "build": "webpack"
+  },
+  "dependencies": {
+    "@openobserve/browser-logs": "file:../../../packages/logs/package.tgz",
+    "@openobserve/browser-rum": "file:../../../packages/rum/package.tgz"
+  },
+  "resolutions": {
+    "@openobserve/browser-rum-core": "file:../../../packages/rum-core/package.tgz",
+    "@openobserve/browser-core": "file:../../../packages/core/package.tgz",
+    "@openobserve/browser-rum-slim": "file:../../../packages/rum-slim/package.tgz",
+    "@openobserve/browser-worker": "file:../../../packages/worker/package.tgz"
+  },
+  "devDependencies": {
+    "webpack": "5.94.0",
+    "webpack-cli": "6.0.1"
+  }
+}

@@ -1,115 +1,151 @@
+export type { Configuration, InitConfiguration, EndpointBuilder, ProxyFn } from './domain/configuration'
 export {
-  Configuration,
-  InitConfiguration,
   validateAndBuildConfiguration,
   DefaultPrivacyLevel,
-  EndpointBuilder,
+  TraceContextInjection,
   serializeConfiguration,
-  INTAKE_SITE_AP1,
-  INTAKE_SITE_STAGING,
-  INTAKE_SITE_US1,
-  INTAKE_SITE_US1_FED,
-  INTAKE_SITE_EU1,
+  isSampleRate,
+  buildEndpointHost,
+  isIntakeUrl,
 } from './domain/configuration'
+export * from './domain/intakeSites'
+export type { TrackingConsentState } from './domain/trackingConsent'
+export { TrackingConsent, createTrackingConsentState } from './domain/trackingConsent'
 export {
   isExperimentalFeatureEnabled,
   addExperimentalFeatures,
   resetExperimentalFeatures,
   getExperimentalFeatures,
+  initFeatureFlags,
   ExperimentalFeature,
 } from './tools/experimentalFeatures'
 export { trackRuntimeError } from './domain/error/trackRuntimeError'
-export { computeStackTrace, StackTrace } from './domain/tracekit'
+export type { StackTrace } from './tools/stackTrace/computeStackTrace'
+export { computeStackTrace } from './tools/stackTrace/computeStackTrace'
+export type { PublicApi } from './boot/init'
 export { defineGlobal, makePublicApi } from './boot/init'
-export { initReportObservable, RawReport, RawReportType } from './domain/report/reportObservable'
-export {
-  startTelemetry,
+export { displayAlreadyInitializedError } from './boot/displayAlreadyInitializedError'
+export { initReportObservable, RawReportType } from './domain/report/reportObservable'
+export type {
   Telemetry,
   RawTelemetryEvent,
   RawTelemetryConfiguration,
-  addTelemetryDebug,
-  addTelemetryError,
-  startFakeTelemetry,
-  resetTelemetry,
   TelemetryEvent,
   TelemetryErrorEvent,
   TelemetryDebugEvent,
   TelemetryConfigurationEvent,
-  TelemetryService,
-  isTelemetryReplicationAllowed,
-  addTelemetryConfiguration,
+  TelemetryUsageEvent,
+  RawTelemetryUsage,
+  RawTelemetryUsageFeature,
 } from './domain/telemetry'
-export { monitored, monitor, callMonitored, setDebugMode } from './tools/monitor'
-export { Observable, Subscription } from './tools/observable'
 export {
-  startSessionManager,
-  SessionManager,
-  // Exposed for tests
-  stopSessionManager,
-} from './domain/session/sessionManager'
+  startTelemetry,
+  addTelemetryDebug,
+  addTelemetryError,
+  resetTelemetry,
+  TelemetryService,
+  TelemetryMetrics,
+  addTelemetryConfiguration,
+  addTelemetryUsage,
+  addTelemetryMetrics,
+} from './domain/telemetry'
+export { monitored, monitor, callMonitored, setDebugMode, monitorError } from './tools/monitor'
+export type { Subscription } from './tools/observable'
+export { Observable, BufferedObservable } from './tools/observable'
+export type { SessionManager } from './domain/session/sessionManager'
+export { startSessionManager, stopSessionManager } from './domain/session/sessionManager'
 export {
   SESSION_TIME_OUT_DELAY, // Exposed for tests
+  SESSION_NOT_TRACKED,
+  SessionPersistence,
 } from './domain/session/sessionConstants'
+export type { BandwidthStats, HttpRequest, HttpRequestEvent, Payload, FlushEvent, FlushReason } from './transport'
 export {
-  HttpRequest,
-  Payload,
   createHttpRequest,
   canUseEventBridge,
   getEventBridge,
-  startBatchWithReplica,
+  bridgeSupports,
+  BridgeCapability,
+  createBatch,
   createFlushController,
-  FlushEvent,
-  FlushReason,
+  FLUSH_DURATION_LIMIT,
 } from './transport'
 export * from './tools/display'
+export type { Encoder, EncoderResult } from './tools/encoder'
+export { createIdentityEncoder } from './tools/encoder'
 export * from './tools/utils/urlPolyfill'
 export * from './tools/utils/timeUtils'
 export * from './tools/utils/arrayUtils'
 export * from './tools/serialisation/sanitize'
-export * from './tools/getGlobalObject'
+export * from './tools/globalObject'
 export { AbstractLifeCycle } from './tools/abstractLifeCycle'
 export * from './domain/eventRateLimiter/createEventRateLimiter'
 export * from './tools/utils/browserDetection'
 export { sendToExtension } from './tools/sendToExtension'
-export { runOnReadyState } from './browser/runOnReadyState'
+export { runOnReadyState, asyncRunOnReadyState } from './browser/runOnReadyState'
 export { getZoneJsOriginalValue } from './tools/getZoneJsOriginalValue'
-export { instrumentMethod, instrumentMethodAndCallOriginal, instrumentSetter } from './tools/instrumentMethod'
+export type { InstrumentedMethodCall } from './tools/instrumentMethod'
+export { instrumentMethod, instrumentSetter } from './tools/instrumentMethod'
 export {
   computeRawError,
-  createHandlingStack,
-  toStackTraceString,
   getFileFromStackTraceString,
+  isError,
   NO_ERROR_STACK_PRESENT_MESSAGE,
 } from './domain/error/error'
 export { NonErrorPrefix } from './domain/error/error.types'
-export { Context, ContextArray, ContextValue } from './tools/serialisation/context'
-export { areCookiesAuthorized, getCookie, setCookie, deleteCookie } from './browser/cookie'
-export { initXhrObservable, XhrCompleteContext, XhrStartContext } from './browser/xhrObservable'
-export { initFetchObservable, FetchResolveContext, FetchStartContext, FetchContext } from './browser/fetchObservable'
-export { createPageExitObservable, PageExitEvent, PageExitReason, isPageExitReason } from './browser/pageExitObservable'
-export * from './browser/addEventListener'
-export * from './tools/timer'
-export { initConsoleObservable, resetConsoleObservable, ConsoleLog } from './domain/console/consoleObservable'
-export { BoundedBuffer } from './tools/boundedBuffer'
-export { catchUserErrors } from './tools/catchUserErrors'
-export { createContextManager, ContextManager } from './tools/serialisation/contextManager'
+export type { Context, ContextArray, ContextValue } from './tools/serialisation/context'
 export {
-  warnIfCustomerDataLimitReached,
-  CustomerDataType,
-  CUSTOMER_DATA_BYTES_LIMIT,
-} from './tools/serialisation/heavyCustomerDataWarning'
-export { ValueHistory, ValueHistoryEntry, CLEAR_OLD_VALUES_INTERVAL } from './tools/valueHistory'
+  areCookiesAuthorized,
+  getCookie,
+  getInitCookie,
+  setCookie,
+  deleteCookie,
+  resetInitCookies,
+} from './browser/cookie'
+export type { CookieStore, WeakRef, WeakRefConstructor } from './browser/browser.types'
+export type { XhrCompleteContext, XhrStartContext } from './browser/xhrObservable'
+export { initXhrObservable } from './browser/xhrObservable'
+export type { FetchResolveContext, FetchStartContext, FetchContext } from './browser/fetchObservable'
+export { initFetchObservable, resetFetchObservable, ResponseBodyAction } from './browser/fetchObservable'
+export type { PageMayExitEvent } from './browser/pageMayExitObservable'
+export { createPageMayExitObservable, PageExitReason, isPageExitReason } from './browser/pageMayExitObservable'
+export * from './browser/addEventListener'
+export { requestIdleCallback } from './tools/requestIdleCallback'
+export * from './tools/taskQueue'
+export * from './tools/timer'
+export type { ConsoleLog } from './domain/console/consoleObservable'
+export { initConsoleObservable, resetConsoleObservable } from './domain/console/consoleObservable'
+export type { BoundedBuffer } from './tools/boundedBuffer'
+export { createBoundedBuffer } from './tools/boundedBuffer'
+export { catchUserErrors } from './tools/catchUserErrors'
+export type { ContextManager } from './domain/context/contextManager'
+export { createContextManager } from './domain/context/contextManager'
+export { defineContextMethod, bufferContextCalls } from './domain/context/defineContextMethod'
+export { storeContextManager, removeStorageListeners } from './domain/context/storeContextManager'
+export { startAccountContext, buildAccountContextManager } from './domain/contexts/accountContext'
+export { startGlobalContext, buildGlobalContextManager } from './domain/contexts/globalContext'
+export { startUserContext, buildUserContextManager } from './domain/contexts/userContext'
+export type { User } from './domain/contexts/userContext'
+export type { Account } from './domain/contexts/accountContext'
+export type { RumInternalContext } from './domain/contexts/rumInternalContext.type'
+export { CustomerDataType, CustomerContextKey, ContextManagerMethod } from './domain/context/contextConstants'
+export type { ValueHistory, ValueHistoryEntry } from './tools/valueHistory'
+export { createValueHistory, CLEAR_OLD_VALUES_INTERVAL } from './tools/valueHistory'
 export { readBytesFromStream } from './tools/readBytesFromStream'
+export type { SessionState } from './domain/session/sessionState'
 export { STORAGE_POLL_DELAY } from './domain/session/sessionStore'
 export { SESSION_STORE_KEY } from './domain/session/storeStrategies/sessionStoreStrategy'
 export {
   willSyntheticsInjectRum,
   getSyntheticsTestId,
   getSyntheticsResultId,
+  isSyntheticsTest,
 } from './domain/synthetics/syntheticsWorkerValues'
-export { User, checkUser, sanitizeUser } from './domain/user'
+export { checkContext } from './domain/context/contextUtils'
 export * from './domain/resourceUtils'
+export * from './domain/bufferedData'
 export * from './tools/utils/polyfills'
+export * from './tools/utils/timezone'
 export * from './tools/utils/numberUtils'
 export * from './tools/utils/byteUtils'
 export * from './tools/utils/objectUtils'
@@ -120,9 +156,10 @@ export * from './tools/utils/stringUtils'
 export * from './tools/matchOption'
 export * from './tools/utils/responseUtils'
 export * from './tools/utils/typeUtils'
-export { ErrorHandling } from './domain/error/error.types'
-export { ErrorSource } from './domain/error/error.types'
-export { RawError } from './domain/error/error.types'
-export { RawErrorCause } from './domain/error/error.types'
-export { ErrorWithCause } from './domain/error/error.types'
+export type { RawError, RawErrorCause, ErrorWithCause, Csp } from './domain/error/error.types'
+export { ErrorHandling, ErrorSource } from './domain/error/error.types'
 export * from './domain/deflate'
+export * from './domain/connectivity'
+export * from './tools/stackTrace/handlingStack'
+export * from './tools/abstractHooks'
+export * from './domain/tags'

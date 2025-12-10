@@ -1,10 +1,12 @@
-import { toStackTraceString } from '../error/error'
+import { toStackTraceString } from '../../tools/stackTrace/handlingStack'
 import { monitor } from '../../tools/monitor'
 import { mergeObservables, Observable } from '../../tools/observable'
 import { addEventListener, DOM_EVENT } from '../../browser/addEventListener'
-import { includes } from '../../tools/utils/polyfills'
 import { safeTruncate } from '../../tools/utils/stringUtils'
 import type { Configuration } from '../configuration'
+import type { RawError } from '../error/error.types'
+import { ErrorHandling, ErrorSource } from '../error/error.types'
+import { clocksNow } from '../../tools/utils/timeUtils'
 import type { ReportType, InterventionReport, DeprecationReport } from './browser.types'
 
 export const RawReportType = {
@@ -15,17 +17,14 @@ export const RawReportType = {
 
 export type RawReportType = (typeof RawReportType)[keyof typeof RawReportType]
 
-export interface RawReport {
-  type: RawReportType
-  subtype: string
-  message: string
-  stack?: string
+export type RawReportError = RawError & {
+  originalError: SecurityPolicyViolationEvent | DeprecationReport | InterventionReport
 }
 
 export function initReportObservable(configuration: Configuration, apis: RawReportType[]) {
-  const observables: Array<Observable<RawReport>> = []
+  const observables: Array<Observable<RawReportError>> = []
 
-  if (includes(apis, RawReportType.cspViolation)) {
+  if (apis.includes(RawReportType.cspViolation)) {
     observables.push(createCspViolationReportObservable(configuration))
   }
 
@@ -34,19 +33,17 @@ export function initReportObservable(configuration: Configuration, apis: RawRepo
     observables.push(createReportObservable(reportTypes))
   }
 
-  return mergeObservables<RawReport>(...observables)
+  return mergeObservables(...observables)
 }
 
 function createReportObservable(reportTypes: ReportType[]) {
-  const observable = new Observable<RawReport>(() => {
+  return new Observable<RawReportError>((observable) => {
     if (!window.ReportingObserver) {
       return
     }
 
     const handleReports = monitor((reports: Array<DeprecationReport | InterventionReport>, _: ReportingObserver) =>
-      reports.forEach((report) => {
-        observable.notify(buildRawReportFromReport(report))
-      })
+      reports.forEach((report) => observable.notify(buildRawReportErrorFromReport(report)))
     ) as ReportingObserverCallback
 
     const observer = new window.ReportingObserver(handleReports, {
@@ -59,37 +56,38 @@ function createReportObservable(reportTypes: ReportType[]) {
       observer.disconnect()
     }
   })
-
-  return observable
 }
 
 function createCspViolationReportObservable(configuration: Configuration) {
-  const observable = new Observable<RawReport>(() => {
+  return new Observable<RawReportError>((observable) => {
     const { stop } = addEventListener(configuration, document, DOM_EVENT.SECURITY_POLICY_VIOLATION, (event) => {
-      observable.notify(buildRawReportFromCspViolation(event))
+      observable.notify(buildRawReportErrorFromCspViolation(event))
     })
 
     return stop
   })
-  return observable
 }
 
-function buildRawReportFromReport({ type, body }: DeprecationReport | InterventionReport): RawReport {
-  return {
-    type,
-    subtype: body.id,
+function buildRawReportErrorFromReport(report: DeprecationReport | InterventionReport): RawReportError {
+  const { type, body } = report
+
+  return buildRawReportError({
+    type: body.id,
     message: `${type}: ${body.message}`,
+    originalError: report,
     stack: buildStack(body.id, body.message, body.sourceFile, body.lineNumber, body.columnNumber),
-  }
+  })
 }
 
-function buildRawReportFromCspViolation(event: SecurityPolicyViolationEvent): RawReport {
-  const type = RawReportType.cspViolation
+function buildRawReportErrorFromCspViolation(event: SecurityPolicyViolationEvent): RawReportError {
   const message = `'${event.blockedURI}' blocked by '${event.effectiveDirective}' directive`
-  return {
-    type: RawReportType.cspViolation,
-    subtype: event.effectiveDirective,
-    message: `${type}: ${message}`,
+  return buildRawReportError({
+    type: event.effectiveDirective,
+    message: `${RawReportType.cspViolation}: ${message}`,
+    originalError: event,
+    csp: {
+      disposition: event.disposition,
+    },
     stack: buildStack(
       event.effectiveDirective,
       event.originalPolicy
@@ -99,6 +97,15 @@ function buildRawReportFromCspViolation(event: SecurityPolicyViolationEvent): Ra
       event.lineNumber,
       event.columnNumber
     ),
+  })
+}
+
+function buildRawReportError(partial: Omit<RawReportError, 'startClocks' | 'source' | 'handling'>): RawReportError {
+  return {
+    startClocks: clocksNow(),
+    source: ErrorSource.REPORT,
+    handling: ErrorHandling.UNHANDLED,
+    ...partial,
   }
 }
 

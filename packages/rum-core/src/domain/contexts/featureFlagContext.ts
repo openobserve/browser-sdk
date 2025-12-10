@@ -1,18 +1,10 @@
-import type { RelativeTime, ContextValue, Context } from '@openobserve/browser-core'
-import {
-  CustomerDataType,
-  warnIfCustomerDataLimitReached,
-  throttle,
-  jsonStringify,
-  computeBytesCount,
-  noop,
-  isExperimentalFeatureEnabled,
-  SESSION_TIME_OUT_DELAY,
-  ValueHistory,
-  ExperimentalFeature,
-} from '@openobserve/browser-core'
+import type { ContextValue, Context } from '@openobserve/browser-core'
+import { HookNames, SESSION_TIME_OUT_DELAY, SKIPPED, createValueHistory, isEmptyObject } from '@openobserve/browser-core'
 import type { LifeCycle } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'
+import { RumEventType } from '../../rawRumEvent.types'
+import type { RumConfiguration } from '../configuration'
+import type { DefaultRumEventAttributes, Hooks } from '../hooks'
 
 export const FEATURE_FLAG_CONTEXT_TIME_OUT_DELAY = SESSION_TIME_OUT_DELAY
 export const BYTES_COMPUTATION_THROTTLING_DELAY = 200
@@ -20,10 +12,7 @@ export const BYTES_COMPUTATION_THROTTLING_DELAY = 200
 export type FeatureFlagContext = Context
 
 export interface FeatureFlagContexts {
-  findFeatureFlagEvaluations: (startTime?: RelativeTime) => FeatureFlagContext | undefined
-  getFeatureFlagBytesCount: () => number
   addFeatureFlagEvaluation: (key: string, value: ContextValue) => void
-  stop: () => void
 }
 
 /**
@@ -36,56 +25,47 @@ export interface FeatureFlagContexts {
  */
 export function startFeatureFlagContexts(
   lifeCycle: LifeCycle,
-  computeBytesCountImpl = computeBytesCount
+  hooks: Hooks,
+  configuration: RumConfiguration
 ): FeatureFlagContexts {
-  if (!isExperimentalFeatureEnabled(ExperimentalFeature.FEATURE_FLAGS)) {
-    return {
-      findFeatureFlagEvaluations: () => undefined,
-      getFeatureFlagBytesCount: () => 0,
-      addFeatureFlagEvaluation: noop,
-      stop: noop,
-    }
-  }
+  const featureFlagContexts = createValueHistory<FeatureFlagContext>({
+    expireDelay: FEATURE_FLAG_CONTEXT_TIME_OUT_DELAY,
+  })
 
-  const featureFlagContexts = new ValueHistory<FeatureFlagContext>(FEATURE_FLAG_CONTEXT_TIME_OUT_DELAY)
-  let bytesCountCache = 0
-  let alreadyWarned = false
+  lifeCycle.subscribe(LifeCycleEventType.BEFORE_VIEW_CREATED, ({ startClocks }) => {
+    featureFlagContexts.add({}, startClocks.relative)
+  })
 
-  lifeCycle.subscribe(LifeCycleEventType.VIEW_ENDED, ({ endClocks }) => {
+  lifeCycle.subscribe(LifeCycleEventType.AFTER_VIEW_ENDED, ({ endClocks }) => {
     featureFlagContexts.closeActive(endClocks.relative)
   })
 
-  lifeCycle.subscribe(LifeCycleEventType.VIEW_CREATED, ({ startClocks }) => {
-    featureFlagContexts.add({}, startClocks.relative)
-    bytesCountCache = 0
+  hooks.register(HookNames.Assemble, ({ startTime, eventType }): DefaultRumEventAttributes | SKIPPED => {
+    const trackFeatureFlagsForEvents = (configuration.trackFeatureFlagsForEvents as RumEventType[]).concat([
+      RumEventType.VIEW,
+      RumEventType.ERROR,
+    ])
+    if (!trackFeatureFlagsForEvents.includes(eventType as RumEventType)) {
+      return SKIPPED
+    }
+
+    const featureFlagContext = featureFlagContexts.find(startTime)
+    if (!featureFlagContext || isEmptyObject(featureFlagContext)) {
+      return SKIPPED
+    }
+
+    return {
+      type: eventType,
+      feature_flags: featureFlagContext,
+    }
   })
 
-  // Throttle the bytes computation to minimize the impact on performance.
-  // Especially useful if the user call addFeatureFlagEvaluation API synchronously multiple times in a row
-  const { throttled: computeBytesCountThrottled, cancel: cancelPendingComputation } = throttle((context: Context) => {
-    bytesCountCache = computeBytesCountImpl(jsonStringify(context)!)
-    if (!alreadyWarned) {
-      alreadyWarned = warnIfCustomerDataLimitReached(bytesCountCache, CustomerDataType.FeatureFlag)
-    }
-  }, BYTES_COMPUTATION_THROTTLING_DELAY)
-
   return {
-    findFeatureFlagEvaluations: (startTime?: RelativeTime) => featureFlagContexts.find(startTime),
-    getFeatureFlagBytesCount: () => {
-      const currentContext = featureFlagContexts.find()
-      if (!currentContext) {
-        return 0
-      }
-
-      return bytesCountCache
-    },
     addFeatureFlagEvaluation: (key: string, value: ContextValue) => {
       const currentContext = featureFlagContexts.find()
       if (currentContext) {
         currentContext[key] = value
-        computeBytesCountThrottled(currentContext)
       }
     },
-    stop: cancelPendingComputation,
   }
 }

@@ -1,5 +1,4 @@
-/* eslint-disable local-rules/disallow-zone-js-patched-values */
-import type { DeflateWorkerAction, DeflateWorkerResponse } from '@openobserve/browser-core'
+import type { DeflateWorkerAction, DeflateWorkerResponse, Uint8ArrayBuffer } from '@openobserve/browser-core'
 import { concatBuffers } from '@openobserve/browser-core'
 import { Deflate, constants, string2buf } from '../domain/deflate'
 
@@ -35,7 +34,7 @@ function sendError(workerScope: WorkerScope, error: unknown, streamId?: number) 
       error: error as Error,
       streamId,
     })
-  } catch (_) {
+  } catch {
     // DATA_CLONE_ERR, cf https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Structured_clone_algorithm
     workerScope.postMessage({
       type: 'errored',
@@ -99,7 +98,7 @@ function handleAction(streams: Map<number, Deflate>, message: DeflateWorkerActio
  * Beside creating a valid zlib stream, those 6 bits are expected to be here so the Openobserve backend
  * can merge streams together (see internal doc).
  */
-function makeTrailer(deflate: Deflate): Uint8Array {
+function makeTrailer(deflate: Deflate): Uint8ArrayBuffer {
   /* eslint-disable no-bitwise */
   const adler = deflate.strm.adler
   return new Uint8Array([

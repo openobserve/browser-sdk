@@ -1,20 +1,21 @@
-import type { Context, PageExitEvent, RawError, RelativeTime } from '@openobserve/browser-core'
+import type { Context, Duration, PageMayExitEvent, RawError, RelativeTime } from '@openobserve/browser-core'
 import { AbstractLifeCycle } from '@openobserve/browser-core'
-import type { RumPerformanceEntry } from '../browser/performanceCollection'
 import type { RumEventDomainContext } from '../domainContext.types'
-import type { RawRumEvent } from '../rawRumEvent.types'
-import type { RumEvent } from '../rumEvent.types'
-import type { CommonContext } from './contexts/commonContext'
+import type { RawRumEvent, AssembledRumEvent } from '../rawRumEvent.types'
 import type { RequestCompleteEvent, RequestStartEvent } from './requestCollection'
-import type { AutoAction } from './rumEventsCollection/action/actionCollection'
-import type { ViewEvent, ViewCreatedEvent, ViewEndedEvent } from './rumEventsCollection/view/trackViews'
+import type { AutoAction } from './action/actionCollection'
+import type { ViewEvent, ViewCreatedEvent, ViewEndedEvent, BeforeViewUpdateEvent } from './view/trackViews'
 
 export const enum LifeCycleEventType {
-  PERFORMANCE_ENTRIES_COLLECTED,
+  // Contexts (like viewHistory) should be opened using prefixed BEFORE_XXX events and closed using prefixed AFTER_XXX events
+  // It ensures the context is available during the non prefixed event callbacks
   AUTO_ACTION_COMPLETED,
+  BEFORE_VIEW_CREATED,
   VIEW_CREATED,
+  BEFORE_VIEW_UPDATED,
   VIEW_UPDATED,
   VIEW_ENDED,
+  AFTER_VIEW_ENDED,
   REQUEST_STARTED,
   REQUEST_COMPLETED,
 
@@ -29,9 +30,8 @@ export const enum LifeCycleEventType {
   // the same time, for example when using Logs and RUM on the same page, or opening multiple tabs
   // on the same domain.
   SESSION_EXPIRED,
-
   SESSION_RENEWED,
-  PAGE_EXITED,
+  PAGE_MAY_EXIT,
   RAW_RUM_EVENT_COLLECTED,
   RUM_EVENT_COLLECTED,
   RAW_ERROR_COLLECTED,
@@ -51,16 +51,18 @@ export const enum LifeCycleEventType {
 // * https://github.com/openobserve/browser-sdk/issues/2208
 // * https://github.com/microsoft/TypeScript/issues/54152
 declare const LifeCycleEventTypeAsConst: {
-  PERFORMANCE_ENTRIES_COLLECTED: LifeCycleEventType.PERFORMANCE_ENTRIES_COLLECTED
   AUTO_ACTION_COMPLETED: LifeCycleEventType.AUTO_ACTION_COMPLETED
+  BEFORE_VIEW_CREATED: LifeCycleEventType.BEFORE_VIEW_CREATED
   VIEW_CREATED: LifeCycleEventType.VIEW_CREATED
+  BEFORE_VIEW_UPDATED: LifeCycleEventType.BEFORE_VIEW_UPDATED
   VIEW_UPDATED: LifeCycleEventType.VIEW_UPDATED
   VIEW_ENDED: LifeCycleEventType.VIEW_ENDED
+  AFTER_VIEW_ENDED: LifeCycleEventType.AFTER_VIEW_ENDED
   REQUEST_STARTED: LifeCycleEventType.REQUEST_STARTED
   REQUEST_COMPLETED: LifeCycleEventType.REQUEST_COMPLETED
   SESSION_EXPIRED: LifeCycleEventType.SESSION_EXPIRED
   SESSION_RENEWED: LifeCycleEventType.SESSION_RENEWED
-  PAGE_EXITED: LifeCycleEventType.PAGE_EXITED
+  PAGE_MAY_EXIT: LifeCycleEventType.PAGE_MAY_EXIT
   RAW_RUM_EVENT_COLLECTED: LifeCycleEventType.RAW_RUM_EVENT_COLLECTED
   RUM_EVENT_COLLECTED: LifeCycleEventType.RUM_EVENT_COLLECTED
   RAW_ERROR_COLLECTED: LifeCycleEventType.RAW_ERROR_COLLECTED
@@ -69,29 +71,29 @@ declare const LifeCycleEventTypeAsConst: {
 // Note: this interface needs to be exported even if it is not used outside of this module, else TS
 // fails to build the rum-core package with error TS4058
 export interface LifeCycleEventMap {
-  [LifeCycleEventTypeAsConst.PERFORMANCE_ENTRIES_COLLECTED]: RumPerformanceEntry[]
   [LifeCycleEventTypeAsConst.AUTO_ACTION_COMPLETED]: AutoAction
+  [LifeCycleEventTypeAsConst.BEFORE_VIEW_CREATED]: ViewCreatedEvent
   [LifeCycleEventTypeAsConst.VIEW_CREATED]: ViewCreatedEvent
+  [LifeCycleEventTypeAsConst.BEFORE_VIEW_UPDATED]: BeforeViewUpdateEvent
   [LifeCycleEventTypeAsConst.VIEW_UPDATED]: ViewEvent
   [LifeCycleEventTypeAsConst.VIEW_ENDED]: ViewEndedEvent
+  [LifeCycleEventTypeAsConst.AFTER_VIEW_ENDED]: ViewEndedEvent
   [LifeCycleEventTypeAsConst.REQUEST_STARTED]: RequestStartEvent
   [LifeCycleEventTypeAsConst.REQUEST_COMPLETED]: RequestCompleteEvent
   [LifeCycleEventTypeAsConst.SESSION_EXPIRED]: void
   [LifeCycleEventTypeAsConst.SESSION_RENEWED]: void
-  [LifeCycleEventTypeAsConst.PAGE_EXITED]: PageExitEvent
+  [LifeCycleEventTypeAsConst.PAGE_MAY_EXIT]: PageMayExitEvent
   [LifeCycleEventTypeAsConst.RAW_RUM_EVENT_COLLECTED]: RawRumEventCollectedData
-  [LifeCycleEventTypeAsConst.RUM_EVENT_COLLECTED]: RumEvent & Context
+  [LifeCycleEventTypeAsConst.RUM_EVENT_COLLECTED]: AssembledRumEvent
   [LifeCycleEventTypeAsConst.RAW_ERROR_COLLECTED]: {
     error: RawError
-    savedCommonContext?: CommonContext
     customerContext?: Context
   }
 }
 
 export interface RawRumEventCollectedData<E extends RawRumEvent = RawRumEvent> {
   startTime: RelativeTime
-  savedCommonContext?: CommonContext
-  customerContext?: Context
+  duration?: Duration
   rawRumEvent: E
   domainContext: RumEventDomainContext<E['type']>
 }

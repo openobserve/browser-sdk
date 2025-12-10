@@ -6,15 +6,19 @@
  * changes.
  */
 import { makeRumPublicApi, startRum } from '@openobserve/browser-rum-core'
-
-import { startRecording } from '../boot/startRecording'
 import { makeRecorderApi } from '../boot/recorderApi'
+import { lazyLoadRecorder } from '../boot/lazyLoadRecorder'
+import { makeProfilerApi } from '../boot/profilerApi'
 
 export { DefaultPrivacyLevel } from '@openobserve/browser-core'
 
 // Disable the rule that forbids potential side effects, because we know that those functions don't
 // have side effects.
 /* eslint-disable local-rules/disallow-side-effects */
-const recorderApi = makeRecorderApi(startRecording)
-export const openobserveRum = makeRumPublicApi(startRum, recorderApi, { ignoreInitIfSyntheticsWillInjectRum: false })
+const recorderApi = makeRecorderApi(lazyLoadRecorder)
+const profilerApi = makeProfilerApi()
+export const openobserveRum = makeRumPublicApi(startRum, recorderApi, profilerApi, {
+  ignoreInitIfSyntheticsWillInjectRum: false,
+  sdkName: 'rum-synthetics',
+})
 /* eslint-enable local-rules/disallow-side-effects */

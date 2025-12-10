@@ -1,22 +1,8 @@
-import type { RelativeTime } from '@openobserve/browser-core'
-import type { ActionContexts } from '../rumEventsCollection/action/actionCollection'
+import type { RelativeTime, RumInternalContext } from '@openobserve/browser-core'
+import type { ActionContexts } from '../action/actionCollection'
 import type { RumSessionManager } from '../rumSessionManager'
-import type { ViewContexts } from './viewContexts'
+import type { ViewHistory } from './viewHistory'
 import type { UrlContexts } from './urlContexts'
-
-export interface InternalContext {
-  application_id: string
-  session_id: string | undefined
-  view?: {
-    id: string
-    url: string
-    referrer: string
-    name?: string
-  }
-  user_action?: {
-    id: string | string[]
-  }
-}
 
 /**
  * Internal context keep returning v1 format
@@ -25,13 +11,13 @@ export interface InternalContext {
 export function startInternalContext(
   applicationId: string,
   sessionManager: RumSessionManager,
-  viewContexts: ViewContexts,
+  viewHistory: ViewHistory,
   actionContexts: ActionContexts,
   urlContexts: UrlContexts
 ) {
   return {
-    get: (startTime?: number): InternalContext | undefined => {
-      const viewContext = viewContexts.findView(startTime as RelativeTime)
+    get: (startTime?: number): RumInternalContext | undefined => {
+      const viewContext = viewHistory.findView(startTime as RelativeTime)
       const urlContext = urlContexts.findUrl(startTime as RelativeTime)
       const session = sessionManager.findTrackedSession(startTime as RelativeTime)
       if (session && viewContext && urlContext) {

@@ -1,31 +1,35 @@
-import type { Context, Observable, PageExitEvent, RawError } from '@openobserve/browser-core'
-import { startBatchWithReplica } from '@openobserve/browser-core'
+import type { Context, Observable, PageMayExitEvent, RawError } from '@openobserve/browser-core'
+import { createBatch, createFlushController, createHttpRequest, createIdentityEncoder } from '@openobserve/browser-core'
 import type { LogsConfiguration } from '../domain/configuration'
 import type { LifeCycle } from '../domain/lifeCycle'
 import { LifeCycleEventType } from '../domain/lifeCycle'
 import type { LogsEvent } from '../logsEvent.types'
+import type { LogsSessionManager } from '../domain/logsSessionManager'
 
 export function startLogsBatch(
   configuration: LogsConfiguration,
   lifeCycle: LifeCycle,
   reportError: (error: RawError) => void,
-  pageExitObservable: Observable<PageExitEvent>,
-  sessionExpireObservable: Observable<void>
+  pageMayExitObservable: Observable<PageMayExitEvent>,
+  session: LogsSessionManager
 ) {
-  const batch = startBatchWithReplica(
-    configuration,
-    {
-      endpoint: configuration.logsEndpointBuilder,
-    },
-    configuration.replica && {
-      endpoint: configuration.replica.logsEndpointBuilder,
-    },
-    reportError,
-    pageExitObservable,
-    sessionExpireObservable
-  )
+  const endpoints = [configuration.logsEndpointBuilder]
+  if (configuration.replica) {
+    endpoints.push(configuration.replica.logsEndpointBuilder)
+  }
+
+  const batch = createBatch({
+    encoder: createIdentityEncoder(),
+    request: createHttpRequest(endpoints, reportError),
+    flushController: createFlushController({
+      pageMayExitObservable,
+      sessionExpireObservable: session.expireObservable,
+    }),
+  })
 
   lifeCycle.subscribe(LifeCycleEventType.LOG_COLLECTED, (serverLogsEvent: LogsEvent & Context) => {
     batch.add(serverLogsEvent)
   })
+
+  return batch
 }

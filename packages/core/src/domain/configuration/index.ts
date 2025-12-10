@@ -1,9 +1,11 @@
+export type { Configuration, InitConfiguration, ProxyFn } from './configuration'
 export {
-  Configuration,
-  InitConfiguration,
   DefaultPrivacyLevel,
+  TraceContextInjection,
+  isSampleRate,
   validateAndBuildConfiguration,
   serializeConfiguration,
 } from './configuration'
-export { createEndpointBuilder, EndpointBuilder, EndpointType } from './endpointBuilder'
-export * from './intakeSites'
+export type { EndpointBuilder, TrackType } from './endpointBuilder'
+export { createEndpointBuilder, buildEndpointHost } from './endpointBuilder'
+export { computeTransportConfiguration, isIntakeUrl } from './transportConfiguration'

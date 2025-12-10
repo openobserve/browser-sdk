@@ -1,72 +1,180 @@
-import { Badge, Box, Checkbox, Code, Group, Select, Space, Text } from '@mantine/core'
+import { Badge, Box, Checkbox, Code, Group, Space, Switch, Text, SegmentedControl, Accordion } from '@mantine/core'
 import React from 'react'
+import { DEV_LOGS_URL, DEV_REPLAY_SANDBOX_URL } from '../../../common/packagesUrlConstants'
 import { DevServerStatus, useDevServerStatus } from '../../hooks/useDevServerStatus'
 import { useSettings } from '../../hooks/useSettings'
-import type { EventSource } from '../../types'
 import { Columns } from '../columns'
 import { TabBase } from '../tabBase'
+import type { DevBundlesOverride, EventCollectionStrategy } from '../../../common/extension.types'
 
 export function SettingsTab() {
-  const devServerStatus = useDevServerStatus()
-  const [{ useDevBundles, useRumSlim, blockIntakeRequests, preserveEvents, eventSource, autoFlush }, setSetting] =
-    useSettings()
+  const sdkDevServerStatus = useDevServerStatus(DEV_LOGS_URL)
+  const replayDevServerStatus = useDevServerStatus(DEV_REPLAY_SANDBOX_URL)
+  const [
+    {
+      useDevBundles,
+      useDevReplaySandbox,
+      useRumSlim,
+      blockIntakeRequests,
+      preserveEvents,
+      eventCollectionStrategy,
+      autoFlush,
+      debugMode: debug,
+      datadogMode,
+    },
+    setSetting,
+  ] = useSettings()
 
   return (
     <TabBase>
       <div className="dd-privacy-allow">
         <Columns>
-          <Columns.Column title="Request interception">
-            <SettingItem
-              input={
-                <Group align="start">
-                  <Checkbox
-                    label="Use development bundles"
-                    checked={useDevBundles}
-                    onChange={(e) => setSetting('useDevBundles', isChecked(e.target))}
-                    color="violet"
+          <Columns.Column title="Overrides">
+            <Accordion defaultValue="browser-sdk">
+              <Accordion.Item key="browser-sdk" value="browser-sdk">
+                <Accordion.Control>
+                  <Group>
+                    <Text>Browser SDK</Text>
+                    <Box style={{ marginLeft: 'auto' }}>
+                      {sdkDevServerStatus === DevServerStatus.AVAILABLE && useDevBundles ? (
+                        <Badge color="blue">Overridden</Badge>
+                      ) : sdkDevServerStatus === DevServerStatus.AVAILABLE ? (
+                        <Badge color="green">Available</Badge>
+                      ) : sdkDevServerStatus === DevServerStatus.CHECKING ? (
+                        <Badge color="yellow">Checking...</Badge>
+                      ) : (
+                        <Badge color="red">Unavailable</Badge>
+                      )}
+                    </Box>
+                  </Group>
+                </Accordion.Control>
+                <Accordion.Panel>
+                  <Box>
+                    Use the local development version of the browser SDK. The development server must be running; to
+                    start it, run <Code>yarn dev</Code>.
+                  </Box>
+
+                  <Space h="md" />
+
+                  <SettingItem
+                    input={
+                      <Group>
+                        <Text>Override strategy:</Text>
+                        <SegmentedControl
+                          color="violet"
+                          value={useDevBundles || 'off'}
+                          size="xs"
+                          data={[
+                            { value: 'off', label: 'Off' },
+                            { value: 'cdn', label: 'Redirect' },
+                            { value: 'npm', label: 'Inject' },
+                          ]}
+                          onChange={(value) =>
+                            setSetting('useDevBundles', value === 'off' ? false : (value as DevBundlesOverride))
+                          }
+                        />
+                      </Group>
+                    }
+                    description={
+                      <>
+                        Choose an override strategy. Network request redirection is reliable, but only works for CDN
+                        setups. Injecting the bundle into the page can work for both CDN and NPM setups, but it's not
+                        always reliable.
+                      </>
+                    }
                   />
-                  {devServerStatus === DevServerStatus.AVAILABLE ? (
-                    <Badge color="green">Available</Badge>
-                  ) : devServerStatus === DevServerStatus.CHECKING ? (
-                    <Badge color="yellow">Checking...</Badge>
-                  ) : (
-                    <Badge color="red">Unavailable</Badge>
-                  )}
-                </Group>
-              }
-              description={
-                <>
-                  Use the local development bundles served by the Browser SDK development server. To start the
-                  development server, run <Code>yarn dev</Code> in the Browser SDK root folder.
-                </>
-              }
-            />
 
-            <SettingItem
-              input={
-                <Checkbox
-                  label="Use RUM Slim"
-                  checked={useRumSlim}
-                  onChange={(e) => setSetting('useRumSlim', isChecked(e.target))}
-                  color="violet"
-                />
-              }
-              description={
-                <>If the page is using the RUM CDN bundle, this bundle will be replaced by the RUM Slim CDN bundle.</>
-              }
-            />
+                  <SettingItem
+                    input={
+                      <Group>
+                        <Text>SDK variant:</Text>
+                        <SegmentedControl
+                          color="violet"
+                          value={useRumSlim ? 'rum-slim' : 'rum'}
+                          size="xs"
+                          data={[
+                            { value: 'rum', label: 'RUM' },
+                            { value: 'rum-slim', label: 'RUM Slim' },
+                          ]}
+                          onChange={(value) => {
+                            setSetting('useRumSlim', value === 'rum-slim')
+                          }}
+                        />
+                      </Group>
+                    }
+                    description={<>Choose an SDK variant. Session replay features won't work with the slim version.</>}
+                  />
+                </Accordion.Panel>
+              </Accordion.Item>
 
-            <SettingItem
-              input={
-                <Checkbox
-                  label="Block intake requests"
-                  checked={blockIntakeRequests}
-                  onChange={(e) => setSetting('blockIntakeRequests', isChecked(e.target))}
-                  color="violet"
-                />
-              }
-              description={<>Block requests made to the intake, preventing any data to be sent to Openobserve.</>}
-            />
+              {datadogMode && (
+                <Accordion.Item key="replay-sandbox" value="replay-sandbox">
+                  <Accordion.Control>
+                    <Group>
+                      <Text>Live replay</Text>
+                      <Box style={{ marginLeft: 'auto' }}>
+                        {replayDevServerStatus === DevServerStatus.AVAILABLE && useDevReplaySandbox ? (
+                          <Badge color="blue">Overridden</Badge>
+                        ) : replayDevServerStatus === DevServerStatus.AVAILABLE ? (
+                          <Badge color="green">Available</Badge>
+                        ) : replayDevServerStatus === DevServerStatus.CHECKING ? (
+                          <Badge color="yellow">Checking...</Badge>
+                        ) : (
+                          <Badge color="red">Unavailable</Badge>
+                        )}
+                      </Box>
+                    </Group>
+                  </Accordion.Control>
+                  <Accordion.Panel>
+                    <Box>
+                      Use the OpenObserve-internal local development version of the live replay sandbox. The development
+                      server must be running; to start it, run
+                      <Code>yarn dev</Code>.
+                    </Box>
+
+                    <Space h="md" />
+
+                    <SettingItem
+                      input={
+                        <Switch
+                          label="Override the live replay sandbox"
+                          checked={!!useDevReplaySandbox}
+                          onChange={(event) => setSetting('useDevReplaySandbox', event.currentTarget.checked)}
+                          color="violet"
+                        />
+                      }
+                      description={<>Activate to use the local development version of the live replay sandbox.</>}
+                    />
+                  </Accordion.Panel>
+                </Accordion.Item>
+              )}
+
+              <Accordion.Item key="intake-requests" value="intake-requests">
+                <Accordion.Control>
+                  <Group>
+                    <Text>Intake requests</Text>
+                    <Box style={{ marginLeft: 'auto' }}>
+                      {blockIntakeRequests ? <Badge color="blue">Blocked</Badge> : <Badge color="green">Allowed</Badge>}
+                    </Box>
+                  </Group>
+                </Accordion.Control>
+                <Accordion.Panel>
+                  <SettingItem
+                    input={
+                      <Switch
+                        label="Block intake requests"
+                        checked={blockIntakeRequests}
+                        onChange={(event) => setSetting('blockIntakeRequests', event.currentTarget.checked)}
+                        color="violet"
+                      />
+                    }
+                    description={
+                      <>Block requests made to the intake, preventing any data from being sent to Openobserve.</>
+                    }
+                  />
+                </Accordion.Panel>
+              </Accordion.Item>
+            </Accordion>
           </Columns.Column>
 
           <Columns.Column title="Events list">
@@ -85,28 +193,28 @@ export function SettingsTab() {
             <SettingItem
               input={
                 <Group>
-                  <Text size="sm">Events source:</Text>
-                  <Select
-                    data={[
-                      { label: 'Requests', value: 'requests' },
-                      { label: 'SDK', value: 'sdk' },
-                    ]}
-                    value={eventSource}
-                    onChange={(value) => setSetting('eventSource', value as EventSource)}
+                  <Text>Event collection strategy:</Text>
+                  <SegmentedControl
                     color="violet"
-                    sx={{ flex: 1 }}
+                    value={eventCollectionStrategy}
+                    size="xs"
+                    data={[
+                      { label: 'SDK', value: 'sdk' },
+                      { label: 'Requests', value: 'requests' },
+                    ]}
+                    onChange={(value) => setSetting('eventCollectionStrategy', value as EventCollectionStrategy)}
                   />
                 </Group>
               }
               description={
                 <>
-                  {eventSource === 'requests' && (
+                  {eventCollectionStrategy === 'requests' && (
                     <>
                       Collect events by listening to intake HTTP requests: events need to be flushed to be collected.
                       Any SDK setup is supported.
                     </>
                   )}
-                  {eventSource === 'sdk' && (
+                  {eventCollectionStrategy === 'sdk' && (
                     <>
                       Collect events by listening to messages sent from the SDK: events are available as soon as they
                       happen. Only newer versions of the SDK are supported.
@@ -128,6 +236,30 @@ export function SettingsTab() {
               description={<>Force the SDK to flush events periodically.</>}
             />
           </Columns.Column>
+          <Columns.Column title="Other">
+            <SettingItem
+              input={
+                <Checkbox
+                  label="Debug mode"
+                  checked={debug}
+                  onChange={(e) => setSetting('debugMode', isChecked(e.target))}
+                  color="violet"
+                />
+              }
+              description={<>Enable the SDK logs in the developer console</>}
+            />
+            <SettingItem
+              input={
+                <Checkbox
+                  label="OpenObserve employee mode"
+                  checked={datadogMode}
+                  onChange={(e) => setSetting('datadogMode', isChecked(e.target))}
+                  color="violet"
+                />
+              }
+              description={<>Enable OpenObserve-internal debugging features</>}
+            />
+          </Columns.Column>
         </Columns>
       </div>
     </TabBase>
@@ -138,11 +270,7 @@ function SettingItem({ description, input }: { description?: React.ReactNode; in
   return (
     <Box>
       {input}
-      {description && (
-        <Text size="sm" c="dimmed">
-          {description}
-        </Text>
-      )}
+      {description && <Text c="dimmed">{description}</Text>}
       <Space h="md" />
     </Box>
   )

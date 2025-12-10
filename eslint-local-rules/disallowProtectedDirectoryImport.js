@@ -1,10 +1,15 @@
-const path = require('path')
-const { minimatch } = require('minimatch')
-const resolve = require('eslint-module-utils/resolve').default
-const moduleVisitor = require('eslint-module-utils/moduleVisitor').default
-const importType = require('eslint-plugin-import/lib/core/importType').default
+import path from 'node:path'
+import { minimatch } from 'minimatch'
 
-module.exports = {
+import resolvePackage from 'eslint-module-utils/resolve.js'
+import moduleVisitorPackage from 'eslint-module-utils/moduleVisitor.js'
+import importTypePackage from 'eslint-plugin-import/lib/core/importType.js'
+
+const moduleVisitor = moduleVisitorPackage.default
+const importType = importTypePackage.default
+const resolve = resolvePackage.default
+
+export default {
   meta: {
     docs: {
       description:
@@ -25,6 +30,11 @@ module.exports = {
       },
     ],
   },
+  /**
+   * Create an ESLint rule to disallow importing modules from protected directories.
+   *
+   * @returns {Record<string, Function>}
+   */
   create(context) {
     return moduleVisitor((source) => {
       const protectedDirectory = getFirstProtectedDirectory(source.value, context)

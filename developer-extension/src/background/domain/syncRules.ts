@@ -1,5 +1,6 @@
-import type { NetRequestRulesOptions } from '../../common/types'
-import { DEV_LOGS_URL, DEV_RUM_SLIM_URL, DEV_RUM_URL, INTAKE_DOMAINS } from '../../common/constants'
+import type { NetRequestRulesOptions } from '../../common/extension.types'
+import { DEV_RUM_SLIM_URL, DEV_RUM_URL, DEV_SERVER_ORIGIN } from '../../common/packagesUrlConstants'
+import { INTAKE_DOMAINS } from '../../common/intakeDomainConstants'
 import { createLogger } from '../../common/logger'
 import { onDevtoolsDisconnection, onDevtoolsMessage } from '../devtoolsPanelConnection'
 
@@ -57,7 +58,7 @@ function buildRules(
   const rules: chrome.declarativeNetRequest.Rule[] = []
   let id = nextRuleId
 
-  if (useDevBundles) {
+  if (useDevBundles === 'cdn') {
     const devRumUrl = useRumSlim ? DEV_RUM_SLIM_URL : DEV_RUM_URL
     logger.log('add redirect to dev bundles rules')
     rules.push(

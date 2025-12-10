@@ -1,6 +1,5 @@
 import type { Configuration } from '../domain/configuration'
-import { withXhr, stubXhr } from '../../test'
-import { isIE } from '../tools/utils/browserDetection'
+import { withXhr, mockXhr } from '../../test'
 import type { Subscription } from '../tools/observable'
 import type { XhrCompleteContext, XhrContext } from './xhrObservable'
 import { initXhrObservable } from './xhrObservable'
@@ -9,15 +8,14 @@ describe('xhr observable', () => {
   let requestsTrackingSubscription: Subscription
   let contextEditionSubscription: Subscription | undefined
   let requests: XhrCompleteContext[]
-  let stubXhrManager: { reset(): void }
-  let originalXhrStubSend: XMLHttpRequest['send']
+  let originalMockXhrSend: XMLHttpRequest['send']
   let configuration: Configuration
 
   beforeEach(() => {
-    stubXhrManager = stubXhr()
+    mockXhr()
     configuration = {} as Configuration
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    originalXhrStubSend = XMLHttpRequest.prototype.send
+    originalMockXhrSend = XMLHttpRequest.prototype.send
 
     requests = []
     startTrackingRequests()
@@ -26,7 +24,6 @@ describe('xhr observable', () => {
   afterEach(() => {
     requestsTrackingSubscription.unsubscribe()
     contextEditionSubscription?.unsubscribe()
-    stubXhrManager.reset()
   })
 
   function startTrackingRequests() {
@@ -50,8 +47,24 @@ describe('xhr observable', () => {
         expect(request.url).toContain('/ok')
         expect(request.status).toBe(200)
         expect(request.isAborted).toBe(false)
-        expect(request.startTime).toEqual(jasmine.any(Number))
         expect(request.duration).toEqual(jasmine.any(Number))
+        expect(request.handlingStack).toBeDefined()
+        done()
+      },
+    })
+  })
+
+  it('should sanitize request method', (done) => {
+    withXhr({
+      setup(xhr) {
+        xhr.open('get', '/ok')
+        xhr.send()
+        xhr.complete(200, 'ok')
+      },
+      onComplete() {
+        const request = requests[0]
+        expect(request.method).toBe('GET')
+        expect(request.handlingStack).toBeDefined()
         done()
       },
     })
@@ -70,8 +83,8 @@ describe('xhr observable', () => {
         expect(request.url).toContain('/expected-404')
         expect(request.status).toBe(404)
         expect(request.isAborted).toBe(false)
-        expect(request.startTime).toEqual(jasmine.any(Number))
         expect(request.duration).toEqual(jasmine.any(Number))
+        expect(request.handlingStack).toBeDefined()
         done()
       },
     })
@@ -90,8 +103,8 @@ describe('xhr observable', () => {
         expect(request.url).toContain('/throw')
         expect(request.status).toBe(500)
         expect(request.isAborted).toBe(false)
-        expect(request.startTime).toEqual(jasmine.any(Number))
         expect(request.duration).toEqual(jasmine.any(Number))
+        expect(request.handlingStack).toBeDefined()
         done()
       },
     })
@@ -110,8 +123,8 @@ describe('xhr observable', () => {
         expect(request.url).toBe('http://foo.bar/qux')
         expect(request.status).toBe(0)
         expect(request.isAborted).toBe(false)
-        expect(request.startTime).toEqual(jasmine.any(Number))
         expect(request.duration).toEqual(jasmine.any(Number))
+        expect(request.handlingStack).toBeDefined()
         done()
       },
     })
@@ -136,11 +149,11 @@ describe('xhr observable', () => {
         expect(request.method).toBe('GET')
         expect(request.url).toContain('/ok')
         expect(request.status).toBe(200)
-        expect(request.startTime).toEqual(jasmine.any(Number))
         expect(request.duration).toEqual(jasmine.any(Number))
         expect(request.isAborted).toBe(false)
         expect(xhr.status).toBe(0)
         expect(xhr.onreadystatechange).toHaveBeenCalledTimes(1)
+        expect(request.handlingStack).toBeDefined()
         done()
       },
     })
@@ -158,10 +171,10 @@ describe('xhr observable', () => {
         expect(request.method).toBe('GET')
         expect(request.url).toContain('/ok')
         expect(request.status).toBe(0)
-        expect(request.startTime).toEqual(jasmine.any(Number))
         expect(request.duration).toEqual(jasmine.any(Number))
         expect(request.isAborted).toBe(true)
         expect(xhr.status).toBe(0)
+        expect(request.handlingStack).toBeDefined()
         done()
       },
     })
@@ -181,9 +194,9 @@ describe('xhr observable', () => {
         expect(request.url).toContain('/ok')
         expect(request.status).toBe(200)
         expect(request.isAborted).toBe(false)
-        expect(request.startTime).toEqual(jasmine.any(Number))
         expect(request.duration).toEqual(jasmine.any(Number))
         expect(xhr.onreadystatechange).toHaveBeenCalled()
+        expect(request.handlingStack).toBeDefined()
         done()
       },
     })
@@ -203,9 +216,9 @@ describe('xhr observable', () => {
         expect(request.url).toContain('/ok')
         expect(request.status).toBe(200)
         expect(request.isAborted).toBe(false)
-        expect(request.startTime).toEqual(jasmine.any(Number))
         expect(request.duration).toEqual(jasmine.any(Number))
         expect(xhr.onreadystatechange).toHaveBeenCalled()
+        expect(request.handlingStack).toBeDefined()
         done()
       },
     })
@@ -276,16 +289,16 @@ describe('xhr observable', () => {
         expect(firstRequest.url).toContain('/ok?request=1')
         expect(firstRequest.status).toBe(200)
         expect(firstRequest.isAborted).toBe(false)
-        expect(firstRequest.startTime).toEqual(jasmine.any(Number))
         expect(firstRequest.duration).toEqual(jasmine.any(Number))
+        expect(firstRequest.handlingStack).toBeDefined()
 
         const secondRequest = requests[1]
         expect(secondRequest.method).toBe('GET')
         expect(secondRequest.url).toContain('/ok?request=2')
         expect(secondRequest.status).toBe(400)
         expect(secondRequest.isAborted).toBe(false)
-        expect(secondRequest.startTime).toEqual(jasmine.any(Number))
         expect(secondRequest.duration).toEqual(jasmine.any(Number))
+        expect(secondRequest.handlingStack).toBeDefined()
 
         expect(xhr.onreadystatechange).toHaveBeenCalledTimes(2)
         expect(listeners.load.length).toBe(0)
@@ -330,9 +343,6 @@ describe('xhr observable', () => {
   })
 
   it('should track request to URL object', (done) => {
-    if (isIE()) {
-      pending('IE not supported')
-    }
     withXhr({
       setup(xhr) {
         xhr.open('GET', new URL('http://example.com/path'))
@@ -369,7 +379,27 @@ describe('xhr observable', () => {
       requestsTrackingSubscription.unsubscribe()
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(XMLHttpRequest.prototype.send).toBe(originalXhrStubSend)
+      expect(XMLHttpRequest.prototype.send).toBe(originalMockXhrSend)
+    })
+  })
+
+  it('should track request with undefined or null methods', (done) => {
+    withXhr({
+      setup(xhr) {
+        xhr.open(null, '/ok')
+        xhr.send()
+        xhr.onreadystatechange = jasmine.createSpy()
+        xhr.complete(200, 'ok')
+        xhr.open(undefined, '/ok')
+        xhr.send()
+        xhr.onreadystatechange = jasmine.createSpy()
+        xhr.complete(200, 'ok')
+      },
+      onComplete() {
+        expect(requests[0].method).toBe('NULL')
+        expect(requests[1].method).toBe('UNDEFINED')
+        done()
+      },
     })
   })
 })

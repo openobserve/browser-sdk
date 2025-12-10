@@ -1,6 +1,7 @@
 import { clocksNow, Observable, timeStampNow } from '@openobserve/browser-core'
 import { createNewEvent } from '@openobserve/browser-core/test'
-import type { Click } from '../src/domain/rumEventsCollection/action/trackClickActions'
+import type { Click } from '../src/domain/action/trackClickActions'
+import type { MouseEventOnElement, UserActivity } from '../src/domain/action/listenActionEvents'
 
 export type FakeClick = Readonly<ReturnType<typeof createFakeClick>>
 
@@ -12,8 +13,8 @@ export function createFakeClick({
 }: {
   hasError?: boolean
   hasPageActivity?: boolean
-  userActivity?: { selection?: boolean; input?: boolean }
-  event?: Partial<PointerEvent & { target: Element }>
+  userActivity?: Partial<UserActivity>
+  event?: Partial<MouseEventOnElement>
 } = {}) {
   const stopObservable = new Observable<void>()
   let isStopped = false
@@ -37,6 +38,7 @@ export function createFakeClick({
     getUserActivity: () => ({
       selection: false,
       input: false,
+      scroll: false,
       ...userActivity,
     }),
     addFrustration: jasmine.createSpy<Click['addFrustration']>(),

@@ -9,10 +9,68 @@ export function generateUUID(placeholder?: string): string {
     : `${1e7}-${1e3}-${4e3}-${8e3}-${1e11}`.replace(/[018]/g, generateUUID)
 }
 
-export function findCommaSeparatedValue(rawString: string, name: string) {
-  const regex = new RegExp(`(?:^|;)\\s*${name}\\s*=\\s*([^;]+)`)
-  const matches = regex.exec(rawString)
-  return matches ? matches[1] : undefined
+const COMMA_SEPARATED_KEY_VALUE = /([\w-]+)\s*=\s*([^;]+)/g
+
+/**
+ * Returns the value of the key with the given name
+ * If there are multiple values with the same key, returns the first one
+ */
+export function findCommaSeparatedValue(rawString: string, name: string): string | undefined {
+  COMMA_SEPARATED_KEY_VALUE.lastIndex = 0
+  while (true) {
+    const match = COMMA_SEPARATED_KEY_VALUE.exec(rawString)
+    if (match) {
+      if (match[1] === name) {
+        return match[2]
+      }
+    } else {
+      break
+    }
+  }
+}
+
+/**
+ * Returns a map of all the values with the given key
+ * If there are multiple values with the same key, returns all the values
+ */
+export function findAllCommaSeparatedValues(rawString: string): Map<string, string[]> {
+  const result = new Map<string, string[]>()
+  COMMA_SEPARATED_KEY_VALUE.lastIndex = 0
+  while (true) {
+    const match = COMMA_SEPARATED_KEY_VALUE.exec(rawString)
+    if (match) {
+      const key = match[1]
+      const value = match[2]
+      if (result.has(key)) {
+        result.get(key)!.push(value)
+      } else {
+        result.set(key, [value])
+      }
+    } else {
+      break
+    }
+  }
+  return result
+}
+
+/**
+ * Returns a map of the values with the given key
+ * ⚠️ If there are multiple values with the same key, returns the LAST one
+ *
+ * @deprecated use `findAllCommaSeparatedValues()` instead
+ */
+export function findCommaSeparatedValues(rawString: string): Map<string, string> {
+  const result = new Map<string, string>()
+  COMMA_SEPARATED_KEY_VALUE.lastIndex = 0
+  while (true) {
+    const match = COMMA_SEPARATED_KEY_VALUE.exec(rawString)
+    if (match) {
+      result.set(match[1], match[2])
+    } else {
+      break
+    }
+  }
+  return result
 }
 
 export function safeTruncate(candidate: string, length: number, suffix = '') {

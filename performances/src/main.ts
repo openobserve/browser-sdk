@@ -1,8 +1,8 @@
 import type { Page } from 'puppeteer'
-import puppeteer from 'puppeteer'
+import { launch } from 'puppeteer'
 import { formatProfilingResults } from './format'
 import { startProfiling } from './profilers/startProfiling'
-import type { ProfilingResults, ProfilingOptions } from './types'
+import type { ProfilingResults, ProfilingOptions } from './profiling.types'
 import { startProxy } from './proxy'
 import { wikipediaScenario } from './scenarios/wikipediaScenario'
 import { twitterScenario } from './scenarios/twitterScenario'
@@ -49,7 +49,7 @@ async function profileScenario(
   options: ProfilingOptions,
   runScenario: (page: Page, takeMeasurements: () => Promise<void>) => Promise<void>
 ) {
-  const browser = await puppeteer.launch({
+  const browser = await launch({
     defaultViewport: { width: 1366, height: 768 },
     // Twitter detects headless browsing and refuses to load
     headless: false,
@@ -82,7 +82,7 @@ async function setupSDK(page: Page, options: ProfilingOptions) {
             applicationId: 'xxx',
             site: 'api.openobserve.ai',
             trackInteractions: true,
-            proxyUrl: ${JSON.stringify(options.proxy.origin)}
+            proxy: ${JSON.stringify(options.proxy.origin)}
           })
           ${options.startRecording ? 'window.OO_RUM.startSessionReplayRecording()' : ''}
         })

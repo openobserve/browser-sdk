@@ -1,69 +1,135 @@
-import { mockClock, stubZoneJs } from '../../test'
-import type { Clock } from '../../test'
+import { mockClock, mockZoneJs } from '../../test'
+import type { Clock, MockZoneJs } from '../../test'
+import type { InstrumentedMethodCall } from './instrumentMethod'
 import { instrumentMethod, instrumentSetter } from './instrumentMethod'
 import { noop } from './utils/functionUtils'
 
 describe('instrumentMethod', () => {
+  const THIRD_PARTY_RESULT = 42
+
   it('replaces the original method', () => {
     const original = () => 1
     const object = { method: original }
 
-    instrumentMethod(object, 'method', () => () => 2)
+    instrumentMethod(object, 'method', noop)
 
     expect(object.method).not.toBe(original)
-    expect(object.method()).toBe(2)
   })
 
-  it('sets a method originally undefined', () => {
+  it('calls the instrumentation before the original method', () => {
+    const originalSpy = jasmine.createSpy()
+    const instrumentationSpy = jasmine.createSpy()
+    const object = { method: originalSpy }
+
+    instrumentMethod(object, 'method', instrumentationSpy)
+
+    object.method()
+
+    expect(instrumentationSpy).toHaveBeenCalledBefore(originalSpy)
+  })
+
+  it('does not set a method originally undefined', () => {
     const object: { method?: () => number } = {}
 
-    instrumentMethod(object, 'method', () => () => 2)
+    instrumentMethod(object, 'method', noop)
 
-    expect(object.method!()).toBe(2)
+    expect(object.method).toBeUndefined()
   })
 
-  it('provides the original method to the instrumentation factory', () => {
-    const original = () => 1
-    const object = { method: original }
-    const instrumentationFactorySpy = jasmine.createSpy().and.callFake((original: () => number) => () => original() + 2)
+  it('sets an event handler even if it was originally undefined', () => {
+    const object: { onevent?: () => void } = { onevent: undefined }
 
-    instrumentMethod(object, 'method', instrumentationFactorySpy)
-
-    expect(instrumentationFactorySpy).toHaveBeenCalledOnceWith(original)
-    expect(object.method()).toBe(3)
-  })
-
-  it('calls the instrumentation with method arguments', () => {
-    const object = { method: (a: number, b: number) => a + b }
     const instrumentationSpy = jasmine.createSpy()
-    instrumentMethod(object, 'method', () => instrumentationSpy)
+    instrumentMethod(object, 'onevent', instrumentationSpy)
+
+    expect(object.onevent).toBeDefined()
+
+    object.onevent!()
+    expect(instrumentationSpy).toHaveBeenCalled()
+  })
+
+  it('do not set an event handler even if the event is not supported (i.e. property does not exist on object)', () => {
+    const object: { onevent?: () => void } = {}
+
+    const instrumentationSpy = jasmine.createSpy()
+    instrumentMethod(object, 'onevent', instrumentationSpy)
+
+    expect('onevent' in object).toBeFalse()
+  })
+
+  it('calls the instrumentation with method target and parameters', () => {
+    const object = { method: (a: number, b: number) => a + b }
+    const instrumentationSpy = jasmine.createSpy<(call: InstrumentedMethodCall<typeof object, 'method'>) => void>()
+    instrumentMethod(object, 'method', instrumentationSpy)
 
     object.method(2, 3)
 
-    expect(instrumentationSpy).toHaveBeenCalledOnceWith(2, 3)
+    expect(instrumentationSpy).toHaveBeenCalledOnceWith({
+      target: object,
+      parameters: jasmine.any(Object),
+      onPostCall: jasmine.any(Function),
+      handlingStack: undefined,
+    })
+    expect(instrumentationSpy.calls.mostRecent().args[0].parameters[0]).toBe(2)
+    expect(instrumentationSpy.calls.mostRecent().args[0].parameters[1]).toBe(3)
+  })
+
+  it('allows replacing a parameter', () => {
+    const object = { method: (a: number) => a }
+    instrumentMethod(object, 'method', ({ parameters }) => {
+      parameters[0] = 2
+    })
+
+    expect(object.method(1)).toBe(2)
+  })
+
+  it('allows adding a parameter', () => {
+    const object = { method: (a?: number) => a }
+    instrumentMethod(object, 'method', ({ parameters }) => {
+      parameters[0] = 2
+    })
+
+    expect(object.method()).toBe(2)
+  })
+
+  it('calls the "onPostCall" callback with the original method result', () => {
+    const object = { method: () => 1 }
+    const onPostCallSpy = jasmine.createSpy()
+    instrumentMethod(object, 'method', ({ onPostCall }) => onPostCall(onPostCallSpy))
+
+    object.method()
+
+    expect(onPostCallSpy).toHaveBeenCalledOnceWith(1)
   })
 
   it('allows other instrumentations from third parties', () => {
     const object = { method: () => 1 }
-    const instrumentationSpy = jasmine.createSpy().and.returnValue(2)
-    instrumentMethod(object, 'method', () => instrumentationSpy)
+    const instrumentationSpy = jasmine.createSpy()
+    instrumentMethod(object, 'method', instrumentationSpy)
 
     thirdPartyInstrumentation(object)
 
-    expect(object.method()).toBe(4)
+    expect(object.method()).toBe(THIRD_PARTY_RESULT)
     expect(instrumentationSpy).toHaveBeenCalled()
   })
 
+  it('computes the handling stack', () => {
+    const object = { method: () => 1 }
+    const instrumentationSpy = jasmine.createSpy()
+    instrumentMethod(object, 'method', instrumentationSpy, { computeHandlingStack: true })
+
+    function foo() {
+      object.method()
+    }
+
+    foo()
+
+    expect(instrumentationSpy.calls.mostRecent().args[0].handlingStack).toEqual(
+      jasmine.stringMatching(/^HandlingStack: instrumented method\n {2}at foo @/)
+    )
+  })
+
   describe('stop()', () => {
-    it('restores the original behavior', () => {
-      const object = { method: () => 1 }
-      const { stop } = instrumentMethod(object, 'method', () => () => 2)
-
-      stop()
-
-      expect(object.method()).toBe(1)
-    })
-
     it('does not call the instrumentation anymore', () => {
       const object = { method: () => 1 }
       const instrumentationSpy = jasmine.createSpy()
@@ -78,7 +144,7 @@ describe('instrumentMethod', () => {
     describe('when the method has been instrumented by a third party', () => {
       it('should not break the third party instrumentation', () => {
         const object = { method: () => 1 }
-        const { stop } = instrumentMethod(object, 'method', () => () => 2)
+        const { stop } = instrumentMethod(object, 'method', noop)
 
         thirdPartyInstrumentation(object)
         const instrumentedMethod = object.method
@@ -91,7 +157,7 @@ describe('instrumentMethod', () => {
       it('does not call the instrumentation', () => {
         const object = { method: () => 1 }
         const instrumentationSpy = jasmine.createSpy()
-        const { stop } = instrumentMethod(object, 'method', () => instrumentationSpy)
+        const { stop } = instrumentMethod(object, 'method', instrumentationSpy)
 
         thirdPartyInstrumentation(object)
 
@@ -101,38 +167,44 @@ describe('instrumentMethod', () => {
       })
 
       it('should not throw errors if original method was undefined', () => {
-        const object: { method?: () => number } = {}
+        const object: { onevent?: () => number } = {}
         const instrumentationStub = () => 2
-        const { stop } = instrumentMethod(object, 'method', () => instrumentationStub)
+        const { stop } = instrumentMethod(object, 'onevent', instrumentationStub)
 
         thirdPartyInstrumentation(object)
 
         stop()
 
-        expect(object.method).not.toThrow()
+        expect(object.onevent).not.toThrow()
       })
     })
   })
 
-  function thirdPartyInstrumentation(object: { method?: () => number }) {
+  function thirdPartyInstrumentation(object: { method?: () => number; onevent?: () => void }) {
     const originalMethod = object.method
     if (typeof originalMethod === 'function') {
-      object.method = () => originalMethod() + 2
+      object.method = () => {
+        originalMethod()
+        return THIRD_PARTY_RESULT
+      }
+    }
+
+    const originalOnEvent = object.onevent
+    object.onevent = () => {
+      if (originalOnEvent) {
+        originalOnEvent()
+      }
     }
   }
 })
 
 describe('instrumentSetter', () => {
   let clock: Clock
-  let zoneJsStub: ReturnType<typeof stubZoneJs>
+  let zoneJs: MockZoneJs
 
   beforeEach(() => {
     clock = mockClock()
-    zoneJsStub = stubZoneJs()
-  })
-  afterEach(() => {
-    zoneJsStub.restore()
-    clock.cleanup()
+    zoneJs = mockZoneJs()
   })
 
   it('replaces the original setter', () => {
@@ -194,7 +266,7 @@ describe('instrumentSetter', () => {
 
   it('does not use the Zone.js setTimeout function', () => {
     const zoneJsSetTimeoutSpy = jasmine.createSpy()
-    zoneJsStub.replaceProperty(window, 'setTimeout', zoneJsSetTimeoutSpy)
+    zoneJs.replaceProperty(window, 'setTimeout', zoneJsSetTimeoutSpy)
 
     const object = {} as { foo: number }
     Object.defineProperty(object, 'foo', { set: noop, configurable: true })
@@ -245,6 +317,20 @@ describe('instrumentSetter', () => {
       stop()
 
       object.foo = 2
+      clock.tick(0)
+
+      expect(instrumentationSetterSpy).not.toHaveBeenCalled()
+    })
+
+    it('does not call instrumentation pending in the event loop via setTimeout', () => {
+      const object = {} as { foo: number }
+      Object.defineProperty(object, 'foo', { set: noop, configurable: true })
+      const instrumentationSetterSpy = jasmine.createSpy()
+      const { stop } = instrumentSetter(object, 'foo', instrumentationSetterSpy)
+
+      object.foo = 2
+      stop()
+      clock.tick(0)
 
       expect(instrumentationSetterSpy).not.toHaveBeenCalled()
     })
@@ -267,13 +353,14 @@ describe('instrumentSetter', () => {
         const object = {} as { foo: number }
         Object.defineProperty(object, 'foo', { set: noop, configurable: true })
         const instrumentationSetterSpy = jasmine.createSpy()
-        const { stop } = instrumentSetter(object, 'foo', noop)
+        const { stop } = instrumentSetter(object, 'foo', instrumentationSetterSpy)
 
         thirdPartyInstrumentation(object)
 
         stop()
 
         object.foo = 2
+        clock.tick(0)
 
         expect(instrumentationSetterSpy).not.toHaveBeenCalled()
       })

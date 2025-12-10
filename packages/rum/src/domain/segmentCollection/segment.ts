@@ -1,59 +1,77 @@
-import { assign, sendToExtension } from '@openobserve/browser-core'
+import type { Encoder, EncoderResult, Uint8ArrayBuffer } from '@openobserve/browser-core'
 import type { BrowserRecord, BrowserSegmentMetadata, CreationReason, SegmentContext } from '../../types'
 import { RecordType } from '../../types'
 import * as replayStats from '../replayStats'
-import type { DeflateEncoder } from '../deflate'
+import type { SerializationStats } from '../record'
+import { aggregateSerializationStats, createSerializationStats } from '../record'
 
 export type FlushReason = Exclude<CreationReason, 'init'> | 'stop'
+export type FlushCallback = (
+  metadata: BrowserSegmentMetadata,
+  stats: SerializationStats,
+  encoderResult: EncoderResult<Uint8ArrayBuffer>
+) => void
+export type AddRecordCallback = (encodedBytesCount: number) => void
 
-export class Segment {
-  private metadata: BrowserSegmentMetadata
+export interface Segment {
+  addRecord: (record: BrowserRecord, stats: SerializationStats | undefined, callback: AddRecordCallback) => void
+  flush: (callback: FlushCallback) => void
+}
 
-  constructor(
-    private encoder: DeflateEncoder,
-    context: SegmentContext,
-    creationReason: CreationReason
-  ) {
-    const viewId = context.view.id
-
-    this.metadata = assign(
-      {
-        start: Infinity,
-        end: -Infinity,
-        creation_reason: creationReason,
-        records_count: 0,
-        has_full_snapshot: false,
-        index_in_view: replayStats.getSegmentsCount(viewId),
-        source: 'browser' as const,
-      },
-      context
-    )
-
-    replayStats.addSegment(viewId)
+export function createSegment({
+  context,
+  creationReason,
+  encoder,
+}: {
+  context: SegmentContext
+  creationReason: CreationReason
+  encoder: Encoder<Uint8ArrayBuffer>
+}): Segment {
+  let encodedBytesCount = 0
+  const viewId = context.view.id
+  const indexInView = replayStats.getSegmentsCount(viewId)
+  const metadata: BrowserSegmentMetadata = {
+    start: Infinity,
+    end: -Infinity,
+    creation_reason: creationReason,
+    records_count: 0,
+    has_full_snapshot: false,
+    index_in_view: indexInView,
+    source: 'browser' as const,
+    ...context,
   }
 
-  addRecord(record: BrowserRecord, callback: () => void): void {
-    this.metadata.start = Math.min(this.metadata.start, record.timestamp)
-    this.metadata.end = Math.max(this.metadata.end, record.timestamp)
-    this.metadata.records_count += 1
-    this.metadata.has_full_snapshot ||= record.type === RecordType.FullSnapshot
+  const serializationStats = createSerializationStats()
+  replayStats.addSegment(viewId)
 
-    sendToExtension('record', { record, segment: this.metadata })
-    replayStats.addRecord(this.metadata.view.id)
+  function addRecord(record: BrowserRecord, stats: SerializationStats | undefined, callback: AddRecordCallback): void {
+    metadata.start = Math.min(metadata.start, record.timestamp)
+    metadata.end = Math.max(metadata.end, record.timestamp)
+    metadata.records_count += 1
+    metadata.has_full_snapshot ||= record.type === RecordType.FullSnapshot
 
-    const prefix = this.metadata.records_count === 1 ? '{"records":[' : ','
-    this.encoder.write(prefix + JSON.stringify(record), callback)
+    if (stats) {
+      aggregateSerializationStats(serializationStats, stats)
+    }
+
+    const prefix = encoder.isEmpty ? '{"records":[' : ','
+    encoder.write(prefix + JSON.stringify(record), (additionalEncodedBytesCount) => {
+      encodedBytesCount += additionalEncodedBytesCount
+      callback(encodedBytesCount)
+    })
   }
 
-  flush(callback: (metadata: BrowserSegmentMetadata) => void) {
-    if (this.metadata.records_count === 0) {
+  function flush(callback: FlushCallback) {
+    if (encoder.isEmpty) {
       throw new Error('Empty segment flushed')
     }
 
-    this.encoder.write(`],${JSON.stringify(this.metadata).slice(1)}\n`, () => {
-      replayStats.addWroteData(this.metadata.view.id, this.encoder.rawBytesCount)
-      callback(this.metadata)
+    encoder.write(`],${JSON.stringify(metadata).slice(1)}\n`)
+    encoder.finish((encoderResult) => {
+      replayStats.addWroteData(metadata.view.id, encoderResult.rawBytesCount)
+      callback(metadata, serializationStats, encoderResult)
     })
-    this.encoder.reset()
   }
+
+  return { addRecord, flush }
 }

@@ -1,6 +1,7 @@
-import { Container, Flex, Space } from '@mantine/core'
+import { Container, Flex, ScrollArea, Space } from '@mantine/core'
 import type { ReactNode } from 'react'
 import React from 'react'
+import * as classes from './tabBase.module.css'
 
 interface TabBaseProps {
   /**
@@ -9,26 +10,37 @@ interface TabBaseProps {
   top?: ReactNode
 
   /**
+   * Content displayed at the left side of the tab.
+   */
+  leftSide?: ReactNode
+
+  /**
    * Content of the tab, scrolls
    */
   children: ReactNode
 }
 
-export function TabBase({ top, children }: TabBaseProps) {
+export function TabBase({ top, leftSide, children }: TabBaseProps) {
   return (
-    <Flex direction="column" sx={{ height: '100%' }}>
+    <Flex direction="column" className={classes.root}>
       {top && (
-        <>
-          <Container fluid sx={{ margin: 0 }}>
-            <Space h="sm" />
-            {top}
-            <Space h="sm" />
-          </Container>
-        </>
+        <Container fluid className={classes.topContainer}>
+          <Space h="sm" />
+          {top}
+          <Space h="sm" />
+        </Container>
       )}
-      <Container fluid sx={{ flex: 1, overflowY: 'auto', padding: 0, margin: 0 }}>
-        {children}
-      </Container>
+      <Flex direction="row" className={classes.horizontalContainer}>
+        {leftSide && (
+          <ScrollArea className={classes.leftContainer}>
+            {leftSide}
+            <Space h="sm" />
+          </ScrollArea>
+        )}
+        <Container fluid className={classes.contentContainer}>
+          {children}
+        </Container>
+      </Flex>
     </Flex>
   )
 }

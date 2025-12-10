@@ -1,8 +1,22 @@
-import type { RelativeTime } from '@openobserve/browser-core'
-import { Observable, noop, performDraw, startSessionManager } from '@openobserve/browser-core'
+import type { RelativeTime, TrackingConsentState } from '@openobserve/browser-core'
+import {
+  BridgeCapability,
+  Observable,
+  SESSION_NOT_TRACKED,
+  bridgeSupports,
+  noop,
+  performDraw,
+  startSessionManager,
+} from '@openobserve/browser-core'
 import type { RumConfiguration } from './configuration'
 import type { LifeCycle } from './lifeCycle'
 import { LifeCycleEventType } from './lifeCycle'
+
+export const enum SessionType {
+  SYNTHETICS = 'synthetics',
+  USER = 'user',
+  CI_TEST = 'ci_test',
+}
 
 export const RUM_SESSION_KEY = 'rum'
 
@@ -10,33 +24,37 @@ export interface RumSessionManager {
   findTrackedSession: (startTime?: RelativeTime) => RumSession | undefined
   expire: () => void
   expireObservable: Observable<void>
+  setForcedReplay: () => void
 }
 
-export type RumSession = {
+export interface RumSession {
   id: string
-  plan: RumSessionPlan
-  sessionReplayAllowed: boolean
-  longTaskAllowed: boolean
-  resourceAllowed: boolean
-}
-
-export const enum RumSessionPlan {
-  WITHOUT_SESSION_REPLAY = 1,
-  WITH_SESSION_REPLAY = 2,
+  sessionReplay: SessionReplayState
+  anonymousId?: string
 }
 
 export const enum RumTrackingType {
-  NOT_TRACKED = '0',
-  // Note: the "tracking type" value (stored in the session cookie) does not match the "session
-  // plan" value (sent in RUM events). This is expected, and was done to keep retrocompatibility
-  // with active sessions when upgrading the SDK.
+  NOT_TRACKED = SESSION_NOT_TRACKED,
   TRACKED_WITH_SESSION_REPLAY = '1',
   TRACKED_WITHOUT_SESSION_REPLAY = '2',
 }
 
-export function startRumSessionManager(configuration: RumConfiguration, lifeCycle: LifeCycle): RumSessionManager {
-  const sessionManager = startSessionManager(configuration, RUM_SESSION_KEY, (rawTrackingType) =>
-    computeSessionState(configuration, rawTrackingType)
+export const enum SessionReplayState {
+  OFF,
+  SAMPLED,
+  FORCED,
+}
+
+export function startRumSessionManager(
+  configuration: RumConfiguration,
+  lifeCycle: LifeCycle,
+  trackingConsentState: TrackingConsentState
+): RumSessionManager {
+  const sessionManager = startSessionManager(
+    configuration,
+    RUM_SESSION_KEY,
+    (rawTrackingType) => computeTrackingType(configuration, rawTrackingType),
+    trackingConsentState
   )
 
   sessionManager.expireObservable.subscribe(() => {
@@ -47,32 +65,34 @@ export function startRumSessionManager(configuration: RumConfiguration, lifeCycl
     lifeCycle.notify(LifeCycleEventType.SESSION_RENEWED)
   })
 
+  sessionManager.sessionStateUpdateObservable.subscribe(({ previousState, newState }) => {
+    if (!previousState.forcedReplay && newState.forcedReplay) {
+      const sessionEntity = sessionManager.findSession()
+      if (sessionEntity) {
+        sessionEntity.isReplayForced = true
+      }
+    }
+  })
   return {
     findTrackedSession: (startTime) => {
-      const session = sessionManager.findActiveSession(startTime)
-      if (!session || !isTypeTracked(session.trackingType)) {
+      const session = sessionManager.findSession(startTime)
+      if (!session || session.trackingType === RumTrackingType.NOT_TRACKED) {
         return
       }
-      const plan =
-        session.trackingType === RumTrackingType.TRACKED_WITH_SESSION_REPLAY
-          ? RumSessionPlan.WITH_SESSION_REPLAY
-          : RumSessionPlan.WITHOUT_SESSION_REPLAY
       return {
         id: session.id,
-        plan,
-        sessionReplayAllowed: plan === RumSessionPlan.WITH_SESSION_REPLAY,
-        longTaskAllowed:
-          configuration.trackLongTasks !== undefined
-            ? configuration.trackLongTasks
-            : configuration.oldPlansBehavior && plan === RumSessionPlan.WITH_SESSION_REPLAY,
-        resourceAllowed:
-          configuration.trackResources !== undefined
-            ? configuration.trackResources
-            : configuration.oldPlansBehavior && plan === RumSessionPlan.WITH_SESSION_REPLAY,
+        sessionReplay:
+          session.trackingType === RumTrackingType.TRACKED_WITH_SESSION_REPLAY
+            ? SessionReplayState.SAMPLED
+            : session.isReplayForced
+              ? SessionReplayState.FORCED
+              : SessionReplayState.OFF,
+        anonymousId: session.anonymousId,
       }
     },
     expire: sessionManager.expire,
     expireObservable: sessionManager.expireObservable,
+    setForcedReplay: () => sessionManager.updateSessionState({ forcedReplay: '1' }),
   }
 }
 
@@ -82,33 +102,27 @@ export function startRumSessionManager(configuration: RumConfiguration, lifeCycl
 export function startRumSessionManagerStub(): RumSessionManager {
   const session: RumSession = {
     id: '00000000-aaaa-0000-aaaa-000000000000',
-    plan: RumSessionPlan.WITHOUT_SESSION_REPLAY, // plan value should not be taken into account for mobile
-    sessionReplayAllowed: false,
-    longTaskAllowed: true,
-    resourceAllowed: true,
+    sessionReplay: bridgeSupports(BridgeCapability.RECORDS) ? SessionReplayState.SAMPLED : SessionReplayState.OFF,
   }
   return {
     findTrackedSession: () => session,
     expire: noop,
     expireObservable: new Observable(),
+    setForcedReplay: noop,
   }
 }
 
-function computeSessionState(configuration: RumConfiguration, rawTrackingType?: string) {
-  let trackingType: RumTrackingType
+function computeTrackingType(configuration: RumConfiguration, rawTrackingType?: string) {
   if (hasValidRumSession(rawTrackingType)) {
-    trackingType = rawTrackingType
-  } else if (!performDraw(configuration.sessionSampleRate)) {
-    trackingType = RumTrackingType.NOT_TRACKED
-  } else if (!performDraw(configuration.sessionReplaySampleRate)) {
-    trackingType = RumTrackingType.TRACKED_WITHOUT_SESSION_REPLAY
-  } else {
-    trackingType = RumTrackingType.TRACKED_WITH_SESSION_REPLAY
+    return rawTrackingType
   }
-  return {
-    trackingType,
-    isTracked: isTypeTracked(trackingType),
+  if (!performDraw(configuration.sessionSampleRate)) {
+    return RumTrackingType.NOT_TRACKED
   }
+  if (!performDraw(configuration.sessionReplaySampleRate)) {
+    return RumTrackingType.TRACKED_WITHOUT_SESSION_REPLAY
+  }
+  return RumTrackingType.TRACKED_WITH_SESSION_REPLAY
 }
 
 function hasValidRumSession(trackingType?: string): trackingType is RumTrackingType {
@@ -116,12 +130,5 @@ function hasValidRumSession(trackingType?: string): trackingType is RumTrackingT
     trackingType === RumTrackingType.NOT_TRACKED ||
     trackingType === RumTrackingType.TRACKED_WITH_SESSION_REPLAY ||
     trackingType === RumTrackingType.TRACKED_WITHOUT_SESSION_REPLAY
-  )
-}
-
-function isTypeTracked(rumSessionType: RumTrackingType | undefined) {
-  return (
-    rumSessionType === RumTrackingType.TRACKED_WITHOUT_SESSION_REPLAY ||
-    rumSessionType === RumTrackingType.TRACKED_WITH_SESSION_REPLAY
   )
 }

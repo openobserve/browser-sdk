@@ -1,8 +1,8 @@
-import { getCookie } from '../../browser/cookie'
+import { getInitCookie } from '../../browser/cookie'
 import type { SessionStoreStrategy } from './storeStrategies/sessionStoreStrategy'
 import { SESSION_STORE_KEY } from './storeStrategies/sessionStoreStrategy'
 import type { SessionState } from './sessionState'
-import { expandSessionState, isSessionInExpiredState } from './sessionState'
+import { expandSessionState, isSessionStarted } from './sessionState'
 
 export const OLD_SESSION_COOKIE_NAME = '_oo'
 export const OLD_RUM_COOKIE_NAME = '_oo_r'
@@ -17,11 +17,11 @@ export const LOGS_SESSION_KEY = 'logs'
  * to allow older sdk versions to be upgraded to newer versions without compatibility issues.
  */
 export function tryOldCookiesMigration(cookieStoreStrategy: SessionStoreStrategy) {
-  const sessionString = getCookie(SESSION_STORE_KEY)
+  const sessionString = getInitCookie(SESSION_STORE_KEY)
   if (!sessionString) {
-    const oldSessionId = getCookie(OLD_SESSION_COOKIE_NAME)
-    const oldRumType = getCookie(OLD_RUM_COOKIE_NAME)
-    const oldLogsType = getCookie(OLD_LOGS_COOKIE_NAME)
+    const oldSessionId = getInitCookie(OLD_SESSION_COOKIE_NAME)
+    const oldRumType = getInitCookie(OLD_RUM_COOKIE_NAME)
+    const oldLogsType = getInitCookie(OLD_LOGS_COOKIE_NAME)
     const session: SessionState = {}
 
     if (oldSessionId) {
@@ -34,7 +34,7 @@ export function tryOldCookiesMigration(cookieStoreStrategy: SessionStoreStrategy
       session[RUM_SESSION_KEY] = oldRumType
     }
 
-    if (!isSessionInExpiredState(session)) {
+    if (isSessionStarted(session)) {
       expandSessionState(session)
       cookieStoreStrategy.persistSession(session)
     }

@@ -1,8 +1,9 @@
 import type { RelativeTime, Observable } from '@openobserve/browser-core'
-import { SESSION_TIME_OUT_DELAY, relativeNow, ValueHistory } from '@openobserve/browser-core'
+import { SESSION_TIME_OUT_DELAY, relativeNow, createValueHistory, HookNames, DISCARDED } from '@openobserve/browser-core'
 import type { LocationChange } from '../../browser/locationChangeObservable'
 import type { LifeCycle } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'
+import type { DefaultRumEventAttributes, Hooks } from '../hooks'
 
 /**
  * We want to attach to an event:
@@ -24,18 +25,15 @@ export interface UrlContexts {
 
 export function startUrlContexts(
   lifeCycle: LifeCycle,
+  hooks: Hooks,
   locationChangeObservable: Observable<LocationChange>,
   location: Location
 ) {
-  const urlContextHistory = new ValueHistory<UrlContext>(URL_CONTEXT_TIME_OUT_DELAY)
+  const urlContextHistory = createValueHistory<UrlContext>({ expireDelay: URL_CONTEXT_TIME_OUT_DELAY })
 
   let previousViewUrl: string | undefined
 
-  lifeCycle.subscribe(LifeCycleEventType.VIEW_ENDED, ({ endClocks }) => {
-    urlContextHistory.closeActive(endClocks.relative)
-  })
-
-  lifeCycle.subscribe(LifeCycleEventType.VIEW_CREATED, ({ startClocks }) => {
+  lifeCycle.subscribe(LifeCycleEventType.BEFORE_VIEW_CREATED, ({ startClocks }) => {
     const viewUrl = location.href
     urlContextHistory.add(
       buildUrlContext({
@@ -45,6 +43,10 @@ export function startUrlContexts(
       startClocks.relative
     )
     previousViewUrl = viewUrl
+  })
+
+  lifeCycle.subscribe(LifeCycleEventType.AFTER_VIEW_ENDED, ({ endClocks }) => {
+    urlContextHistory.closeActive(endClocks.relative)
   })
 
   const locationChangeSubscription = locationChangeObservable.subscribe(({ newLocation }) => {
@@ -68,6 +70,22 @@ export function startUrlContexts(
       referrer,
     }
   }
+
+  hooks.register(HookNames.Assemble, ({ startTime, eventType }): DefaultRumEventAttributes | DISCARDED => {
+    const urlContext = urlContextHistory.find(startTime)
+
+    if (!urlContext) {
+      return DISCARDED
+    }
+
+    return {
+      type: eventType,
+      view: {
+        url: urlContext.url,
+        referrer: urlContext.referrer,
+      },
+    }
+  })
 
   return {
     findUrl: (startTime?: RelativeTime) => urlContextHistory.find(startTime),

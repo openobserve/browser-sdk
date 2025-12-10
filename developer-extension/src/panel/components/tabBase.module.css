@@ -1,0 +1,29 @@
+.root {
+  height: 100%;
+}
+
+.topContainer {
+  margin: 0;
+}
+
+.leftContainer {
+  width: 250px;
+}
+
+.contentContainer {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+  margin: 0;
+
+  scroll-timeline:
+    --dd-tab-scroll-timeline,
+    --dd-tab-scroll-x-timeline x;
+}
+
+.horizontalContainer {
+  flex: 1;
+  /* This makes sure the row height fills its parent container and is not influenced by its inner content */
+  min-height: 0;
+}

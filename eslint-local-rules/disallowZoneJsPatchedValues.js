@@ -19,7 +19,7 @@ const PROBLEMATIC_IDENTIFIERS = {
   removeEventListener: 'Use `addEventListener().stop` from @openobserve/browser-core instead',
 }
 
-module.exports = {
+export default {
   meta: {
     docs: {
       description: 'Disallow problematic ZoneJs patched values.',
@@ -28,7 +28,7 @@ module.exports = {
     schema: [],
   },
   create(context) {
-    const parserServices = context.parserServices
+    const parserServices = context.sourceCode.parserServices
     const checker = parserServices.program.getTypeChecker()
 
     return {

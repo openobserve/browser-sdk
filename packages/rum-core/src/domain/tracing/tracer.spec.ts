@@ -1,143 +1,150 @@
-import { display, isIE, objectEntries } from '@openobserve/browser-core'
-import type { TestSetupBuilder, RumSessionManagerMock } from '../../../test'
-import { setup, createRumSessionManagerMock } from '../../../test'
+import type { ContextManager, ContextValue } from '@openobserve/browser-core'
+import { display, objectEntries, TraceContextInjection } from '@openobserve/browser-core'
+import type { RumSessionManagerMock } from '../../../test'
+import { createRumSessionManagerMock } from '../../../test'
 import type { RumFetchResolveContext, RumFetchStartContext, RumXhrStartContext } from '../requestCollection'
-import type { RumConfiguration, RumInitConfiguration } from '../configuration'
+import type { RumInitConfiguration } from '../configuration'
 import { validateAndBuildRumConfiguration } from '../configuration'
-import { startTracer, TraceIdentifier } from './tracer'
+import { startTracer } from './tracer'
+import type { SpanIdentifier, TraceIdentifier } from './identifier'
+import { createSpanIdentifier, createTraceIdentifier } from './identifier'
 
 describe('tracer', () => {
-  let configuration: RumConfiguration
   const ALLOWED_DOMAIN_CONTEXT: Partial<RumXhrStartContext | RumFetchStartContext> = {
     url: window.location.origin,
   }
   const DISALLOWED_DOMAIN_CONTEXT: Partial<RumXhrStartContext | RumFetchStartContext> = {
     url: 'http://foo.com',
   }
-  let setupBuilder: TestSetupBuilder
-  let sessionManager: RumSessionManagerMock
 
-  const INIT_CONFIGURATION: RumInitConfiguration = {
-    clientToken: 'xxx',
-    applicationId: 'xxx',
-    service: 'service',
-    allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['tracecontext'] }],
+  function startTracerWithDefaults({
+    initConfiguration,
+    sessionManager = createRumSessionManagerMock(),
+    userId = '1234',
+  }: {
+    initConfiguration?: Partial<RumInitConfiguration>
+    sessionManager?: RumSessionManagerMock
+    userId?: ContextValue
+  } = {}) {
+    const configuration = validateAndBuildRumConfiguration({
+      clientToken: 'xxx',
+      applicationId: 'xxx',
+      service: 'service',
+      allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['tracecontext'] }],
+      ...initConfiguration,
+    })!
+    const userContext = { getContext: () => ({ id: userId }) } as unknown as ContextManager
+    const accountContext = { getContext: () => ({ id: '5678' }) } as unknown as ContextManager
+    const tracer = startTracer(configuration, sessionManager, userContext, accountContext)
+    return tracer
   }
 
-  beforeEach(() => {
-    configuration = validateAndBuildRumConfiguration(INIT_CONFIGURATION)!
-    setupBuilder = setup()
-    sessionManager = createRumSessionManagerMock()
-  })
-
-  afterEach(() => {
-    setupBuilder.cleanup()
-  })
-
   describe('traceXhr', () => {
-    interface XhrStub {
+    interface MockXhr {
       headers: { [name: string]: string }
       setRequestHeader(name: string, value: string): void
     }
-    let xhrStub: XhrStub
+    let xhr: MockXhr
 
     beforeEach(() => {
-      xhrStub = {
-        setRequestHeader(this: XhrStub, name: string, value: string) {
+      xhr = {
+        setRequestHeader(this: MockXhr, name: string, value: string) {
           this.headers[name] = value
         },
-        headers: {} as XhrStub['headers'],
+        headers: {} as MockXhr['headers'],
       }
     })
 
     it('should add traceId and spanId to context and add tracing headers', () => {
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       const context = { ...ALLOWED_DOMAIN_CONTEXT }
-      tracer.traceXhr(context, xhrStub as unknown as XMLHttpRequest)
+      tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
       expect(context.traceId).toBeDefined()
       expect(context.spanId).toBeDefined()
-      expect(xhrStub.headers).toEqual(tracingHeadersFor(context.traceId!, context.spanId!, '1'))
+      expect(xhr.headers).toEqual(tracingHeadersFor(context.traceId!, context.spanId!, '1'))
     })
 
     it('should not trace request on disallowed domain', () => {
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       const context = { ...DISALLOWED_DOMAIN_CONTEXT }
-      tracer.traceXhr(context, xhrStub as unknown as XMLHttpRequest)
+      tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
       expect(context.traceId).toBeUndefined()
       expect(context.spanId).toBeUndefined()
-      expect(xhrStub.headers).toEqual({})
+      expect(xhr.headers).toEqual({})
     })
 
     it('should not trace request during untracked session', () => {
-      const tracer = startTracer(configuration, sessionManager.setNotTracked())
+      const tracer = startTracerWithDefaults({
+        sessionManager: createRumSessionManagerMock().setNotTracked(),
+      })
       const context = { ...ALLOWED_DOMAIN_CONTEXT }
-      tracer.traceXhr(context, xhrStub as unknown as XMLHttpRequest)
+      tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
       expect(context.traceId).toBeUndefined()
       expect(context.spanId).toBeUndefined()
-      expect(xhrStub.headers).toEqual({})
+      expect(xhr.headers).toEqual({})
     })
 
     it("should trace request with priority '1' when sampled", () => {
-      spyOn(Math, 'random').and.callFake(() => 0)
-      const tracer = startTracer({ ...configuration, traceSampleRate: 50 }, sessionManager)
+      const tracer = startTracerWithDefaults({
+        initConfiguration: { traceSampleRate: 100 },
+      })
       const context = { ...ALLOWED_DOMAIN_CONTEXT }
-      tracer.traceXhr(context, xhrStub as unknown as XMLHttpRequest)
+      tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
       expect(context.traceSampled).toBe(true)
       expect(context.traceId).toBeDefined()
       expect(context.spanId).toBeDefined()
-      expect(xhrStub.headers).toEqual(tracingHeadersFor(context.traceId!, context.spanId!, '1'))
+      expect(xhr.headers).toEqual(tracingHeadersFor(context.traceId!, context.spanId!, '1'))
     })
 
-    it("should trace request with priority '0' when not sampled", () => {
-      spyOn(Math, 'random').and.callFake(() => 1)
-      const tracer = startTracer({ ...configuration, traceSampleRate: 50 }, sessionManager)
+    it("should trace request with priority '0' when not sampled and config set to all", () => {
+      const tracer = startTracerWithDefaults({
+        initConfiguration: { traceSampleRate: 0, traceContextInjection: TraceContextInjection.ALL },
+      })
       const context = { ...ALLOWED_DOMAIN_CONTEXT }
-      tracer.traceXhr(context, xhrStub as unknown as XMLHttpRequest)
+      tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
       expect(context.traceSampled).toBe(false)
       expect(context.traceId).toBeDefined()
       expect(context.spanId).toBeDefined()
-      expect(xhrStub.headers).toEqual(tracingHeadersFor(context.traceId!, context.spanId!, '0'))
+      expect(xhr.headers).toEqual(tracingHeadersFor(context.traceId!, context.spanId!, '0'))
     })
 
-    it("should trace request with sampled set to '0' in OTel headers when not sampled", () => {
-      spyOn(Math, 'random').and.callFake(() => 1)
-
-      const configurationWithAllOtelHeaders = validateAndBuildRumConfiguration({
-        ...INIT_CONFIGURATION,
-        traceSampleRate: 50,
-        allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['b3', 'tracecontext', 'b3multi'] }],
-      })!
-
-      const tracer = startTracer(configurationWithAllOtelHeaders, sessionManager)
+    it("should trace request with sampled set to '0' in OTel headers when not sampled and config set to all", () => {
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          traceSampleRate: 0,
+          traceContextInjection: TraceContextInjection.ALL,
+          allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['b3', 'tracecontext', 'b3multi'] }],
+        },
+      })
       const context = { ...ALLOWED_DOMAIN_CONTEXT }
-      tracer.traceXhr(context, xhrStub as unknown as XMLHttpRequest)
+      tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
-      expect(xhrStub.headers).toEqual(
+      expect(xhr.headers).toEqual(
         jasmine.objectContaining({
           b3: jasmine.stringMatching(/^[0-9a-f]{16}-[0-9a-f]{16}-0$/),
           traceparent: jasmine.stringMatching(/^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-00$/),
+          tracestate: 'dd=s:0;o:rum',
           'X-B3-Sampled': '0',
         })
       )
     })
 
     it('should trace requests on configured origins', () => {
-      const configurationWithTracingUrls = validateAndBuildRumConfiguration({
-        ...INIT_CONFIGURATION,
-        allowedTracingUrls: [
-          /^https?:\/\/qux\.com/,
-          'http://bar.com',
-          (origin: string) => origin === 'http://dynamic.com',
-        ],
-      })!
-      const stub = xhrStub as unknown as XMLHttpRequest
-
-      const tracer = startTracer(configurationWithTracingUrls, sessionManager)
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          allowedTracingUrls: [
+            /^https?:\/\/qux\.com/,
+            'http://bar.com',
+            (origin: string) => origin === 'http://dynamic.com',
+          ],
+        },
+      })
+      const stub = xhr as unknown as XMLHttpRequest
 
       let context: Partial<RumXhrStartContext> = { url: 'http://qux.com' }
       tracer.traceXhr(context, stub)
@@ -156,16 +163,15 @@ describe('tracer', () => {
     })
 
     it('should add headers only for B3 Multiple propagator', () => {
-      const configurationWithb3multi = validateAndBuildRumConfiguration({
-        ...INIT_CONFIGURATION,
-        allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['b3multi'] }],
-      })!
-
-      const tracer = startTracer(configurationWithb3multi, sessionManager)
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['b3multi'] }],
+        },
+      })
       const context = { ...ALLOWED_DOMAIN_CONTEXT }
-      tracer.traceXhr(context, xhrStub as unknown as XMLHttpRequest)
+      tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
-      expect(xhrStub.headers).toEqual(
+      expect(xhr.headers).toEqual(
         jasmine.objectContaining({
           'X-B3-TraceId': jasmine.stringMatching(/^[0-9a-f]{16}$/),
           'X-B3-SpanId': jasmine.stringMatching(/^[0-9a-f]{16}$/),
@@ -173,91 +179,84 @@ describe('tracer', () => {
         })
       )
 
-      expect(xhrStub.headers['x-openobserve-origin']).toBeUndefined()
-      expect(xhrStub.headers['x-openobserve-parent-id']).toBeUndefined()
-      expect(xhrStub.headers['x-openobserve-trace-id']).toBeUndefined()
-      expect(xhrStub.headers['x-openobserve-sampling-priority']).toBeUndefined()
+      expect(xhr.headers['x-openobserve-origin']).toBeUndefined()
+      expect(xhr.headers['x-openobserve-parent-id']).toBeUndefined()
+      expect(xhr.headers['x-openobserve-trace-id']).toBeUndefined()
+      expect(xhr.headers['x-openobserve-sampling-priority']).toBeUndefined()
     })
 
     it('should add headers for B3 (single) and tracecontext propagators', () => {
-      const configurationWithB3andTracecontext = validateAndBuildRumConfiguration({
-        ...INIT_CONFIGURATION,
-        allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['b3', 'tracecontext'] }],
-      })!
-
-      const tracer = startTracer(configurationWithB3andTracecontext, sessionManager)
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['b3', 'tracecontext'] }],
+        },
+      })
       const context = { ...ALLOWED_DOMAIN_CONTEXT }
-      tracer.traceXhr(context, xhrStub as unknown as XMLHttpRequest)
+      tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
-      expect(xhrStub.headers).toEqual(
+      expect(xhr.headers).toEqual(
         jasmine.objectContaining({
           b3: jasmine.stringMatching(/^[0-9a-f]{16}-[0-9a-f]{16}-1$/),
           traceparent: jasmine.stringMatching(/^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-01$/),
+          tracestate: 'dd=s:1;o:rum',
         })
       )
     })
 
     it('should not add any headers', () => {
-      const configurationWithoutHeaders = validateAndBuildRumConfiguration({
-        ...INIT_CONFIGURATION,
-        allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: [] }],
-      })!
-
-      const tracer = startTracer(configurationWithoutHeaders, sessionManager)
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: [] }],
+        },
+      })
       const context = { ...ALLOWED_DOMAIN_CONTEXT }
-      tracer.traceXhr(context, xhrStub as unknown as XMLHttpRequest)
+      tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
-      expect(xhrStub.headers['b3']).toBeUndefined()
-      expect(xhrStub.headers['traceparent']).toBeUndefined()
-      expect(xhrStub.headers['x-openobserve-trace-id']).toBeUndefined()
-      expect(xhrStub.headers['X-B3-TraceId']).toBeUndefined()
+      expect(xhr.headers['b3']).toBeUndefined()
+      expect(xhr.headers['traceparent']).toBeUndefined()
+      expect(xhr.headers['tracestate']).toBeUndefined()
+      expect(xhr.headers['x-openobserve-trace-id']).toBeUndefined()
+      expect(xhr.headers['X-B3-TraceId']).toBeUndefined()
     })
 
     it('should ignore wrong propagator types', () => {
-      const configurationWithBadParams = validateAndBuildRumConfiguration({
-        ...INIT_CONFIGURATION,
-        allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['foo', 32, () => true] as any }],
-      })!
-
-      const tracer = startTracer(configurationWithBadParams, sessionManager)
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['foo', 32, () => true] as any }],
+        },
+      })
       const context = { ...ALLOWED_DOMAIN_CONTEXT }
-      tracer.traceXhr(context, xhrStub as unknown as XMLHttpRequest)
+      tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
-      expect(xhrStub.headers['b3']).toBeUndefined()
-      expect(xhrStub.headers['traceparent']).toBeUndefined()
-      expect(xhrStub.headers['x-openobserve-trace-id']).toBeUndefined()
-      expect(xhrStub.headers['X-B3-TraceId']).toBeUndefined()
+      expect(xhr.headers['b3']).toBeUndefined()
+      expect(xhr.headers['traceparent']).toBeUndefined()
+      expect(xhr.headers['tracestate']).toBeUndefined()
+      expect(xhr.headers['x-openobserve-trace-id']).toBeUndefined()
+      expect(xhr.headers['X-B3-TraceId']).toBeUndefined()
     })
 
     it('should display an error when a matching function throws', () => {
       const displaySpy = spyOn(display, 'error')
-      const configurationWithBadParams = validateAndBuildRumConfiguration({
-        ...INIT_CONFIGURATION,
-        allowedTracingUrls: [
-          () => {
-            throw new Error('invalid')
-          },
-        ],
-      })!
-
-      const tracer = startTracer(configurationWithBadParams, sessionManager)
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          allowedTracingUrls: [
+            () => {
+              throw new Error('invalid')
+            },
+          ],
+        },
+      })
       const context = { ...ALLOWED_DOMAIN_CONTEXT }
-      tracer.traceXhr(context, xhrStub as unknown as XMLHttpRequest)
+      tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
       expect(displaySpy).toHaveBeenCalledTimes(1)
     })
   })
 
   describe('traceFetch', () => {
-    beforeEach(() => {
-      if (isIE()) {
-        pending('no fetch support')
-      }
-    })
-
     it('should add traceId and spanId to context, and add tracing headers', () => {
       const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT }
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       tracer.traceFetch(context)
 
       expect(context.traceId).toBeDefined()
@@ -272,7 +271,7 @@ describe('tracer', () => {
         init,
       }
 
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       tracer.traceFetch(context)
 
       expect(context.init).not.toBe(init)
@@ -289,7 +288,7 @@ describe('tracer', () => {
         init: { headers, method: 'POST' },
       }
 
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       tracer.traceFetch(context)
 
       expect(context.init!.headers).not.toBe(headers)
@@ -310,7 +309,7 @@ describe('tracer', () => {
         init: { headers, method: 'POST' },
       }
 
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       tracer.traceFetch(context)
 
       expect(context.init!.headers).not.toBe(headers)
@@ -335,7 +334,7 @@ describe('tracer', () => {
         init: { headers, method: 'POST' },
       }
 
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       tracer.traceFetch(context)
 
       expect(context.init!.headers).not.toBe(headers)
@@ -363,7 +362,7 @@ describe('tracer', () => {
         input: request,
       }
 
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       tracer.traceFetch(context)
 
       expect(context.init).toBe(undefined)
@@ -384,7 +383,7 @@ describe('tracer', () => {
         }),
       }
 
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       tracer.traceFetch(context)
 
       expect(context.init!.headers).toEqual([
@@ -396,7 +395,7 @@ describe('tracer', () => {
     it('should not trace request on disallowed domain', () => {
       const context: Partial<RumFetchStartContext> = { ...DISALLOWED_DOMAIN_CONTEXT }
 
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       tracer.traceFetch(context)
 
       expect(context.traceId).toBeUndefined()
@@ -407,7 +406,9 @@ describe('tracer', () => {
     it('should not trace request during untracked session', () => {
       const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT }
 
-      const tracer = startTracer(configuration, sessionManager.setNotTracked())
+      const tracer = startTracerWithDefaults({
+        sessionManager: createRumSessionManagerMock().setNotTracked(),
+      })
       tracer.traceFetch(context)
 
       expect(context.traceId).toBeUndefined()
@@ -418,8 +419,7 @@ describe('tracer', () => {
     it("should trace request with priority '1' when sampled", () => {
       const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT }
 
-      spyOn(Math, 'random').and.callFake(() => 0)
-      const tracer = startTracer({ ...configuration, traceSampleRate: 50 }, sessionManager)
+      const tracer = startTracerWithDefaults({ initConfiguration: { traceSampleRate: 100 } })
       tracer.traceFetch(context)
 
       expect(context.traceSampled).toBe(true)
@@ -428,11 +428,12 @@ describe('tracer', () => {
       expect(context.init!.headers).toEqual(tracingHeadersAsArrayFor(context.traceId!, context.spanId!, '1'))
     })
 
-    it("should trace request with priority '0' when not sampled", () => {
+    it("should trace request with priority '0' when not sampled and config set to all", () => {
       const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT }
 
-      spyOn(Math, 'random').and.callFake(() => 1)
-      const tracer = startTracer({ ...configuration, traceSampleRate: 50 }, sessionManager)
+      const tracer = startTracerWithDefaults({
+        initConfiguration: { traceSampleRate: 0, traceContextInjection: TraceContextInjection.ALL },
+      })
       tracer.traceFetch(context)
 
       expect(context.traceSampled).toBe(false)
@@ -442,19 +443,18 @@ describe('tracer', () => {
     })
 
     it('should trace requests on configured urls', () => {
-      const configurationWithTracingUrls = validateAndBuildRumConfiguration({
-        ...INIT_CONFIGURATION,
-        allowedTracingUrls: [
-          /^https?:\/\/qux\.com.*/,
-          'http://bar.com',
-          (origin: string) => origin === 'http://dynamic.com',
-        ],
-      })!
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          allowedTracingUrls: [
+            /^https?:\/\/qux\.com.*/,
+            'http://bar.com',
+            (origin: string) => origin === 'http://dynamic.com',
+          ],
+        },
+      })
       const quxDomainContext: Partial<RumFetchStartContext> = { url: 'http://qux.com' }
       const barDomainContext: Partial<RumFetchStartContext> = { url: 'http://bar.com' }
       const dynamicDomainContext: Partial<RumFetchStartContext> = { url: 'http://dynamic.com' }
-
-      const tracer = startTracer(configurationWithTracingUrls, sessionManager)
 
       tracer.traceFetch(quxDomainContext)
       tracer.traceFetch(barDomainContext)
@@ -468,12 +468,12 @@ describe('tracer', () => {
     })
 
     it('should add headers only for B3 Multiple propagator', () => {
-      const configurationWithb3multi = validateAndBuildRumConfiguration({
-        ...INIT_CONFIGURATION,
-        allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['b3multi'] }],
-      })!
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['b3multi'] }],
+        },
+      })
 
-      const tracer = startTracer(configurationWithb3multi, sessionManager)
       const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT }
       tracer.traceFetch(context)
 
@@ -496,12 +496,12 @@ describe('tracer', () => {
     })
 
     it('should add headers for b3 (single) and tracecontext propagators', () => {
-      const configurationWithB3andTracecontext = validateAndBuildRumConfiguration({
-        ...INIT_CONFIGURATION,
-        allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['b3', 'tracecontext'] }],
-      })!
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['b3', 'tracecontext'] }],
+        },
+      })
 
-      const tracer = startTracer(configurationWithB3andTracecontext, sessionManager)
       const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT }
       tracer.traceFetch(context)
 
@@ -509,36 +509,85 @@ describe('tracer', () => {
         jasmine.arrayContaining([
           ['b3', jasmine.stringMatching(/^[0-9a-f]{16}-[0-9a-f]{16}-1$/)],
           ['traceparent', jasmine.stringMatching(/^[0-9a-f]{2}-[0-9a-f]{32}-[0-9a-f]{16}-01$/)],
+          ['tracestate', 'dd=s:1;o:rum'],
         ])
       )
     })
 
-    it('should not add any headers', () => {
-      const configurationWithoutHeaders = validateAndBuildRumConfiguration({
-        ...INIT_CONFIGURATION,
-        allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: [] }],
-      })!
+    it('should not add any headers with no propagatorTypes', () => {
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: [] }],
+        },
+      })
 
-      const tracer = startTracer(configurationWithoutHeaders, sessionManager)
       const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT }
       tracer.traceFetch(context)
 
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['b3']))
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['traceparent']))
+      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['tracestate']))
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['X-B3-TraceId']))
+    })
+    it('should not add headers when trace not sampled and config set to sampled', () => {
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          traceSampleRate: 0,
+          traceContextInjection: TraceContextInjection.SAMPLED,
+        },
+      })
+
+      const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT }
+      tracer.traceFetch(context)
+
+      expect(context.init).toBeUndefined()
+    })
+
+    it('should add headers when trace sampled and config set to sampled', () => {
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          traceSampleRate: 100,
+          traceContextInjection: TraceContextInjection.SAMPLED,
+        },
+      })
+
+      const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT }
+      tracer.traceFetch(context)
+
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-datadog-origin']))
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-datadog-parent-id']))
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-datadog-trace-id']))
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-datadog-sampling-priority']))
+    })
+
+    it('should add headers when trace not sampled and config set to all', () => {
+      const tracer = startTracerWithDefaults({
+        initConfiguration: {
+          traceSampleRate: 0,
+          traceContextInjection: TraceContextInjection.ALL,
+        },
+      })
+
+      const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT }
+      tracer.traceFetch(context)
+
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-datadog-origin']))
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-datadog-parent-id']))
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-datadog-trace-id']))
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-datadog-sampling-priority']))
     })
   })
 
   describe('clearTracingIfCancelled', () => {
     it('should clear tracing if status is 0', () => {
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       const context: RumFetchResolveContext = {
         status: 0,
 
-        spanId: new TraceIdentifier(),
-        traceId: new TraceIdentifier(),
-      } as any
+        spanId: createSpanIdentifier(),
+        traceId: createTraceIdentifier(),
+      } satisfies Partial<RumFetchResolveContext> as any
       tracer.clearTracingIfNeeded(context)
 
       expect(context.traceId).toBeUndefined()
@@ -546,34 +595,18 @@ describe('tracer', () => {
     })
 
     it('should not clear tracing if status is not 0', () => {
-      const tracer = startTracer(configuration, sessionManager)
+      const tracer = startTracerWithDefaults()
       const context: RumFetchResolveContext = {
         status: 200,
 
-        spanId: new TraceIdentifier(),
-        traceId: new TraceIdentifier(),
-      } as any
+        spanId: createSpanIdentifier(),
+        traceId: createTraceIdentifier(),
+      } satisfies Partial<RumFetchResolveContext> as any
       tracer.clearTracingIfNeeded(context)
 
       expect(context.traceId).toBeDefined()
       expect(context.spanId).toBeDefined()
     })
-  })
-})
-
-describe('TraceIdentifier', () => {
-  it('should generate id', () => {
-    const traceIdentifier = new TraceIdentifier()
-
-    expect(traceIdentifier.toDecimalString()).toMatch(/^\d+$/)
-  })
-
-  it('should pad the string to 16 characters', () => {
-    const traceIdentifier = new TraceIdentifier()
-      // Forcing as any to access private member: buffer
-      ; (traceIdentifier as any).buffer = new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07])
-
-    expect(traceIdentifier.toPaddedHexadecimalString()).toEqual('0001020304050607')
   })
 })
 
@@ -585,7 +618,7 @@ function toPlainObject(headers: Headers) {
   return result
 }
 
-function tracingHeadersFor(traceId: TraceIdentifier, spanId: TraceIdentifier, samplingPriority: '1' | '0') {
+function tracingHeadersFor(traceId: TraceIdentifier, spanId: SpanIdentifier, samplingPriority: '1' | '0') {
   return {
     'x-openobserve-origin': 'rum',
     'x-openobserve-parent-id': spanId.toDecimalString(),
@@ -594,7 +627,7 @@ function tracingHeadersFor(traceId: TraceIdentifier, spanId: TraceIdentifier, sa
   }
 }
 
-function tracingHeadersAsArrayFor(traceId: TraceIdentifier, spanId: TraceIdentifier, samplingPriority: '1' | '0') {
+function tracingHeadersAsArrayFor(traceId: TraceIdentifier, spanId: SpanIdentifier, samplingPriority: '1' | '0') {
   return objectEntries(tracingHeadersFor(traceId, spanId, samplingPriority))
 }
 
