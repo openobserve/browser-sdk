@@ -41,7 +41,7 @@ Object.keys(ConsoleApiName).forEach((name) => {
   originalConsoleMethods[name as ConsoleApiName] = globalConsole[name as ConsoleApiName]
 })
 
-const PREFIX = 'Datadog Browser SDK:'
+const PREFIX = 'Openobserve Browser SDK:'
 
 export const display: Display = {
   debug: originalConsoleMethods.debug.bind(globalConsole, PREFIX),
@@ -51,6 +51,6 @@ export const display: Display = {
   error: originalConsoleMethods.error.bind(globalConsole, PREFIX),
 }
 
-export const DOCS_ORIGIN = 'https://docs.datadoghq.com'
-export const DOCS_TROUBLESHOOTING = `${DOCS_ORIGIN}/real_user_monitoring/browser/troubleshooting`
+export const DOCS_ORIGIN = 'https://openobserve.ai'
+export const DOCS_TROUBLESHOOTING = `${DOCS_ORIGIN}/docs/user-guide/rum/`
 export const MORE_DETAILS = 'More details:'

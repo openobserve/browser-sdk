@@ -90,7 +90,7 @@ export default (_env: unknown, argv: { mode?: webpack.Configuration['mode'] }) =
             <html>
             <head>
               <meta charset="utf-8">
-              <title>Datadog Browser SDK Panel</title>
+              <title>Openobserve Browser SDK Panel</title>
               <meta name="viewport" content="width=device-width,initial-scale=1">
             </head>
             <body>
