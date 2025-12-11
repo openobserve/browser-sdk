@@ -9054,9 +9054,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"media-typer@npm:0.3.1":
-  version: 0.3.1
-  resolution: "media-typer@npm:0.3.1"
+"media-typer@npm:0.3.0":
+  version: 0.3.0
+  resolution: "media-typer@npm:0.3.0"
   checksum: 10c0/d160f31246907e79fed398470285f21bafb45a62869dc469b1c8877f3f064f5eabc4bcc122f9479b8b605bc5c76187d7871cf84c4ee3ecd3e487da1993279928
   languageName: node
   linkType: hard
@@ -13146,7 +13146,7 @@ __metadata:
   version: 1.6.18
   resolution: "type-is@npm:1.6.18"
   dependencies:
-    media-typer: "npm:0.3.1"
+    media-typer: "npm:0.3.0"
     mime-types: "npm:~2.1.24"
   checksum: 10c0/a23daeb538591b7efbd61ecf06b6feb2501b683ffdc9a19c74ef5baba362b4347e42f1b4ed81f5882a8c96a3bfff7f93ce3ffaf0cbbc879b532b04c97a55db9d
   languageName: node
