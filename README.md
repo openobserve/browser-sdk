@@ -21,6 +21,8 @@ npm install @openobserve/browser-rum
 npm install @openobserve/browser-rum-slim
 ```
 
+For detailed setup instructions and configuration options, see the [OpenObserve RUM Setup Guide](https://openobserve.ai/docs/user-guide/rum/#setup).
+
 ### Using CDN
 
 You can include the SDK directly in your HTML using our CDN:
