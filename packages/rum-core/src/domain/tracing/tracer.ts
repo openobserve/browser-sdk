@@ -184,10 +184,18 @@ function makeTracingHeaders(
 
   propagatorTypes.forEach((propagatorType) => {
     switch (propagatorType) {
+      case 'openobserve': {
+        Object.assign(tracingHeaders, {
+          'x-openobserve-trace-id': toPaddedHexadecimalString(traceId),
+          'x-openobserve-span-id': toPaddedHexadecimalString(spanId),
+          'x-openobserve-sampled': traceSampled ? '1' : '0',
+        })
+        break
+      }
       // https://www.w3.org/TR/trace-context/
       case 'tracecontext': {
         Object.assign(tracingHeaders, {
-          traceparent: `00-0000000000000000${toPaddedHexadecimalString(traceId)}-${toPaddedHexadecimalString(spanId)}-0${
+          traceparent: `00-${toPaddedHexadecimalString(traceId)}-${toPaddedHexadecimalString(spanId)}-0${
             traceSampled ? '1' : '0'
           }`,
           tracestate: `oo=s:${traceSampled ? '1' : '0'};o:rum`,

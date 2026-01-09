@@ -1,3 +1,5 @@
+import { v7 as uuidv7 } from 'uuid'
+
 interface BaseIdentifier {
   toString(radix?: number): string
 }
@@ -13,7 +15,31 @@ export interface SpanIdentifier extends BaseIdentifier {
 }
 
 export function createTraceIdentifier() {
-  return createIdentifier(64) as TraceIdentifier
+  // UUID v7 generates a 128-bit identifier with timestamp-based ordering
+  const uuid = uuidv7()
+  // Remove hyphens to get a 32-character hex string (128 bits)
+  const hex = uuid.replace(/-/g, '')
+
+  return {
+    toString(radix = 10) {
+      if (radix === 16) {
+        return hex
+      }
+      // For other radixes, convert from hex
+      let result = ''
+      let value = BigInt('0x' + hex)
+      if (value === BigInt(0)) return '0'
+
+      const radixBigInt = BigInt(radix)
+      while (value > BigInt(0)) {
+        const remainder = value % radixBigInt
+        result = remainder.toString(radix) + result
+        value = value / radixBigInt
+      }
+      return result
+    },
+    __brand: 'traceIdentifier' as const,
+  } as TraceIdentifier
 }
 
 export function createSpanIdentifier() {
@@ -65,5 +91,8 @@ function createIdentifier(bits: 63 | 64): BaseIdentifier {
 }
 
 export function toPaddedHexadecimalString(id: BaseIdentifier) {
-  return id.toString(16).padStart(16, '0')
+  const hexString = id.toString(16)
+  // UUID v7 trace IDs are 128 bits (32 hex chars), span IDs are 64 bits (16 hex chars)
+  const targetLength = hexString.length > 16 ? 32 : 16
+  return hexString.padStart(targetLength, '0')
 }
