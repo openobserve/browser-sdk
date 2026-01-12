@@ -790,6 +790,68 @@ describe('tracer', () => {
 
         expect(context.traceId!.toString(16)).toBe(existingTraceId)
       })
+
+      it('should handle comma-separated traceparent values and use the first valid one', () => {
+        const tracer = startTracerWithDefaults()
+        const firstTraceId = '0af7651916cd43dd8448eb211c80319c'
+        const secondTraceId = '1bf8762027de54ee9559fc322d91420d'
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: {
+            headers: {
+              traceparent: `00-${firstTraceId}-b7ad6b7169203331-01, 00-${secondTraceId}-c8be7c8270314442-01`,
+            },
+          },
+        }
+
+        tracer.traceFetch(context)
+
+        // Should use the first valid traceparent
+        expect(context.traceId!.toString(16)).toBe(firstTraceId)
+        expect(context.traceSampled).toBe(true)
+      })
+
+      it('should replace existing traceparent header instead of appending', () => {
+        const tracer = startTracerWithDefaults()
+        const existingTraceId = '0af7651916cd43dd8448eb211c80319c'
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: {
+            headers: {
+              traceparent: `00-${existingTraceId}-b7ad6b7169203331-01`,
+              'x-custom-header': 'custom-value',
+            },
+          },
+        }
+
+        tracer.traceFetch(context)
+
+        const headers = context.init!.headers as Array<[string, string]>
+        const traceparentHeaders = headers.filter(([key]) => key.toLowerCase() === 'traceparent')
+
+        // Should have exactly one traceparent header
+        expect(traceparentHeaders.length).toBe(1)
+        // Should keep other headers
+        expect(headers).toContain(['x-custom-header', 'custom-value'])
+      })
+
+      it('should handle invalid comma-separated values gracefully', () => {
+        const tracer = startTracerWithDefaults()
+        const validTraceId = '0af7651916cd43dd8448eb211c80319c'
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: {
+            headers: {
+              traceparent: `invalid-value, 00-${validTraceId}-b7ad6b7169203331-01`,
+            },
+          },
+        }
+
+        tracer.traceFetch(context)
+
+        // Should skip invalid value and use the valid one
+        expect(context.traceId!.toString(16)).toBe(validTraceId)
+      })
     })
   })
 })

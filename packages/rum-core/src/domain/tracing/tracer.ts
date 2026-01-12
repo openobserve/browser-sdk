@@ -83,22 +83,34 @@ export function startTracer(
           if (context.input instanceof Request && !context.init?.headers) {
             context.input = new Request(context.input)
             Object.keys(tracingHeaders).forEach((key) => {
-              ;(context.input as Request).headers.append(key, tracingHeaders[key])
+              // Use set instead of append to replace existing tracing headers
+              ;(context.input as Request).headers.set(key, tracingHeaders[key])
             })
           } else {
             context.init = shallowClone(context.init)
             const headers: Array<[string, string]> = []
+            const tracingHeaderKeys = Object.keys(tracingHeaders).map((k) => k.toLowerCase())
+
             if (context.init.headers instanceof Headers) {
               context.init.headers.forEach((value, key) => {
-                headers.push([key, value])
+                // Skip existing tracing headers that will be replaced
+                if (!tracingHeaderKeys.includes(key.toLowerCase())) {
+                  headers.push([key, value])
+                }
               })
             } else if (Array.isArray(context.init.headers)) {
               context.init.headers.forEach((header) => {
-                headers.push(header)
+                // Skip existing tracing headers that will be replaced
+                if (!tracingHeaderKeys.includes(header[0].toLowerCase())) {
+                  headers.push(header)
+                }
               })
             } else if (context.init.headers) {
               Object.keys(context.init.headers).forEach((key) => {
-                headers.push([key, (context.init!.headers as Record<string, string>)[key]])
+                // Skip existing tracing headers that will be replaced
+                if (!tracingHeaderKeys.includes(key.toLowerCase())) {
+                  headers.push([key, (context.init!.headers as Record<string, string>)[key]])
+                }
               })
             }
             context.init.headers = headers.concat(objectEntries(tracingHeaders))
@@ -181,6 +193,9 @@ function parseTraceparent(traceparentValue: string): { traceId: TraceIdentifier;
  * - Plain object (fetch API)
  * - Request object
  *
+ * Handles comma-separated values (when header appears multiple times).
+ * According to W3C spec, only the first valid traceparent should be used.
+ *
  * @param context - Request context from fetch/XHR interception
  * @returns Parsed trace context or null if not found/invalid
  */
@@ -210,6 +225,19 @@ function extractExistingTraceparent(
   }
 
   if (!traceparentValue) {
+    return null
+  }
+
+  // Handle comma-separated values (multiple traceparent headers)
+  // Per W3C spec, use only the first valid traceparent
+  if (traceparentValue.includes(',')) {
+    const values = traceparentValue.split(',').map((v) => v.trim())
+    for (const value of values) {
+      const parsed = parseTraceparent(value)
+      if (parsed) {
+        return parsed
+      }
+    }
     return null
   }
 
