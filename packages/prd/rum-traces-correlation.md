@@ -850,7 +850,7 @@ describe('Distributed Tracing Integration', () => {
 
 ### Rollback Plan
 
-- Keep previous SDK version (`0.3.2-beta.1`) available
+- Keep previous SDK version (`0.3.2-beta.2`) available
 - If issues detected:
   1. Revert OpenObserve to previous SDK version
   2. Use Solution 2 (exclude search endpoints) as temporary workaround
