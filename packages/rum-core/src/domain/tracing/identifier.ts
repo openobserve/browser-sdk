@@ -96,3 +96,30 @@ export function toPaddedHexadecimalString(id: BaseIdentifier) {
   const targetLength = hexString.length > 16 ? 32 : 16
   return hexString.padStart(targetLength, '0')
 }
+
+/**
+ * Creates a TraceIdentifier from an existing 128-bit hex string.
+ * Used when reusing trace-ids from parent contexts (e.g., existing traceparent header).
+ *
+ * @param hexString - 32-character hexadecimal string (128 bits)
+ * @returns TraceIdentifier with toString method
+ */
+export function createTraceIdentifierFromHex(hexString: string): TraceIdentifier {
+  if (!/^[0-9a-f]{32}$/i.test(hexString)) {
+    throw new Error(`Invalid trace-id hex string: ${hexString}`)
+  }
+
+  const normalizedHex = hexString.toLowerCase()
+
+  return {
+    toString(radix = 10) {
+      if (radix === 16) {
+        return normalizedHex
+      }
+      // Convert hex string to decimal or other radix
+      const value = BigInt('0x' + normalizedHex)
+      return value.toString(radix)
+    },
+    __brand: 'traceIdentifier' as const,
+  } as TraceIdentifier
+}

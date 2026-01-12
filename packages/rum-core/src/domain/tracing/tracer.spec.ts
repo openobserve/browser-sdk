@@ -7,7 +7,7 @@ import type { RumInitConfiguration } from '../configuration'
 import { validateAndBuildRumConfiguration } from '../configuration'
 import { startTracer } from './tracer'
 import type { SpanIdentifier, TraceIdentifier } from './identifier'
-import { createSpanIdentifier, createTraceIdentifier } from './identifier'
+import { createSpanIdentifier, createTraceIdentifier, toPaddedHexadecimalString } from './identifier'
 
 describe('tracer', () => {
   const ALLOWED_DOMAIN_CONTEXT: Partial<RumXhrStartContext | RumFetchStartContext> = {
@@ -608,6 +608,190 @@ describe('tracer', () => {
       expect(context.spanId).toBeDefined()
     })
   })
+
+  describe('tracer with existing traceparent', () => {
+    describe('traceFetch with existing traceparent', () => {
+      it('should reuse trace-id from existing traceparent header (Headers object)', () => {
+        const tracer = startTracerWithDefaults()
+        const existingTraceId = '0af7651916cd43dd8448eb211c80319c'
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: {
+            headers: new Headers({
+              traceparent: `00-${existingTraceId}-b7ad6b7169203331-01`,
+            }),
+          },
+        }
+
+        tracer.traceFetch(context)
+
+        expect(context.traceId).toBeDefined()
+        expect(context.traceId!.toString(16)).toBe(existingTraceId)
+        expect(context.spanId).toBeDefined()
+        expect(context.spanId!.toString(16)).not.toBe('b7ad6b7169203331')
+        expect(context.traceSampled).toBe(true)
+      })
+
+      it('should reuse trace-id from existing traceparent header (plain object)', () => {
+        const tracer = startTracerWithDefaults()
+        const existingTraceId = '0af7651916cd43dd8448eb211c80319c'
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: {
+            headers: {
+              traceparent: `00-${existingTraceId}-b7ad6b7169203331-01`,
+            },
+          },
+        }
+
+        tracer.traceFetch(context)
+
+        expect(context.traceId!.toString(16)).toBe(existingTraceId)
+        expect(context.traceSampled).toBe(true)
+      })
+
+      it('should reuse trace-id from existing traceparent header (array)', () => {
+        const tracer = startTracerWithDefaults()
+        const existingTraceId = '0af7651916cd43dd8448eb211c80319c'
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: {
+            headers: [['traceparent', `00-${existingTraceId}-b7ad6b7169203331-01`]],
+          },
+        }
+
+        tracer.traceFetch(context)
+
+        expect(context.traceId!.toString(16)).toBe(existingTraceId)
+        expect(context.traceSampled).toBe(true)
+      })
+
+      it('should reuse trace-id from Request object headers', () => {
+        const tracer = startTracerWithDefaults()
+        const existingTraceId = '0af7651916cd43dd8448eb211c80319c'
+        const request = new Request(window.location.origin, {
+          headers: {
+            traceparent: `00-${existingTraceId}-b7ad6b7169203331-01`,
+          },
+        })
+
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          input: request,
+        }
+
+        tracer.traceFetch(context)
+
+        expect(context.traceId!.toString(16)).toBe(existingTraceId)
+        expect(context.traceSampled).toBe(true)
+      })
+
+      it('should preserve sampling decision from existing traceparent (sampled)', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: {
+            headers: {
+              traceparent: '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01',
+            },
+          },
+        }
+
+        tracer.traceFetch(context)
+
+        expect(context.traceSampled).toBe(true)
+      })
+
+      it('should preserve sampling decision from existing traceparent (not sampled)', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: {
+            headers: {
+              traceparent: '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-00',
+            },
+          },
+        }
+
+        tracer.traceFetch(context)
+
+        expect(context.traceSampled).toBe(false)
+      })
+
+      it('should inject reused trace-id in all propagator types', () => {
+        const existingTraceId = '0af7651916cd43dd8448eb211c80319c'
+        const tracer = startTracerWithDefaults({
+          initConfiguration: {
+            allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['tracecontext', 'openobserve'] }],
+          },
+        })
+
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: {
+            headers: {
+              traceparent: `00-${existingTraceId}-b7ad6b7169203331-01`,
+            },
+          },
+        }
+
+        tracer.traceFetch(context)
+
+        const headers = context.init!.headers as Array<[string, string]>
+        const headersObj = Object.fromEntries(headers)
+
+        expect(headersObj['traceparent']).toMatch(new RegExp(`^00-${existingTraceId}-[0-9a-f]{16}-01$`))
+        expect(headersObj['x-openobserve-trace-id']).toBe(existingTraceId)
+      })
+
+      it('should generate new trace-id when no traceparent exists', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: { headers: {} },
+        }
+
+        tracer.traceFetch(context)
+
+        expect(context.traceId).toBeDefined()
+        expect(context.traceId!.toString(16).length).toBe(32)
+      })
+
+      it('should generate new trace-id when traceparent is invalid', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: {
+            headers: {
+              traceparent: 'invalid-traceparent-value',
+            },
+          },
+        }
+
+        tracer.traceFetch(context)
+
+        expect(context.traceId).toBeDefined()
+        expect(context.traceSampled).toBe(true)
+      })
+
+      it('should be case-insensitive for traceparent header name', () => {
+        const tracer = startTracerWithDefaults()
+        const existingTraceId = '0af7651916cd43dd8448eb211c80319c'
+        const context: Partial<RumFetchStartContext> = {
+          url: window.location.origin,
+          init: {
+            headers: {
+              Traceparent: `00-${existingTraceId}-b7ad6b7169203331-01`,
+            },
+          },
+        }
+
+        tracer.traceFetch(context)
+
+        expect(context.traceId!.toString(16)).toBe(existingTraceId)
+      })
+    })
+  })
 })
 
 function toPlainObject(headers: Headers) {
@@ -620,10 +804,8 @@ function toPlainObject(headers: Headers) {
 
 function tracingHeadersFor(traceId: TraceIdentifier, spanId: SpanIdentifier, samplingPriority: '1' | '0') {
   return {
-    'x-openobserve-origin': 'rum',
-    'x-openobserve-parent-id': spanId.toDecimalString(),
-    'x-openobserve-sampling-priority': samplingPriority,
-    'x-openobserve-trace-id': traceId.toDecimalString(),
+    traceparent: `00-${toPaddedHexadecimalString(traceId)}-${toPaddedHexadecimalString(spanId)}-0${samplingPriority}`,
+    tracestate: `oo=s:${samplingPriority};o:rum`,
   }
 }
 
