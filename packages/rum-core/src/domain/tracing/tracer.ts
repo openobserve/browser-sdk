@@ -18,7 +18,7 @@ import type { RumSessionManager } from '../rumSessionManager'
 import { isSampled } from '../sampler/sampler'
 import type { PropagatorType, TracingOption } from './tracer.types'
 import type { SpanIdentifier, TraceIdentifier } from './identifier'
-import { createSpanIdentifier, createTraceIdentifier, createTraceIdentifierFromHex, toPaddedHexadecimalString } from './identifier'
+import { createSpanIdentifier, createSpanIdentifierFromHex, createTraceIdentifier, createTraceIdentifierFromHex, toPaddedHexadecimalString } from './identifier'
 
 export interface Tracer {
   traceFetch: (context: Partial<RumFetchStartContext>) => void
@@ -144,7 +144,7 @@ export function startTracer(
  *
  * @see https://www.w3.org/TR/trace-context/#traceparent-header
  */
-function parseTraceparent(traceparentValue: string): { traceId: TraceIdentifier; sampled: boolean } | null {
+function parseTraceparent(traceparentValue: string): { traceId: TraceIdentifier; spanId: SpanIdentifier; sampled: boolean } | null {
   const parts = traceparentValue.trim().split('-')
 
   // Validate format: exactly 4 parts
@@ -180,8 +180,9 @@ function parseTraceparent(traceparentValue: string): { traceId: TraceIdentifier;
 
   // Create TraceIdentifier from parsed hex string
   const traceId = createTraceIdentifierFromHex(traceIdHex.toLowerCase())
+  const spanId = createSpanIdentifierFromHex(parentIdHex.toLowerCase())
 
-  return { traceId, sampled }
+  return { traceId, spanId, sampled }
 }
 
 /**
@@ -201,7 +202,7 @@ function parseTraceparent(traceparentValue: string): { traceId: TraceIdentifier;
  */
 function extractExistingTraceparent(
   context: Partial<RumFetchStartContext | RumXhrStartContext>
-): { traceId: TraceIdentifier; sampled: boolean } | null {
+): { traceId: TraceIdentifier; spanId: SpanIdentifier; sampled: boolean } | null {
   let traceparentValue: string | null = null
 
   // Type-safe check for init.headers (only exists on RumFetchStartContext)
@@ -268,9 +269,9 @@ function injectHeadersIfTracingAllowed(
   const existingTraceparent = extractExistingTraceparent(context)
 
   if (existingTraceparent) {
-    // Continue existing trace with new span
+    // Continue existing trace, reusing trace-id and span-id
     context.traceId = existingTraceparent.traceId
-    context.spanId = createSpanIdentifier()
+    context.spanId = existingTraceparent.spanId
     context.traceSampled = existingTraceparent.sampled
 
     inject(

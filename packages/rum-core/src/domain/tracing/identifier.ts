@@ -46,6 +46,25 @@ export function createSpanIdentifier() {
   return createIdentifier(63) as SpanIdentifier
 }
 
+export function createSpanIdentifierFromHex(hexString: string): SpanIdentifier {
+  if (!/^[0-9a-f]{16}$/i.test(hexString)) {
+    throw new Error(`Invalid span-id hex string: ${hexString}`)
+  }
+
+  const normalizedHex = hexString.toLowerCase()
+
+  return {
+    toString(radix = 10) {
+      if (radix === 16) {
+        return normalizedHex
+      }
+      const value = BigInt(`0x${normalizedHex}`)
+      return value.toString(radix)
+    },
+    __brand: 'spanIdentifier' as const,
+  } as SpanIdentifier
+}
+
 function createIdentifier(bits: 63 | 64): BaseIdentifier {
   const buffer = crypto.getRandomValues(new Uint32Array(2))
   if (bits === 63) {
