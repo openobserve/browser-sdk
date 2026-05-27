@@ -1621,7 +1621,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openobserve/browser-core@npm:0.3.2-beta.2, @openobserve/browser-core@workspace:*, @openobserve/browser-core@workspace:packages/core":
+"@openobserve/browser-core@npm:0.3.2-beta.3, @openobserve/browser-core@workspace:*, @openobserve/browser-core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-core@workspace:packages/core"
   dependencies:
@@ -1634,10 +1634,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-flagging@workspace:packages/flagging"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.2-beta.2"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
     webpack: "npm:5.102.1"
   peerDependencies:
-    "@openobserve/browser-rum": 0.3.2-beta.2
+    "@openobserve/browser-rum": 0.3.2-beta.3
   peerDependenciesMeta:
     "@openobserve/browser-rum":
       optional: true
@@ -1648,20 +1648,20 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-logs@workspace:packages/logs"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.2-beta.2"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
   peerDependencies:
-    "@openobserve/browser-rum": 0.3.2-beta.2
+    "@openobserve/browser-rum": 0.3.2-beta.3
   peerDependenciesMeta:
     "@openobserve/browser-rum":
       optional: true
   languageName: unknown
   linkType: soft
 
-"@openobserve/browser-rum-core@npm:0.3.2-beta.2, @openobserve/browser-rum-core@workspace:packages/rum-core":
+"@openobserve/browser-rum-core@npm:0.3.2-beta.3, @openobserve/browser-rum-core@workspace:packages/rum-core":
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-rum-core@workspace:packages/rum-core"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.2-beta.2"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
     ajv: "npm:8.17.1"
     uuid: "npm:13.0.0"
   languageName: unknown
@@ -1671,8 +1671,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-rum-react@workspace:packages/rum-react"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.2-beta.2"
-    "@openobserve/browser-rum-core": "npm:0.3.2-beta.2"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
+    "@openobserve/browser-rum-core": "npm:0.3.2-beta.3"
     "@types/react": "npm:19.2.2"
     "@types/react-dom": "npm:19.2.2"
     react: "npm:19.2.0"
@@ -1702,10 +1702,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-rum-slim@workspace:packages/rum-slim"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.2-beta.2"
-    "@openobserve/browser-rum-core": "npm:0.3.2-beta.2"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
+    "@openobserve/browser-rum-core": "npm:0.3.2-beta.3"
   peerDependencies:
-    "@openobserve/browser-logs": 0.3.2-beta.2
+    "@openobserve/browser-logs": 0.3.2-beta.3
   peerDependenciesMeta:
     "@openobserve/browser-logs":
       optional: true
@@ -1716,12 +1716,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-rum@workspace:packages/rum"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.2-beta.2"
-    "@openobserve/browser-rum-core": "npm:0.3.2-beta.2"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
+    "@openobserve/browser-rum-core": "npm:0.3.2-beta.3"
     "@types/pako": "npm:2.0.4"
     pako: "npm:2.1.0"
   peerDependencies:
-    "@openobserve/browser-logs": 0.3.2-beta.2
+    "@openobserve/browser-logs": 0.3.2-beta.3
   peerDependenciesMeta:
     "@openobserve/browser-logs":
       optional: true
@@ -1764,7 +1764,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-worker@workspace:packages/worker"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.2-beta.2"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
     webpack: "npm:5.102.1"
   languageName: unknown
   linkType: soft
