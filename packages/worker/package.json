@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-worker",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "license": "Apache-2.0",
   "main": "bundle/worker.js",
   "scripts": {
@@ -8,7 +8,7 @@
     "build:bundle": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.3.2"
+    "@openobserve/browser-core": "0.3.3"
   },
   "repository": {
     "type": "git",
