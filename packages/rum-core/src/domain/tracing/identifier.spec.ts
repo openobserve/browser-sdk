@@ -1,4 +1,4 @@
-import { createSpanIdentifier, createTraceIdentifier, toPaddedHexadecimalString } from './identifier'
+import { createSpanIdentifier, createTraceIdentifier, createTraceIdentifierFromHex, toPaddedHexadecimalString } from './identifier'
 
 describe('identifier', () => {
   describe('TraceIdentifier', () => {
@@ -34,6 +34,47 @@ describe('toPaddedHexadecimalString', () => {
     mockRandomValues((buffer) => (buffer[0] = 0x01))
     const identifier = createTraceIdentifier()
     expect(toPaddedHexadecimalString(identifier)).toEqual('0000000000000001')
+  })
+})
+
+describe('createTraceIdentifierFromHex', () => {
+  it('should create a TraceIdentifier from a valid 32-character hex string', () => {
+    const hexString = '0af7651916cd43dd8448eb211c80319c'
+    const identifier = createTraceIdentifierFromHex(hexString)
+    expect(identifier.toString(16)).toEqual('0af7651916cd43dd8448eb211c80319c')
+  })
+
+  it('should handle uppercase hex strings and normalize to lowercase', () => {
+    const hexString = '0AF7651916CD43DD8448EB211C80319C'
+    const identifier = createTraceIdentifierFromHex(hexString)
+    expect(identifier.toString(16)).toEqual('0af7651916cd43dd8448eb211c80319c')
+  })
+
+  it('should support toString with different radixes', () => {
+    const hexString = '0af7651916cd43dd8448eb211c80319c'
+    const identifier = createTraceIdentifierFromHex(hexString)
+    expect(identifier.toString(10)).toMatch(/^\d+$/)
+    expect(identifier.toString(16)).toEqual('0af7651916cd43dd8448eb211c80319c')
+  })
+
+  it('should throw an error for invalid hex string (wrong length)', () => {
+    expect(() => createTraceIdentifierFromHex('abc123')).toThrowError('Invalid trace-id hex string: abc123')
+  })
+
+  it('should throw an error for invalid hex string (non-hex characters)', () => {
+    expect(() => createTraceIdentifierFromHex('0af7651916cd43dd8448eb211c80319g')).toThrowError(
+      'Invalid trace-id hex string: 0af7651916cd43dd8448eb211c80319g'
+    )
+  })
+
+  it('should throw an error for invalid hex string (too short)', () => {
+    expect(() => createTraceIdentifierFromHex('0af7651916cd43dd')).toThrowError('Invalid trace-id hex string: 0af7651916cd43dd')
+  })
+
+  it('should throw an error for invalid hex string (too long)', () => {
+    expect(() => createTraceIdentifierFromHex('0af7651916cd43dd8448eb211c80319caa')).toThrowError(
+      'Invalid trace-id hex string: 0af7651916cd43dd8448eb211c80319caa'
+    )
   })
 })
 

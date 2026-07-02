@@ -18,7 +18,7 @@ import type { RumSessionManager } from '../rumSessionManager'
 import { isSampled } from '../sampler/sampler'
 import type { PropagatorType, TracingOption } from './tracer.types'
 import type { SpanIdentifier, TraceIdentifier } from './identifier'
-import { createSpanIdentifier, createTraceIdentifier, toPaddedHexadecimalString } from './identifier'
+import { createSpanIdentifier, createSpanIdentifierFromHex, createTraceIdentifier, createTraceIdentifierFromHex, toPaddedHexadecimalString } from './identifier'
 
 export interface Tracer {
   traceFetch: (context: Partial<RumFetchStartContext>) => void
@@ -83,22 +83,34 @@ export function startTracer(
           if (context.input instanceof Request && !context.init?.headers) {
             context.input = new Request(context.input)
             Object.keys(tracingHeaders).forEach((key) => {
-              ;(context.input as Request).headers.append(key, tracingHeaders[key])
+              // Use set instead of append to replace existing tracing headers
+              ;(context.input as Request).headers.set(key, tracingHeaders[key])
             })
           } else {
             context.init = shallowClone(context.init)
             const headers: Array<[string, string]> = []
+            const tracingHeaderKeys = Object.keys(tracingHeaders).map((k) => k.toLowerCase())
+
             if (context.init.headers instanceof Headers) {
               context.init.headers.forEach((value, key) => {
-                headers.push([key, value])
+                // Skip existing tracing headers that will be replaced
+                if (!tracingHeaderKeys.includes(key.toLowerCase())) {
+                  headers.push([key, value])
+                }
               })
             } else if (Array.isArray(context.init.headers)) {
               context.init.headers.forEach((header) => {
-                headers.push(header)
+                // Skip existing tracing headers that will be replaced
+                if (!tracingHeaderKeys.includes(header[0].toLowerCase())) {
+                  headers.push(header)
+                }
               })
             } else if (context.init.headers) {
               Object.keys(context.init.headers).forEach((key) => {
-                headers.push([key, (context.init!.headers as Record<string, string>)[key]])
+                // Skip existing tracing headers that will be replaced
+                if (!tracingHeaderKeys.includes(key.toLowerCase())) {
+                  headers.push([key, (context.init!.headers as Record<string, string>)[key]])
+                }
               })
             }
             context.init.headers = headers.concat(objectEntries(tracingHeaders))
@@ -121,6 +133,118 @@ export function startTracer(
   }
 }
 
+/**
+ * Parses W3C Trace Context traceparent header value.
+ *
+ * Format: {version}-{trace-id}-{parent-id}-{flags}
+ * Example: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
+ *
+ * @param traceparentValue - Raw traceparent header value
+ * @returns Parsed trace context or null if invalid
+ *
+ * @see https://www.w3.org/TR/trace-context/#traceparent-header
+ */
+function parseTraceparent(traceparentValue: string): { traceId: TraceIdentifier; spanId: SpanIdentifier; sampled: boolean } | null {
+  const parts = traceparentValue.trim().split('-')
+
+  // Validate format: exactly 4 parts
+  if (parts.length !== 4) {
+    return null
+  }
+
+  const [version, traceIdHex, parentIdHex, flags] = parts
+
+  // Validate version (only 00 supported)
+  if (version !== '00') {
+    return null
+  }
+
+  // Validate trace-id: 32 hex chars, not all zeros
+  if (!/^[0-9a-f]{32}$/i.test(traceIdHex) || traceIdHex === '00000000000000000000000000000000') {
+    return null
+  }
+
+  // Validate parent-id: 16 hex chars, not all zeros
+  if (!/^[0-9a-f]{16}$/i.test(parentIdHex) || parentIdHex === '0000000000000000') {
+    return null
+  }
+
+  // Validate flags: 2 hex chars
+  if (!/^[0-9a-f]{2}$/i.test(flags)) {
+    return null
+  }
+
+  // Extract sampling decision from flags (LSB)
+  // eslint-disable-next-line no-bitwise
+  const sampled = (parseInt(flags, 16) & 1) === 1
+
+  // Create TraceIdentifier from parsed hex string
+  const traceId = createTraceIdentifierFromHex(traceIdHex.toLowerCase())
+  const spanId = createSpanIdentifierFromHex(parentIdHex.toLowerCase())
+
+  return { traceId, spanId, sampled }
+}
+
+/**
+ * Extracts and validates existing traceparent header from request context.
+ *
+ * Supports multiple header formats:
+ * - Headers object (fetch API)
+ * - Array of tuples (fetch API)
+ * - Plain object (fetch API)
+ * - Request object
+ *
+ * Handles comma-separated values (when header appears multiple times).
+ * According to W3C spec, only the first valid traceparent should be used.
+ *
+ * @param context - Request context from fetch/XHR interception
+ * @returns Parsed trace context or null if not found/invalid
+ */
+function extractExistingTraceparent(
+  context: Partial<RumFetchStartContext | RumXhrStartContext>
+): { traceId: TraceIdentifier; spanId: SpanIdentifier; sampled: boolean } | null {
+  let traceparentValue: string | null = null
+
+  // Type-safe check for init.headers (only exists on RumFetchStartContext)
+  const fetchContext = context as Partial<RumFetchStartContext>
+  if (fetchContext.init?.headers) {
+    if (fetchContext.init.headers instanceof Headers) {
+      traceparentValue = fetchContext.init.headers.get('traceparent')
+    } else if (Array.isArray(fetchContext.init.headers)) {
+      const traceparentHeader = fetchContext.init.headers.find(([key]: [string, string]) => key.toLowerCase() === 'traceparent')
+      traceparentValue = traceparentHeader?.[1] || null
+    } else if (typeof fetchContext.init.headers === 'object') {
+      // Check both lowercase and original case
+      const headers = fetchContext.init.headers as Record<string, string>
+      traceparentValue = headers['traceparent'] || headers['Traceparent'] || null
+    }
+  }
+
+  // Check Request object headers (only exists on RumFetchStartContext)
+  if (!traceparentValue && fetchContext.input instanceof Request) {
+    traceparentValue = fetchContext.input.headers.get('traceparent')
+  }
+
+  if (!traceparentValue) {
+    return null
+  }
+
+  // Handle comma-separated values (multiple traceparent headers)
+  // Per W3C spec, use only the first valid traceparent
+  if (traceparentValue.includes(',')) {
+    const values = traceparentValue.split(',').map((v) => v.trim())
+    for (const value of values) {
+      const parsed = parseTraceparent(value)
+      if (parsed) {
+        return parsed
+      }
+    }
+    return null
+  }
+
+  return parseTraceparent(traceparentValue)
+}
+
 function injectHeadersIfTracingAllowed(
   configuration: RumConfiguration,
   context: Partial<RumFetchStartContext | RumXhrStartContext>,
@@ -141,6 +265,31 @@ function injectHeadersIfTracingAllowed(
     return
   }
 
+  // Check for existing traceparent and reuse if valid
+  const existingTraceparent = extractExistingTraceparent(context)
+
+  if (existingTraceparent) {
+    // Continue existing trace, reusing trace-id and span-id
+    context.traceId = existingTraceparent.traceId
+    context.spanId = existingTraceparent.spanId
+    context.traceSampled = existingTraceparent.sampled
+
+    inject(
+      makeTracingHeaders(
+        context.traceId,
+        context.spanId,
+        context.traceSampled,
+        session.id,
+        tracingOption.propagatorTypes,
+        userContext,
+        accountContext,
+        configuration
+      )
+    )
+    return
+  }
+
+  // Original logic: Start new trace
   const traceSampled = isSampled(session.id, configuration.traceSampleRate)
 
   const shouldInjectHeaders = traceSampled || configuration.traceContextInjection === TraceContextInjection.ALL
@@ -184,10 +333,18 @@ function makeTracingHeaders(
 
   propagatorTypes.forEach((propagatorType) => {
     switch (propagatorType) {
+      case 'openobserve': {
+        Object.assign(tracingHeaders, {
+          'x-openobserve-trace-id': toPaddedHexadecimalString(traceId),
+          'x-openobserve-span-id': toPaddedHexadecimalString(spanId),
+          'x-openobserve-sampled': traceSampled ? '1' : '0',
+        })
+        break
+      }
       // https://www.w3.org/TR/trace-context/
       case 'tracecontext': {
         Object.assign(tracingHeaders, {
-          traceparent: `00-0000000000000000${toPaddedHexadecimalString(traceId)}-${toPaddedHexadecimalString(spanId)}-0${
+          traceparent: `00-${toPaddedHexadecimalString(traceId)}-${toPaddedHexadecimalString(spanId)}-0${
             traceSampled ? '1' : '0'
           }`,
           tracestate: `oo=s:${traceSampled ? '1' : '0'};o:rum`,

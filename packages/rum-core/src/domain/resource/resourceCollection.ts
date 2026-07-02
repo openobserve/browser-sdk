@@ -235,8 +235,8 @@ function computeRequestTracingInfo(request: RequestCompleteEvent, configuration:
   }
   return {
     _oo: {
-      span_id: request.spanId!.toString(),
-      trace_id: request.traceId!.toString(),
+      span_id: request.spanId!.toString(16),
+      trace_id: request.traceId!.toString(16),
       rule_psr: configuration.rulePsr,
     },
   }
@@ -250,7 +250,7 @@ function computeResourceEntryTracingInfo(entry: RumPerformanceResourceTiming, co
   return {
     _oo: {
       trace_id: entry.traceId,
-      span_id: createSpanIdentifier().toString(),
+      span_id: createSpanIdentifier().toString(16),
       rule_psr: configuration.rulePsr,
     },
   }

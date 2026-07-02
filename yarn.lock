@@ -1621,7 +1621,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openobserve/browser-core@npm:0.3.1, @openobserve/browser-core@workspace:*, @openobserve/browser-core@workspace:packages/core":
+"@openobserve/browser-core@npm:0.3.2-beta.3, @openobserve/browser-core@workspace:*, @openobserve/browser-core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-core@workspace:packages/core"
   dependencies:
@@ -1634,10 +1634,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-flagging@workspace:packages/flagging"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.1"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
     webpack: "npm:5.102.1"
   peerDependencies:
-    "@openobserve/browser-rum": 0.3.1
+    "@openobserve/browser-rum": 0.3.2-beta.3
   peerDependenciesMeta:
     "@openobserve/browser-rum":
       optional: true
@@ -1648,21 +1648,22 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-logs@workspace:packages/logs"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.1"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
   peerDependencies:
-    "@openobserve/browser-rum": 0.3.1
+    "@openobserve/browser-rum": 0.3.2-beta.3
   peerDependenciesMeta:
     "@openobserve/browser-rum":
       optional: true
   languageName: unknown
   linkType: soft
 
-"@openobserve/browser-rum-core@npm:0.3.1, @openobserve/browser-rum-core@workspace:packages/rum-core":
+"@openobserve/browser-rum-core@npm:0.3.2-beta.3, @openobserve/browser-rum-core@workspace:packages/rum-core":
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-rum-core@workspace:packages/rum-core"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.1"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
     ajv: "npm:8.17.1"
+    uuid: "npm:13.0.0"
   languageName: unknown
   linkType: soft
 
@@ -1670,8 +1671,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-rum-react@workspace:packages/rum-react"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.1"
-    "@openobserve/browser-rum-core": "npm:0.3.1"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
+    "@openobserve/browser-rum-core": "npm:0.3.2-beta.3"
     "@types/react": "npm:19.2.2"
     "@types/react-dom": "npm:19.2.2"
     react: "npm:19.2.0"
@@ -1701,10 +1702,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-rum-slim@workspace:packages/rum-slim"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.1"
-    "@openobserve/browser-rum-core": "npm:0.3.1"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
+    "@openobserve/browser-rum-core": "npm:0.3.2-beta.3"
   peerDependencies:
-    "@openobserve/browser-logs": 0.3.1
+    "@openobserve/browser-logs": 0.3.2-beta.3
   peerDependenciesMeta:
     "@openobserve/browser-logs":
       optional: true
@@ -1715,12 +1716,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-rum@workspace:packages/rum"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.1"
-    "@openobserve/browser-rum-core": "npm:0.3.1"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
+    "@openobserve/browser-rum-core": "npm:0.3.2-beta.3"
     "@types/pako": "npm:2.0.4"
     pako: "npm:2.1.0"
   peerDependencies:
-    "@openobserve/browser-logs": 0.3.1
+    "@openobserve/browser-logs": 0.3.2-beta.3
   peerDependenciesMeta:
     "@openobserve/browser-logs":
       optional: true
@@ -1763,7 +1764,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-worker@workspace:packages/worker"
   dependencies:
-    "@openobserve/browser-core": "npm:0.3.1"
+    "@openobserve/browser-core": "npm:0.3.2-beta.3"
     webpack: "npm:5.102.1"
   languageName: unknown
   linkType: soft
@@ -13519,6 +13520,15 @@ __metadata:
   version: 1.0.1
   resolution: "utils-merge@npm:1.0.1"
   checksum: 10c0/02ba649de1b7ca8854bfe20a82f1dfbdda3fb57a22ab4a8972a63a34553cf7aa51bc9081cf7e001b035b88186d23689d69e71b510e610a09a4c66f68aa95b672
+  languageName: node
+  linkType: hard
+
+"uuid@npm:13.0.0":
+  version: 13.0.0
+  resolution: "uuid@npm:13.0.0"
+  bin:
+    uuid: dist-node/bin/uuid
+  checksum: 10c0/950e4c18d57fef6c69675344f5700a08af21e26b9eff2bf2180427564297368c538ea11ac9fb2e6528b17fc3966a9fd2c5049361b0b63c7d654f3c550c9b3d67
   languageName: node
   linkType: hard
 
