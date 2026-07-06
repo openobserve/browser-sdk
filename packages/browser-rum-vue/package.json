@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-rum-vue",
-  "version": "0.4.0-beta.5",
+  "version": "0.4.0-beta.6",
   "license": "Apache-2.0",
   "main": "cjs/entries/main.js",
   "module": "esm/entries/main.mjs",
@@ -18,9 +18,9 @@
     "prepack": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.0-beta.5",
-    "@openobserve/browser-rum-core": "0.4.0-beta.5",
-    "@openobserve/js-core": "0.4.0-beta.5"
+    "@openobserve/browser-core": "0.4.0-beta.6",
+    "@openobserve/browser-rum-core": "0.4.0-beta.6",
+    "@openobserve/js-core": "0.4.0-beta.6"
   },
   "peerDependencies": {
     "vue": "^3.5.0",

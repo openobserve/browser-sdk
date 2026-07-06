@@ -46,7 +46,6 @@
     "@eslint/js": "10.0.1",
     "@jsdevtools/coverage-istanbul-loader": "3.0.5",
     "@microsoft/api-extractor": "7.58.9",
-    "@openobserve/rum-events-format": "openobserve/rum-events-format#commit=a8d609baa399bc75fab07d98d21cd29f4f3e0efd",
     "@playwright/test": "1.60.0",
     "@swc/core": "1.15.41",
     "@types/busboy": "1.5.4",
