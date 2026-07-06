@@ -62,10 +62,10 @@ npm view <package>@latest version
 
 ## RUM Events Schema Management
 
-Types auto-generated from [rum-events-format](https://github.com/DataDog/rum-events-format) (Yarn GitHub dependency) → `src/rumEvent.types.ts` (committed).
+Types auto-generated from [rum-events-format](https://github.com/openobserve/rum-events-format) (Yarn GitHub dependency) → `src/rumEvent.types.ts` (committed).
 
 ```bash
-yarn json-schemas:sync      # Bump @datadog/rum-events-format to latest master commit + regenerate types
+yarn json-schemas:sync      # Bump @openobserve/rum-events-format to latest master commit + regenerate types
 yarn json-schemas:generate  # Regenerate types only
 
 # Try a specific branch of rum-events-format (e.g. while iterating on schema changes)

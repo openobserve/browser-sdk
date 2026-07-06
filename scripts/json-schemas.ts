@@ -49,7 +49,7 @@ function printHelp() {
 Usage: node scripts/json-schemas.ts [options]
 
 Options:
-  --update <branch|commit>  Update @datadog/rum-events-format to the latest commit on <branch> (or a specific full commit hash) and run yarn install
+  --update <branch|commit>  Update @openobserve/rum-events-format to the latest commit on <branch> (or a specific full commit hash) and run yarn install
   --build            Build json-schema-to-typescript and regenerate TypeScript types from JSON schemas
   --help, -h         Show this help message
 
@@ -68,7 +68,7 @@ async function update(branchOrCommit: string) {
   } else {
     printLog(`Resolving latest commit on ${branchOrCommit}...`)
     const response = await fetchHandlingError(
-      `https://api.github.com/repos/DataDog/rum-events-format/branches/${branchOrCommit}`
+      `https://api.github.com/repos/openobserve/rum-events-format/branches/${branchOrCommit}`
     )
     const {
       commit: { sha },
@@ -82,11 +82,11 @@ async function update(branchOrCommit: string) {
 
   await modifyFile(PACKAGE_JSON_PATH, (content) =>
     content.replace(
-      /"@datadog\/rum-events-format": "DataDog\/rum-events-format#[^"]+"/,
-      `"@datadog/rum-events-format": "DataDog/rum-events-format#commit=${commitHash}"`
+      /"@openobserve\/rum-events-format": "openobserve\/rum-events-format#[^"]+"/,
+      `"@openobserve/rum-events-format": "openobserve/rum-events-format#commit=${commitHash}"`
     )
   )
-  printLog('Updated @datadog/rum-events-format in package.json')
+  printLog('Updated @openobserve/rum-events-format in package.json')
 
   printLog('Running yarn install...')
   command`yarn install`.run()

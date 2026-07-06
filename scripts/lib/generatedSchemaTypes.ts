@@ -4,7 +4,7 @@ import type { Options } from 'json-schema-to-typescript'
 
 const rootDir = path.resolve(import.meta.dirname, '../..')
 const schemasDir = path.join(
-  path.dirname(fileURLToPath(import.meta.resolve('@datadog/rum-events-format/package.json'))),
+  path.dirname(fileURLToPath(import.meta.resolve('@openobserve/rum-events-format/package.json'))),
   'schemas'
 )
 

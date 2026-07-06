@@ -16,7 +16,7 @@ runMain(() => {
     printError(`
 Untracked changes detected.
 * If your PR requires rum-events-format changes, make sure to run \`yarn json-schemas:sync\`.
-* Else, you probably updated the @datadog/rum-events-format ref by mistake. To revert it, restore
+* Else, you probably updated the @openobserve/rum-events-format ref by mistake. To revert it, restore
   the previous ref in package.json and run \`yarn install\`.
 `)
 

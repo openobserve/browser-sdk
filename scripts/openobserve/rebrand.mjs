@@ -126,8 +126,31 @@ for (const file of trackedFiles.filter((f) => f.endsWith('package.json'))) {
   }
 }
 
-const total = changed + versionChanged
-console.log(`rebrand: ${changed} files rebranded, ${versionChanged} package.json versions normalized to ${VERSION}`)
+// ---- rum-events-format schema pin ------------------------------------------
+// The schema package is the OpenObserve fork (its schemas describe `_oo`, not `_dd`),
+// pinned to a controlled fork commit rather than the DataDog commit upstream ships.
+// The commit lives in scripts/openobserve/rum-events-format-pin.txt and is bumped after
+// an rum-events-format fork sync merges. Rewrite the root package.json entry
+// deterministically so it survives every upstream sync regardless of the SHA upstream pins.
+let schemaPinChanged = 0
+const SCHEMA_PIN_FILE = path.join(HERE, 'rum-events-format-pin.txt')
+if (fs.existsSync(SCHEMA_PIN_FILE)) {
+  const pin = fs.readFileSync(SCHEMA_PIN_FILE, 'utf8').trim()
+  const rootPkgPath = path.join(ROOT, 'package.json')
+  const rootRaw = fs.readFileSync(rootPkgPath, 'utf8')
+  const canonical = `"@openobserve/rum-events-format": "openobserve/rum-events-format#commit=${pin}"`
+  const next = rootRaw.replace(/"@(?:datadog|openobserve)\/rum-events-format":\s*"[^"]+"/, canonical)
+  if (next !== rootRaw) {
+    schemaPinChanged = 1
+    if (!CHECK) fs.writeFileSync(rootPkgPath, next)
+  }
+}
+
+const total = changed + versionChanged + schemaPinChanged
+console.log(
+  `rebrand: ${changed} files rebranded, ${versionChanged} package.json versions normalized to ${VERSION}` +
+    (schemaPinChanged ? ', rum-events-format pinned to fork' : '')
+)
 if (CHECK && total > 0) {
   console.error('rebrand --check: tree is not fully branded')
   process.exit(1)

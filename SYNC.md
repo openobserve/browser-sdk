@@ -33,8 +33,15 @@ The only manual step in the normal flow is approving the sync PR.
    serialized as hex in resource events.
 3. **0003 console URLs** — session replay deep links use the configured site verbatim;
    developer-extension intake detection uses OpenObserve domains.
-4. **0004 schema validation shim** — unit tests validate events against upstream
-   `@datadog/rum-events-format` schemas by mapping `_oo` back to `_dd` pre-validation.
+
+The event schemas come from the **OpenObserve fork** `@openobserve/rum-events-format`
+([openobserve/rum-events-format](https://github.com/openobserve/rum-events-format)), whose schemas
+describe `_oo` directly — so unit tests validate events against them with no `_oo`→`_dd` shim (the
+former patch 0004 is gone). The fork commit is pinned in
+`scripts/openobserve/rum-events-format-pin.txt`; `rebrand.mjs` rewrites the `package.json` entry to
+that pin on every sync, so upstream's DataDog SHA is never inherited. After an rum-events-format
+fork sync merges, bump the pin: `yarn openobserve:schemas --update <fork-commit>` (or edit the pin
+file), then `yarn install`.
 
 ## Release cadence policy
 

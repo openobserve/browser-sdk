@@ -20,9 +20,10 @@ lerna.json
 # Package READMEs intentionally come from upstream (rebranded by the codemod),
 # so they track upstream layout changes. Only the root README is ours.
 
-# Note: the rum-events-format submodule and the @datadog/rum-events-format npm package
-# intentionally stay on upstream, so event schemas always match the synced release.
-# Test format validation maps _oo back to _dd via openobserve-patches.
+# Note: the schema package is the OpenObserve fork @openobserve/rum-events-format
+# (openobserve/rum-events-format), whose schemas describe `_oo` directly. The commit is
+# pinned in scripts/openobserve/rum-events-format-pin.txt and reapplied to package.json by
+# rebrand.mjs on every sync. Events validate against the fork schemas with no _oo->_dd shim.
 
 # OpenObserve-authored files
 packages/prd

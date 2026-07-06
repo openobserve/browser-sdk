@@ -7,6 +7,11 @@
     { "literal": "@datadog/browser-sdk-developer-extension", "to": "@openobserve/browser-sdk-developer-extension", "why": "dev extension package name" },
     { "literal": "github.com/DataDog/browser-sdk", "to": "github.com/openobserve/browser-sdk", "why": "repository URLs" },
 
+    { "literal": "@datadog/rum-events-format", "to": "@openobserve/rum-events-format", "why": "schema package: imports, dep key, help text (fork provides the _oo schemas)" },
+    { "literal": "@datadog\\/rum-events-format", "to": "@openobserve\\/rum-events-format", "why": "schema package name inside the escaped regex literal in scripts/json-schemas.ts" },
+    { "literal": "DataDog/rum-events-format", "to": "openobserve/rum-events-format", "why": "schema git URL in the dep value, README, and the GitHub API URL in scripts/json-schemas.ts" },
+    { "literal": "DataDog\\/rum-events-format", "to": "openobserve\\/rum-events-format", "why": "schema git URL inside the escaped regex literal in scripts/json-schemas.ts" },
+
     { "literal": "DD_RUM_SYNTHETICS", "to": "OO_RUM_SYNTHETICS", "why": "synthetics global (before DD_RUM rule)" },
     { "literal": "DD_RUM", "to": "OO_RUM", "why": "RUM global API name" },
     { "literal": "DD_LOGS", "to": "OO_LOGS", "why": "Logs global API name" },
