@@ -54,7 +54,16 @@ function validateRumEventFormat(rawRumEvent: RawRumEvent) {
     },
     context: {},
   }
-  validateRumFormat(combine(fakeContext as CommonProperties & Context, rawRumEvent))
+  validateRumFormat(renameOoNamespaceForValidation(combine(fakeContext as CommonProperties & Context, rawRumEvent)))
+}
+
+/**
+ * The OpenObserve SDK renames the `_dd` event namespace to `_oo`, but the upstream
+ * rum-events-format schemas still describe `_dd`. Rename it back so events can be validated
+ * against the upstream schemas.
+ */
+function renameOoNamespaceForValidation(event: Context): Context {
+  return JSON.parse(JSON.stringify(event).replace(/"_oo":/g, '"_dd":')) as Context
 }
 
 let getAjvCache: Ajv | undefined
