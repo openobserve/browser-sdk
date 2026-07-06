@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-rum-nextjs",
-  "version": "0.4.0-beta.4",
+  "version": "0.4.0-beta.5",
   "license": "Apache-2.0",
   "main": "cjs/entries/main.js",
   "module": "esm/entries/main.mjs",
@@ -17,10 +17,10 @@
     "prepack": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.0-beta.4",
-    "@openobserve/browser-rum-core": "0.4.0-beta.4",
-    "@openobserve/browser-rum-react": "0.4.0-beta.4",
-    "@openobserve/js-core": "0.4.0-beta.4"
+    "@openobserve/browser-core": "0.4.0-beta.5",
+    "@openobserve/browser-rum-core": "0.4.0-beta.5",
+    "@openobserve/browser-rum-react": "0.4.0-beta.5",
+    "@openobserve/js-core": "0.4.0-beta.5"
   },
   "peerDependencies": {
     "next": ">=13.0.0",

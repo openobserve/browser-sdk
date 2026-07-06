@@ -22,8 +22,8 @@
     "acorn": "8.17.0"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.0-beta.4",
-    "@openobserve/js-core": "0.4.0-beta.4"
+    "@openobserve/browser-core": "0.4.0-beta.5",
+    "@openobserve/js-core": "0.4.0-beta.5"
   },
   "repository": {
     "type": "git",
