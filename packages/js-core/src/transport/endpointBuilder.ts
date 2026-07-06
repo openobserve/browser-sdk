@@ -50,6 +50,9 @@ interface EndpointBuilderConfiguration {
   proxy?: string | ProxyFn
   site?: Site
   source?: TransportSource
+  apiVersion?: string
+  organizationIdentifier?: string
+  insecureHTTP?: boolean
 }
 
 interface ReplicaConfiguration {
@@ -82,7 +85,8 @@ export function createEndpointBuilder(
       return buildEndpointUrl({
         proxy: configuration.proxy,
         site: configuration.site,
-        path: `/api/v2/${trackType}`,
+        insecureHTTP: configuration.insecureHTTP,
+        path: `/rum/${configuration.apiVersion ?? 'v1'}/${configuration.organizationIdentifier ?? 'default'}/${trackType}`,
         parameters: buildEndpointParameters(configuration, trackType, api, payload, extraParameters),
       })
     },
@@ -127,6 +131,7 @@ export interface BuildEndpointUrlOptions {
   path: string
   /** Pre-built query string appended to the URL, without a leading `?`. */
   parameters?: string
+  insecureHTTP?: boolean
 }
 
 /** Builds a Datadog intake URL from the given options. */
@@ -136,6 +141,7 @@ export function buildEndpointUrl({
   path,
   parameters = '',
   subdomain,
+  insecureHTTP,
 }: BuildEndpointUrlOptions): string {
   let pathAndParameters = path
   if (parameters) {
@@ -154,14 +160,10 @@ export function buildEndpointUrl({
     return proxy({ path, parameters, subdomain })
   }
 
-  const domainParts = site.split('.')
-  const extension = domainParts.pop()
-  let domain = `browser-intake-${domainParts.join('-')}.${extension!}`
-  if (subdomain) {
-    domain = `${subdomain}.${domain}`
-  }
-
-  return `https://${domain}${pathAndParameters}`
+  // OpenObserve: the configured `site` is used verbatim as the intake host, without the
+  // Datadog `browser-intake-` domain construction or subdomain prefixes.
+  const protocol = insecureHTTP ? 'http' : 'https'
+  return `${protocol}://${site}${pathAndParameters}`
 }
 
 /**

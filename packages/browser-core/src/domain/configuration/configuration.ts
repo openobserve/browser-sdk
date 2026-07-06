@@ -135,6 +135,30 @@ export interface InitConfiguration {
    */
   site?: Site | undefined
 
+  /**
+   * The OpenObserve ingestion API version used to build intake URLs.
+   *
+   * @category Transport
+   * @defaultValue v1
+   */
+  apiVersion?: string | undefined
+
+  /**
+   * The OpenObserve organization identifier, used as a path segment of intake URLs.
+   *
+   * @category Transport
+   * @defaultValue default
+   */
+  organizationIdentifier?: string | undefined
+
+  /**
+   * Send data to the intake over plain HTTP instead of HTTPS. Only intended for local
+   * development against a non-TLS OpenObserve instance.
+   *
+   * @category Transport
+   */
+  insecureHTTP?: boolean | undefined
+
   // tag and context options
   /**
    * The service name for your application. Follows the [tag syntax requirements](https://docs.datadoghq.com/getting_started/tagging/#define-tags).
@@ -279,7 +303,14 @@ export const BROWSER_CORE_SCHEMA = {
   version: { type: 'string' },
 
   // Transport
-  site: { type: 'site', default: INTAKE_SITE_US1 },
+  // OpenObserve: `site` is the intake host, used verbatim. Plain `string` instead of upstream's
+  // `site` field type, which rejects anything that does not look like a Datadog site.
+  site: { type: 'string', default: INTAKE_SITE_US1 },
+  // OpenObserve: intake path is `/rum/{apiVersion}/{organizationIdentifier}/{trackType}`. `strict: false`
+  // so an invalid value falls back to the default instead of aborting SDK initialization.
+  apiVersion: { type: 'string', default: 'v1', strict: false },
+  organizationIdentifier: { type: 'string', default: 'default', strict: false },
+  insecureHTTP: { type: 'boolean', strict: false },
   proxy: {
     type: 'union',
     variants: [{ type: 'string' }, { type: 'function', signature: undefined as ProxyFn | undefined }],

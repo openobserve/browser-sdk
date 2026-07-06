@@ -9,6 +9,8 @@ export function buildEndpointUrl(input: BuildEndpointUrlOptions): string;
 
 // @public
 export interface BuildEndpointUrlOptions {
+    // (undocumented)
+    insecureHTTP?: boolean;
     parameters?: string;
     path: string;
     proxy?: string | ProxyFn;
