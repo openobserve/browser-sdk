@@ -1,8 +1,8 @@
 import { Box, Button, Card, Checkbox, Collapse, Flex, Text } from '@mantine/core'
 import React from 'react'
 import type { FacetValuesFilter, FacetRegistry } from '../../../hooks/useEvents'
-import type { Facet } from '../../../facets.constants'
-import { FACET_ROOT, FacetValue } from '../../../facets.constants'
+import type { Facet, FacetValue } from '../../../facets.constants'
+import { FACET_ROOT } from '../../../facets.constants'
 import * as classes from './facetList.module.css'
 import { computeSelectionState } from './computeFacetState'
 
@@ -92,10 +92,8 @@ function FacetValue({
 }) {
   const isTopLevel = depth === 0
   const facetSelectState = computeSelectionState(facetValuesFilter, facetRegistry, facet, facetValue, parentList)
-  const isCollapsed =
-    !facetValuesFilter.facetValues[facet.path] || !facetValuesFilter.facetValues[facet.path].includes(facetValue)
-  const isFiltered =
-    facetValuesFilter.facetValues[facet.path] && facetValuesFilter.facetValues[facet.path].includes(facetValue)
+  const isCollapsed = !facetValuesFilter.facetValues[facet.path]?.includes(facetValue)
+  const isFiltered = facetValuesFilter.facetValues[facet.path]?.includes(facetValue)
   const isOnly = facetValuesFilter.type === 'include' && facetSelectState === 'selected'
   const value = (
     <Flex justify="space-between" mt={isTopLevel ? 'xs' : SPACE_BETWEEN_CHECKBOX}>
@@ -125,7 +123,7 @@ function FacetValue({
 
   const childFacets = facet.values?.[facetValue]?.facets
   const children = childFacets && (
-    <Collapse in={isCollapsed || isOnly}>
+    <Collapse expanded={isCollapsed || isOnly}>
       <Box className={classes.facetChildren} data-top-level={isTopLevel ? true : undefined}>
         {childFacets.map((facet) => (
           <FacetField

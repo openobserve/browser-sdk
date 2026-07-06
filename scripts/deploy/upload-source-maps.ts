@@ -2,8 +2,8 @@ import path from 'node:path'
 import { printLog, runMain } from '../lib/executionUtils.ts'
 import { command } from '../lib/command.ts'
 import { getBuildEnvValue } from '../lib/buildEnv.ts'
-import { getTelemetryOrgApiKey } from '../lib/secrets.ts'
-import { siteByDatacenter } from '../lib/datacenter.ts'
+import { getTelemetryOrgApiKey, getOrg2ApiKey } from '../lib/secrets.ts'
+import { getAllDatacentersMetadata, getDatacenterMetadata } from '../lib/datacenter.ts'
 import { forEachFile } from '../lib/filesUtils.ts'
 import { buildRootUploadPath, buildDatacenterUploadPath, buildBundleFolder, packages } from './lib/deploymentUtils.ts'
 
@@ -13,15 +13,14 @@ import { buildRootUploadPath, buildDatacenterUploadPath, buildBundleFolder, pack
  * BUILD_MODE=canary|release node upload-source-maps.ts staging|canary|vXXX root,us1,eu1,...
  */
 
-function getSitesByVersion(version: string): string[] {
-  switch (version) {
-    case 'staging':
-      return ['datad0g.com', 'datadoghq.com']
-    case 'canary':
-      return ['datadoghq.com']
-    default:
-      return Object.values(siteByDatacenter)
+async function getSitesByVersion(version: string): Promise<string[]> {
+  if (version === 'staging') {
+    return ['datad0g.com', 'datadoghq.com']
   }
+  if (version.endsWith('canary')) {
+    return ['datadoghq.com']
+  }
+  return (await getAllDatacentersMetadata()).map((dc) => dc.site)
 }
 
 if (!process.env.NODE_TEST_CONTEXT) {
@@ -52,15 +51,22 @@ async function uploadSourceMaps(
     let sites: string[]
     let uploadPath: string
     if (uploadPathType === 'root') {
-      sites = getSitesByVersion(version)
+      sites = await getSitesByVersion(version)
       uploadPath = buildRootUploadPath(packageName, version)
       await renameFilesWithVersionSuffix(bundleFolder, version)
     } else {
-      sites = [siteByDatacenter[uploadPathType]]
+      const datacenterMetadata = await getDatacenterMetadata(uploadPathType)
+
+      if (!datacenterMetadata) {
+        throw new Error(`No datacenter metadata found for ${uploadPathType}`)
+      }
+
+      sites = [datacenterMetadata.site]
       uploadPath = buildDatacenterUploadPath(uploadPathType, packageName, version)
     }
     const prefix = path.dirname(`/${uploadPath}`)
     uploadToDatadog(packageName, service, prefix, bundleFolder, sites)
+    uploadToOrg2(packageName, service, prefix, bundleFolder)
   }
 }
 
@@ -78,6 +84,29 @@ async function renameFilesWithVersionSuffix(bundleFolder: string, version: strin
     console.log(`Renaming ${bundlePath} to ${uploadPath}`)
     command`mv ${bundlePath} ${uploadPath}`.run()
   })
+}
+
+const ORG2_CLOUDFRONT_BASE_URL = 'https://d20xtzwzcl0ceb.cloudfront.net'
+
+function uploadToOrg2(packageName: string, service: string, prefix: string, bundleFolder: string): void {
+  const apiKey = getOrg2ApiKey()
+  const org2Prefix = `${ORG2_CLOUDFRONT_BASE_URL}${prefix === '/' ? '' : prefix}`
+
+  printLog(`Uploading ${packageName} source maps with prefix ${org2Prefix} for org2...`)
+
+  command`
+    datadog-ci sourcemaps upload ${bundleFolder}
+      --service ${service}
+      --release-version ${getBuildEnvValue('SDK_VERSION')}
+      --minified-path-prefix ${org2Prefix}
+      --project-path @datadog/${packageName}/
+      --repository-url https://www.github.com/datadog/browser-sdk
+  `
+    .withEnvironment({
+      DATADOG_API_KEY: apiKey,
+      OPENOBSERVE_SITE: 'datadoghq.com',
+    })
+    .run()
 }
 
 function uploadToDatadog(
@@ -102,12 +131,12 @@ function uploadToDatadog(
         --service ${service}
         --release-version ${getBuildEnvValue('SDK_VERSION')}
         --minified-path-prefix ${prefix}
-        --project-path @openobserve/browser-${packageName}/
-        --repository-url https://www.github.com/openobserve/browser-sdk
+        --project-path @datadog/${packageName}/
+        --repository-url https://www.github.com/datadog/browser-sdk
     `
       .withEnvironment({
         DATADOG_API_KEY: apiKey,
-        DATADOG_SITE: site,
+        OPENOBSERVE_SITE: site,
       })
       .run()
   }

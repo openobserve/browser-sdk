@@ -4,7 +4,6 @@ import * as emojiNameMap from 'emoji-name-map'
 
 import { browserSdkVersion } from '../../../lib/browserSdkVersion.ts'
 import { command } from '../../../lib/command.ts'
-import { getAffectedPackages } from './getAffectedPackages.ts'
 import { CHANGELOG_FILE, CONTRIBUTING_FILE, PUBLIC_EMOJI_PRIORITY, INTERNAL_EMOJI_PRIORITY } from './constants.ts'
 
 const FIRST_EMOJI_REGEX = /\p{Extended_Pictographic}/u
@@ -20,6 +19,8 @@ export const addNewChangesToChangelog = async (previousContent: string): Promise
   const changeLists = getChangeLists()
 
   return `\
+<!-- DO NOT MODIFY IT BY HAND. This file is generated automatically during the release process. -->
+
 # Changelog
 
 ${emojisLegend}
@@ -64,13 +65,12 @@ function getChangeLists(): string {
 
   commits.forEach((commit) => {
     const spaceIndex = commit.indexOf(' ')
-    const hash = commit.slice(0, spaceIndex)
     const message = commit.slice(spaceIndex + 1)
     if (isVersionMessage(message) || isStagingBumpMessage(message)) {
       return
     }
 
-    const change = formatChange(hash, message)
+    const change = formatChange(message)
     const emoji = findFirstEmoji(change)
     if (PUBLIC_EMOJI_PRIORITY.includes(emoji || '')) {
       publicChanges.push(change)
@@ -96,7 +96,7 @@ function getLastReleaseTagName(): string {
   return match[1]
 }
 
-function sortByEmojiPriority(a: string, b: string, priorityList: string[]): number {
+function sortByEmojiPriority(a: string, b: string, priorityList: readonly string[]): number {
   const getFirstRelevantEmojiIndex = (text: string): number => {
     const emoji = findFirstEmoji(text)
     return emoji && priorityList.includes(emoji) ? priorityList.indexOf(emoji) : Number.MAX_VALUE
@@ -104,7 +104,7 @@ function sortByEmojiPriority(a: string, b: string, priorityList: string[]): numb
   return getFirstRelevantEmojiIndex(a) - getFirstRelevantEmojiIndex(b)
 }
 
-function formatChangeList(title: string, changes: string[], priority: string[]): string {
+function formatChangeList(title: string, changes: string[], priority: readonly string[]): string {
   if (!changes.length) {
     return ''
   }
@@ -113,16 +113,8 @@ function formatChangeList(title: string, changes: string[], priority: string[]):
   return `**${title}:**\n\n${formatedList}`
 }
 
-function formatChange(hash: string, message: string): string {
-  let change = `- ${message}`
-
-  const affectedPackages = getAffectedPackages(hash)
-  if (affectedPackages.length > 0) {
-    const formattedPackages = affectedPackages
-      .map((packageDirectoryName) => `[${packageDirectoryName.toUpperCase()}]`)
-      .join(' ')
-    change += ` ${formattedPackages}`
-  }
+function formatChange(message: string): string {
+  const change = `- ${message}`
 
   return addLinksToGithubIssues(emojiNameToUnicode(change))
 }
@@ -132,7 +124,7 @@ function emojiNameToUnicode(message: string): string {
 }
 
 function addLinksToGithubIssues(message: string): string {
-  return message.replace(/\(#(\d+)\)/gm, (_, id) => `([#${id}](https://github.com/DataDog/browser-sdk/pull/${id}))`)
+  return message.replace(/\(#(\d+)\)/gm, (_, id) => `([#${id}](https://github.com/openobserve/browser-sdk/pull/${id}))`)
 }
 
 function findFirstEmoji(message: string): string | undefined {

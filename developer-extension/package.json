@@ -3,37 +3,29 @@
   "version": "0.3.4",
   "private": true,
   "scripts": {
-    "build": "rm -rf dist && webpack --disable-interpret --mode production",
-    "dev": "rm -rf dist && webpack --disable-interpret --mode development && webpack serve --disable-interpret --mode development --config-name=panel --hot"
+    "build": "wxt build",
+    "dev": "wxt"
   },
   "devDependencies": {
-    "@pmmmwh/react-refresh-webpack-plugin": "^0.6.0",
-    "@types/chrome": "0.1.27",
-    "@types/react": "19.2.2",
-    "@types/react-dom": "19.2.2",
-    "@types/webpack-env": "^1.18.4",
-    "@webextension-toolbox/webpack-webextension-plugin": "3.3.1",
-    "copy-webpack-plugin": "13.0.1",
-    "css-loader": "7.1.2",
-    "html-webpack-plugin": "5.6.4",
-    "react-refresh": "^0.18.0",
-    "react-refresh-typescript": "^2.0.9",
-    "style-loader": "4.0.0",
-    "typescript": "5.9.3",
-    "webpack": "5.102.1",
-    "webpack-cli": "^6.0.0",
-    "webpack-dev-server": "^5.0.4"
+    "@types/chrome": "0.1.43",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@wxt-dev/module-react": "1.2.2",
+    "typescript": "6.0.3",
+    "vite": "8.0.16"
   },
   "dependencies": {
-    "@mantine/core": "8.3.7",
-    "@mantine/hooks": "8.3.7",
+    "@mantine/core": "9.3.1",
+    "@mantine/hooks": "9.3.1",
     "@openobserve/browser-core": "workspace:*",
     "@openobserve/browser-logs": "workspace:*",
     "@openobserve/browser-rum": "workspace:*",
-    "@tabler/icons-react": "3.35.0",
+    "@openobserve/browser-rum-core": "workspace:*",
+    "@tabler/icons-react": "3.44.0",
     "clsx": "2.1.1",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "wxt": "0.20.26"
   },
   "volta": {
     "extends": "../package.json"

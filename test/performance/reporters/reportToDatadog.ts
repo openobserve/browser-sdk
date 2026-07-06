@@ -1,4 +1,4 @@
-import { DATADOG_SITE } from '../configuration'
+import { OPENOBSERVE_SITE } from '../configuration'
 import type { Metrics } from '../profiling.type'
 import { fetchHandlingError } from '../../../scripts/lib/executionUtils'
 import { getOrg2ApiKey } from '../../../scripts/lib/secrets'
@@ -17,7 +17,7 @@ export async function reportToDatadog(metricsTable: Record<string, Metrics>, sce
 
   console.log(`✅ Successfully sent ${series.length} metrics to Datadog`)
   console.log(
-    `📊 View metrics in Datadog: https://app.${DATADOG_SITE}/dashboard/m7i-uke-sa9/rum-browser-sdk-performance`
+    `📊 View metrics in Datadog: https://app.${OPENOBSERVE_SITE}/dashboard/m7i-uke-sa9/rum-browser-sdk-performance`
   )
   return result
 }
@@ -48,7 +48,7 @@ function convertMetricsToSeries(
 async function sendToDatadog(series: DatadogSeries[]) {
   const apiKey = getOrg2ApiKey()
   const payload = { series }
-  const apiUrl = `https://api.${DATADOG_SITE}/api/v1/distribution_points`
+  const apiUrl = `https://api.${OPENOBSERVE_SITE}/api/v1/distribution_points`
 
   try {
     const response = await fetchHandlingError(apiUrl, {

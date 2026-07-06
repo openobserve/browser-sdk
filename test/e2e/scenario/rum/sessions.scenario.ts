@@ -1,5 +1,8 @@
+import { ONE_HOUR, ONE_MINUTE } from '@openobserve/js-core/time'
+import { SESSION_STORE_KEY, SESSION_TIME_OUT_DELAY } from '@openobserve/browser-core'
 import { RecordType } from '@openobserve/browser-rum/src/types'
 import { test, expect } from '@playwright/test'
+import { setCookie } from '../../lib/helpers/browser'
 import { expireSession, findSessionCookie, renewSession } from '../../lib/helpers/session'
 import { createTest, waitForRequests } from '../../lib/framework'
 
@@ -35,6 +38,91 @@ test.describe('rum sessions', () => {
         expect(segment.records[1].type).toBe(RecordType.Focus)
         expect(segment.records[2].type).toBe(RecordType.FullSnapshot)
         expect(segment.records.slice(3).every((record) => record.type !== RecordType.FullSnapshot)).toBe(true)
+      })
+  })
+
+  test.describe('session freeze/resume', () => {
+    createTest('does not send a view update with stale session data when the session expires while the page is frozen')
+      .withRum()
+      .withMockClock()
+      .run(async ({ intakeRegistry, flushEvents, page }) => {
+        const initialDate = await page.evaluate(() => Date.now())
+
+        // Fast forward 10 minutes: the view should still be active at this point.
+        await page.clock.fastForward('10:00')
+
+        // Simulate a 24-hour page freeze by jumping time without firing timers.
+        await page.clock.fastForward('24:00:00')
+
+        await flushEvents()
+
+        // No requests were sent after the 24-hour freeze.
+        for (const request of intakeRegistry.rumRequests) {
+          expect(request.batchTime).toBeLessThan(initialDate + ONE_HOUR)
+        }
+
+        // View events should only contain data from before the freeze (< 11 minutes of time_spent)
+        expect(intakeRegistry.rumViewEvents).not.toHaveLength(0)
+        for (const view of intakeRegistry.rumViewEvents) {
+          expect(view.view.time_spent / 1e6 / ONE_MINUTE).toBeLessThan(11)
+        }
+      })
+  })
+
+  test.describe('cross-tab session isolation', () => {
+    createTest('a tab should not collect events under another tab session until an interaction happens')
+      .withRum()
+      .run(async ({ page, intakeRegistry, flushEvents }) => {
+        await expireSession(page, page.context())
+
+        // Simulate another tab opening a fresh session
+        const otherSessionId = '00000000-0000-0000-0000-000000000000'
+        await setCookie(
+          page,
+          SESSION_STORE_KEY,
+          `id=${otherSessionId}&created=${Date.now()}&expire=${Date.now() + 15 * ONE_MINUTE}`,
+          ONE_HOUR
+        )
+
+        await page.evaluate(() => {
+          window.OO_RUM!.addAction('not collected')
+        })
+
+        // Makes the tab picks up the new session
+        await page.locator('html').click()
+
+        await page.evaluate(() => {
+          window.OO_RUM!.addAction('collected')
+        })
+
+        await flushEvents()
+
+        const actionEvents = intakeRegistry.rumActionEvents
+        expect(actionEvents).toHaveLength(1)
+        expect(actionEvents[0].action.target!.name).toBe('collected')
+        expect(actionEvents[0].session.id).toBe(otherSessionId)
+      })
+
+    createTest('a visible tab with an expired session should not extend another tab session')
+      .withRum()
+      .withMockClock()
+      .run(async ({ page, browserContext }) => {
+        // Expire the current session
+        await expireSession(page, browserContext)
+
+        // Simulate another tab opening a fresh session
+        const otherTabExpire = Date.now() + 15 * ONE_MINUTE
+        await setCookie(
+          page,
+          SESSION_STORE_KEY,
+          `id=other-tab-session&created=${Date.now()}&expire=${otherTabExpire}`,
+          ONE_HOUR
+        )
+
+        await page.clock.fastForward(ONE_MINUTE)
+
+        const cookie = await findSessionCookie(browserContext)
+        expect(Number(cookie?.expire)).toEqual(otherTabExpire)
       })
   })
 
@@ -78,8 +166,6 @@ test.describe('rum sessions', () => {
         await page.waitForTimeout(1000)
 
         expect((await findSessionCookie(browserContext))?.aid).toEqual(anonymousId)
-
-        expect(true).toBeTruthy()
       })
 
     createTest('removes anonymous id when tracking consent is withdrawn')
@@ -162,6 +248,39 @@ test.describe('rum sessions', () => {
         expect(intakeRegistry.rumViewEvents[0].session.is_active).toBe(false)
         expect(intakeRegistry.logsEvents).toHaveLength(1)
         expect(intakeRegistry.replaySegments).toHaveLength(1)
+      })
+  })
+
+  test.describe('session cookie alteration', () => {
+    createTest('after cookie is altered to isExpired, a user interaction starts a new session with a new anonymous id')
+      .withRum()
+      .run(async ({ flushEvents, browserContext, page }) => {
+        const initialCookie = await findSessionCookie(browserContext)
+        const initialSessionId = initialCookie?.id
+        const initialAid = initialCookie?.aid
+
+        expect(initialSessionId).toBeDefined()
+        expect(initialAid).toBeDefined()
+
+        // Simulate cookie being altered to isExpired=1 without preserving aid
+        await setCookie(page, SESSION_STORE_KEY, 'isExpired=1', SESSION_TIME_OUT_DELAY)
+
+        // Cookies are cached for 1s, wait until the cache expires
+        await page.waitForTimeout(1100)
+
+        await page.locator('html').click()
+
+        // The session is not created right away, let's wait until we see a cookie
+        await page.waitForTimeout(1000)
+
+        await flushEvents()
+
+        const newCookie = await findSessionCookie(browserContext)
+        expect(newCookie?.isExpired).not.toEqual('1')
+        expect(newCookie?.id).toBeDefined()
+        expect(newCookie?.id).not.toEqual(initialSessionId)
+        expect(newCookie?.aid).toBeDefined()
+        expect(newCookie?.aid).not.toEqual(initialAid)
       })
   })
 

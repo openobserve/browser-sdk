@@ -4,8 +4,8 @@ import type { BrowserLog } from '../../lib/framework'
 import { createTest, createExtension, createCrossOriginScriptUrls, formatConfiguration } from '../../lib/framework'
 
 const ERROR_DOES_NOT_HAVE_ALLOWED_TRACKING_ORIGIN =
-  'Datadog Browser SDK: Running the Browser SDK in a Web extension content script is forbidden unless the `allowedTrackingOrigins` option is provided.'
-const ERROR_MESSAGE = 'Datadog Browser SDK: SDK initialized on a non-allowed domain.'
+  'OpenObserve Browser SDK: Running the Browser SDK in a Web extension content script is forbidden unless the `allowedTrackingOrigins` option is provided.'
+const ERROR_MESSAGE = 'OpenObserve Browser SDK: SDK initialized on a non-allowed domain.'
 
 const BASE_PATH = path.join(process.cwd(), 'test/apps')
 const EXTENSIONS = ['base-extension', 'cdn-extension']
@@ -97,8 +97,8 @@ test.describe('browser extensions', () => {
     .withSetup((options, servers) => {
       const { rumScriptUrl, logsScriptUrl } = createCrossOriginScriptUrls(servers, options)
       return `
-          <script src="${rumScriptUrl}"></script>
-          <script src="${logsScriptUrl}"></script>
+          <script src="${rumScriptUrl}" crossorigin></script>
+          <script src="${logsScriptUrl}" crossorigin></script>
           <script>
             const script = document.createElement('script')
             script.innerHTML = 'window.OO_RUM.init(${formatConfiguration(options.rum!, servers)}); window.OO_LOGS.init(${formatConfiguration(options.logs!, servers)})'

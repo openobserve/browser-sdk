@@ -1,9 +1,10 @@
 import os from 'os'
 
 export function getIp() {
-  return (Object.values(os.networkInterfaces()) as os.NetworkInterfaceInfo[][])
+  const networkInterface = (Object.values(os.networkInterfaces()) as os.NetworkInterfaceInfo[][])
     .flat()
-    .find(({ family, internal }) => family === 'IPv4' && !internal)!.address
+    .find(({ family, internal }) => family === 'IPv4' && !internal)
+  return networkInterface ? networkInterface.address : '127.0.0.1'
 }
 
 export function getBuildInfos() {
@@ -32,15 +33,24 @@ function getLocalInfos() {
   return `${process.env.USER} ${new Date().toLocaleString()}`
 }
 
+// `CI_JOB_NAME` for a parallel:matrix job looks like `e2e: [chromium]`. Strip the
+// `: [...]` suffix so all matrix cells share a single report folder; per-cell results
+// are disambiguated by filename instead (see PW_BROWSER usage in playwright.config.ts).
+function getJobNameBase() {
+  return process.env.CI_JOB_NAME?.replace(/: \[.*\]$/, '')
+}
+
 export function getTestReportDirectory() {
-  if (process.env.CI_JOB_NAME) {
-    return `test-report/${process.env.CI_JOB_NAME}`
+  const jobName = getJobNameBase()
+  if (jobName) {
+    return `test-report/${jobName}`
   }
 }
 
 export function getCoverageReportDirectory() {
-  if (process.env.CI_JOB_NAME) {
-    return `coverage/${process.env.CI_JOB_NAME}`
+  const jobName = getJobNameBase()
+  if (jobName) {
+    return `coverage/${jobName}`
   }
 
   return 'coverage'

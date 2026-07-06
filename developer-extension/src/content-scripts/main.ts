@@ -1,23 +1,23 @@
+import type { LogsInitConfiguration } from '@openobserve/browser-logs'
+import type { RumInitConfiguration } from '@openobserve/browser-rum'
 import type { Settings } from '../common/extension.types'
 import { EventListeners } from '../common/eventListeners'
 import { DEV_LOGS_URL, DEV_RUM_SLIM_URL, DEV_RUM_URL } from '../common/packagesUrlConstants'
 import { SESSION_STORAGE_SETTINGS_KEY } from '../common/sessionKeyConstant'
 
-declare global {
-  interface Window extends EventTarget {
-    OO_RUM?: SdkPublicApi
-    OO_LOGS?: SdkPublicApi
-    __ooBrowserSdkExtensionCallback?: (message: unknown) => void
-  }
+const windowWithSdkGlobals = window as Window & {
+  OO_RUM?: SdkPublicApi
+  OO_LOGS?: SdkPublicApi
+  __ooBrowserSdkExtensionCallback?: (message: unknown) => void
 }
 
 interface SdkPublicApi {
   [key: string]: (...args: any[]) => unknown
 }
 
-function main() {
+export function main() {
   // Prevent multiple executions when the devetools are reconnecting
-  if (window.__ooBrowserSdkExtensionCallback) {
+  if (windowWithSdkGlobals.__ooBrowserSdkExtensionCallback) {
     return
   }
 
@@ -31,35 +31,33 @@ function main() {
     // This happens when the page is loaded and then the devtools are opened.
     noBrowserSdkLoaded()
   ) {
-    const ooRumGlobal = instrumentGlobal('OO_RUM')
-    const ooLogsGlobal = instrumentGlobal('OO_LOGS')
+    const ddRumGlobal = instrumentGlobal('OO_RUM')
+    const ddLogsGlobal = instrumentGlobal('OO_LOGS')
 
     if (settings.debugMode) {
-      setDebug(ooRumGlobal)
-      setDebug(ooLogsGlobal)
+      setDebug(ddRumGlobal)
+      setDebug(ddLogsGlobal)
     }
 
     if (settings.rumConfigurationOverride) {
-      overrideInitConfiguration(ooRumGlobal, settings.rumConfigurationOverride)
+      overrideInitConfiguration(ddRumGlobal, settings.rumConfigurationOverride)
     }
 
     if (settings.logsConfigurationOverride) {
-      overrideInitConfiguration(ooLogsGlobal, settings.logsConfigurationOverride)
+      overrideInitConfiguration(ddLogsGlobal, settings.logsConfigurationOverride)
     }
 
     if (settings.useDevBundles === 'npm') {
-      injectDevBundle(settings.useRumSlim ? DEV_RUM_SLIM_URL : DEV_RUM_URL, ooRumGlobal)
-      injectDevBundle(DEV_LOGS_URL, ooLogsGlobal)
+      injectDevBundle(settings.useRumSlim ? DEV_RUM_SLIM_URL : DEV_RUM_URL, ddRumGlobal)
+      injectDevBundle(DEV_LOGS_URL, ddLogsGlobal)
     }
   }
 }
 
-main()
-
 function sendEventsToExtension() {
   // This script is executed in the "main" execution world, the same world as the webpage. Thus, it
   // can define a global callback variable to listen to SDK events.
-  window.__ooBrowserSdkExtensionCallback = (message: unknown) => {
+  windowWithSdkGlobals.__ooBrowserSdkExtensionCallback = (message: unknown) => {
     // Relays any message to the "isolated" content-script via a custom event.
     window.dispatchEvent(
       new CustomEvent('__ooBrowserSdkMessage', {
@@ -82,7 +80,7 @@ function getSettings() {
 }
 
 function noBrowserSdkLoaded() {
-  return !window.OO_RUM && !window.OO_LOGS
+  return !windowWithSdkGlobals.OO_RUM && !windowWithSdkGlobals.OO_LOGS
 }
 
 function injectDevBundle(url: string, global: GlobalInstrumentation) {
@@ -104,20 +102,61 @@ function setDebug(global: GlobalInstrumentation) {
   })
 }
 
-function overrideInitConfiguration(global: GlobalInstrumentation, configurationOverride: object) {
+function overrideInitConfiguration(
+  global: GlobalInstrumentation,
+  configurationOverride: Partial<RumInitConfiguration | LogsInitConfiguration>
+) {
   global.onSet((sdkInstance) => {
     // Ensure the sdkInstance has an 'init' method, excluding async stubs.
     if ('init' in sdkInstance) {
       const originalInit = sdkInstance.init
-      sdkInstance.init = (config: any) => {
+      sdkInstance.init = (config: RumInitConfiguration | LogsInitConfiguration) => {
         originalInit({
           ...config,
-          ...configurationOverride,
+          ...restoreFunctions(config, configurationOverride),
           allowedTrackingOrigins: [location.origin],
         })
       }
     }
   })
+}
+
+type SDKInitConfiguration = RumInitConfiguration | LogsInitConfiguration
+function restoreFunctions(
+  original: SDKInitConfiguration,
+  override: Partial<SDKInitConfiguration>
+): Partial<SDKInitConfiguration> {
+  // Clone the override to avoid mutating the input
+  const result = (Array.isArray(override) ? [...override] : { ...override }) as Record<string, unknown>
+
+  // Add back any missing functions from original
+  for (const key in original) {
+    if (!Object.prototype.hasOwnProperty.call(original, key)) {
+      continue
+    }
+
+    const originalValue = original[key as keyof typeof original]
+    const resultValue = result[key]
+
+    // If it's a function and missing in result, restore it
+    if (typeof originalValue === 'function' && !(key in result)) {
+      result[key] = originalValue
+    }
+    // If both are objects, recurse to restore functions at deeper levels
+    else if (
+      key in result &&
+      originalValue &&
+      typeof originalValue === 'object' &&
+      !Array.isArray(originalValue) &&
+      resultValue &&
+      typeof resultValue === 'object' &&
+      !Array.isArray(resultValue)
+    ) {
+      result[key] = restoreFunctions(originalValue, resultValue)
+    }
+  }
+
+  return result
 }
 
 function loadSdkScriptFromURL(url: string) {
@@ -127,25 +166,17 @@ function loadSdkScriptFromURL(url: string) {
     xhr.send()
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error(`[OO Browser SDK extension] Error while loading ${url}:`, error)
+    console.error(`[DD Browser SDK extension] Error while loading ${url}:`, error)
     return
   }
   if (xhr.status === 200) {
     let sdkCode = xhr.responseText
 
-    // Webpack expects the script to be loaded with a `<script src="...">` tag to get its URL to
-    // know where to load the relative chunks. By loading it with an XHR and evaluating it in an
-    // inline script tag, Webpack does not know where to load the chunks from.
-    //
-    // Let's replace Webpack logic that breaks with our own logic to define the URL. It's not
-    // pretty, but loading the script this way isn't either, so...
-    //
-    // We'll probably have to revisit when using actual `import()` expressions instead of relying on
-    // Webpack runtime to load the chunks.
-    sdkCode = sdkCode.replace(
-      'if (!scriptUrl) throw new Error("Automatic publicPath is not supported in this browser");',
-      `if (!scriptUrl) scriptUrl = ${JSON.stringify(url)};`
-    )
+    // Webpack chunks are loaded via ESM dynamic imports with relative paths (e.g. `import('./chunks/...')`).
+    // Since this script is injected inline rather than loaded via `<script src>`, relative import()
+    // paths would resolve against the page URL instead of the SDK URL. Replace them with absolute URLs.
+    const baseUrl = url.slice(0, url.lastIndexOf('/') + 1)
+    sdkCode = sdkCode.replaceAll(/\bimport\(['"]\.\/['"]/g, `import('${baseUrl}'`)
 
     const script = document.createElement('script')
     script.type = 'text/javascript'
@@ -171,7 +202,7 @@ function instrumentGlobal(global: 'OO_RUM' | 'OO_LOGS') {
   })
 
   return {
-    get: () => window[global],
+    get: () => windowWithSdkGlobals[global],
     onSet: (callback: (sdkInstance: SdkPublicApi) => void) => {
       eventListeners.subscribe(callback)
     },

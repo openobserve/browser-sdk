@@ -2,7 +2,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import zlib from 'node:zlib'
 
-const packages = ['rum', 'logs', 'flagging', 'rum-slim', 'worker'] as const
+const packages = ['browser-rum', 'browser-logs', 'browser-rum-slim', 'browser-worker'] as const
 
 interface BundleSize {
   uncompressed: number
@@ -16,8 +16,8 @@ interface BundleSizes {
 function getPackageName(file: string): string | undefined {
   if (file.includes('chunk')) {
     const { chunkName, packageName } =
-      file.match(/chunks\/(?<chunkName>[a-z0-9]*)-[a-z0-9]*-datadog-(?<packageName>[a-z-]*)\.js/)?.groups ?? {}
-    return `${packageName}_${chunkName}`
+      file.match(/chunks\/(?<chunkName>[a-zA-Z0-9]*)-[a-z0-9]*-datadog-(?<packageName>[a-z-]*)\.js/)?.groups ?? {}
+    return `${packageName}_${chunkName.replace(/^datadog/, '').toLowerCase()}`
   }
 
   return file

@@ -1,6 +1,6 @@
-import type { TelemetryEvent } from '../../../../../../packages/core/src/domain/telemetry'
-import type { LogsEvent } from '../../../../../../packages/logs/src/logsEvent.types'
-import type { RumEvent } from '../../../../../../packages/rum-core/src/rumEvent.types'
+import type { TelemetryEvent } from '../../../../../../packages/browser-core/src/domain/telemetry'
+import type { LogsEvent } from '../../../../../../packages/browser-logs/src/logsEvent.types'
+import type { RumEvent } from '../../../../../../packages/browser-rum-core/src/rumEvent.types'
 import { getIntakeUrlForEvent, escapeShellParameter } from './copyEvent'
 
 const RUM_ERROR_EVENT = { type: 'error' } as RumEvent
@@ -43,11 +43,11 @@ describe('getIntakeUrlForEvent', () => {
 
     expect(url.host).toBe('browser-intake-datadoghq.com')
     expect(url.pathname).toBe('/api/v2/rum')
-    expect(url.searchParams.get('ddsource')).toBe('browser')
-    expect(url.searchParams.get('dd-api-key')).toBe('client-token')
-    expect(url.searchParams.get('dd-evp-origin-version')).toBe('1.2.3')
-    expect(url.searchParams.get('dd-evp-origin')).toBe('browser')
-    expect(url.searchParams.get('dd-request-id')).toMatch(/[a-f0-9-]+/)
+    expect(url.searchParams.get('o2source')).toBe('browser')
+    expect(url.searchParams.get('o2-api-key')).toBe('client-token')
+    expect(url.searchParams.get('o2-evp-origin-version')).toBe('1.2.3')
+    expect(url.searchParams.get('o2-evp-origin')).toBe('browser')
+    expect(url.searchParams.get('o2-request-id')).toMatch(/[a-f0-9-]+/)
     expect(url.searchParams.get('batch_time')).toMatch(/[0-9]+/)
   })
 
@@ -67,7 +67,7 @@ describe('getIntakeUrlForEvent', () => {
       )!
     )
 
-    expect(url.searchParams.get('dd-evp-origin-version')).toBe('1.2.3&4')
+    expect(url.searchParams.get('o2-evp-origin-version')).toBe('1.2.3&4')
   })
 
   it('should use the RUM intake for telemetry events', () => {

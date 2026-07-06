@@ -4,12 +4,13 @@ interface Package {
 }
 
 export const packages: Package[] = [
-  { packageName: 'logs', service: 'browser-logs-sdk' },
-  { packageName: 'rum', service: 'browser-rum-sdk' },
-  { packageName: 'rum-slim', service: 'browser-rum-sdk' },
+  { packageName: 'browser-logs', service: 'browser-logs-sdk' },
+  { packageName: 'browser-rum', service: 'browser-rum-sdk' },
+  { packageName: 'browser-rum-slim', service: 'browser-rum-sdk' },
+  { packageName: 'browser-debugger', service: 'browser-debugger-sdk' },
 ]
 
-// ex: datadog-rum-v4.js, chunks/recorder-8d8a8dfab6958424038f-datadog-rum.js
+// ex: openobserve-rum-v4.js, chunks/datadogRecorder-8d8a8dfab6958424038f-openobserve-rum.js
 export const buildRootUploadPath = (filePath: string, version: string): string => {
   // We don't suffix chunk names as they are referenced by the main bundle. Renaming them would require updates via Webpack, adding unnecessary complexity for minimal value.
   if (filePath.includes('chunks')) {
@@ -22,13 +23,13 @@ export const buildRootUploadPath = (filePath: string, version: string): string =
   return `${basePath}-${version}.${ext}`
 }
 
-// ex: us1/v4/datadog-rum.js, eu1/v4/chunks/recorder-8d8a8dfab6958424038f-datadog-rum.js
+// ex: us1/v4/openobserve-rum.js, eu1/v4/chunks/datadogRecorder-8d8a8dfab6958424038f-openobserve-rum.js
 export const buildDatacenterUploadPath = (datacenter: string, filePath: string, version: string): string =>
   `${datacenter}/${version}/${filePath}`
 
-// ex: pull-request/2781/datadog-rum.js, pull-request/2781/chunks/recorder-8d8a8dfab6958424038f-datadog-rum.js
+// ex: pull-request/2781/openobserve-rum.js, pull-request/2781/chunks/datadogRecorder-8d8a8dfab6958424038f-openobserve-rum.js
 export const buildPullRequestUploadPath = (filePath: string, version: string): string =>
   `pull-request/${version}/${filePath}`
 
-// ex: packages/rum/bundle
+// ex: packages/browser-rum/bundle
 export const buildBundleFolder = (packageName: string): string => `packages/${packageName}/bundle`

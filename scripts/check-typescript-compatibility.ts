@@ -12,8 +12,7 @@ interface TypeScriptCheck {
 }
 
 runMain(() => {
-  printLog('Building project...')
-  command`yarn run build`.run()
+  printLog('Building and packing project...')
   command`yarn run pack`.run()
 
   printLog('Setting up test environment...')
@@ -23,29 +22,32 @@ runMain(() => {
     {
       title: 'TypeScript 3.8.2 compatibility',
       version: '3.8.2',
+      compilerOptions: { moduleResolution: 'node' },
     },
     {
       title: 'TypeScript isolated modules compatibility',
-      compilerOptions: { isolatedModules: true },
+      compilerOptions: { isolatedModules: true, moduleResolution: 'node' },
       version: '3.8.2',
     },
     {
       title: 'TypeScript 4.1.6 compatibility',
       version: '4.1.6',
+      compilerOptions: { moduleResolution: 'node' },
     },
     {
       title: 'TypeScript latest compatibility',
       version: 'latest',
+      compilerOptions: { ignoreDeprecations: '6.0' },
     },
     {
       title: 'exactOptionalPropertyTypes compatibility',
       version: 'latest', // Not available in 3.8.2
-      compilerOptions: { exactOptionalPropertyTypes: true },
+      compilerOptions: { exactOptionalPropertyTypes: true, ignoreDeprecations: '6.0' },
     },
     {
       title: 'ESNext compatibility',
       version: 'latest',
-      compilerOptions: { lib: ['ESNext', 'DOM'] },
+      compilerOptions: { lib: ['ESNext', 'DOM'], ignoreDeprecations: '6.0' },
     },
   ]
 

@@ -1,4 +1,6 @@
+import util from 'node:util'
 import { spawn } from 'node:child_process'
+import { fetch, type RequestInit, type Response } from 'undici'
 
 /**
  * Helper to run executables asynchronously, in a shell. This function does not prevent Shell
@@ -28,20 +30,31 @@ export function runMain(mainFunction: () => void | Promise<void>): void {
 }
 
 const resetColor = '\x1b[0m'
+const redColor = '\x1b[31;1m'
+const greenColor = '\x1b[32;1m'
+const yellowColor = '\x1b[33;1m'
+const greyColor = '\x1b[90m'
 
 export function printError(...params: any[]): void {
-  const redColor = '\x1b[31;1m'
-  console.log(redColor, ...params, resetColor)
+  printWithColor(redColor, params)
 }
 
 export function printLog(...params: any[]): void {
-  const greenColor = '\x1b[32;1m'
-  console.log(greenColor, ...params, resetColor)
+  printWithColor(greenColor, params)
 }
 
 export function printWarning(...params: any[]): void {
-  const yellowColor = '\x1b[33;1m'
-  console.log(yellowColor, ...params, resetColor)
+  printWithColor(yellowColor, params)
+}
+
+export function printDebug(...params: any[]): void {
+  if (process.env.DEBUG) {
+    printWithColor(greyColor, params)
+  }
+}
+
+function printWithColor(color: string, params: any[]): void {
+  console.log(`${color}${util.format(...params)}${resetColor}`)
 }
 
 export function formatSize(bytes: number | null, { includeSign = false } = {}): string {
@@ -88,17 +101,21 @@ export class FetchError extends Error {
   }
 }
 
+export async function createFetchError(response: Response): Promise<FetchError> {
+  let cause: unknown
+  const body = await response.text()
+  try {
+    cause = JSON.parse(body)
+  } catch {
+    cause = body
+  }
+  return new FetchError(response, { cause })
+}
+
 export async function fetchHandlingError(url: string, options?: RequestInit): Promise<Response> {
   const response = await fetch(url, options)
   if (!response.ok) {
-    let cause: unknown
-    const body = await response.text()
-    try {
-      cause = JSON.parse(body)
-    } catch {
-      cause = body
-    }
-    throw new FetchError(response, { cause })
+    throw await createFetchError(response)
   }
 
   return response

@@ -1,0 +1,19 @@
+import { printLog, runMain } from '../lib/executionUtils.ts'
+import { fetchPR, LOCAL_BRANCH, getLastCommonCommit } from '../lib/gitUtils.ts'
+import { Pr } from './lib/reportAsAPrComment.ts'
+import { computeAndReportBundleSizes } from './lib/bundleSizes.ts'
+
+runMain(async () => {
+  const githubPr = await fetchPR(LOCAL_BRANCH!)
+  let pr: Pr | undefined
+  if (!githubPr) {
+    printLog('No pull requests found for the branch, reporting only (normal for main)')
+  } else {
+    const lastCommonCommit = getLastCommonCommit(githubPr.base.ref)
+    // Truncate to 8 characters to match the format used in Datadog metrics
+    pr = new Pr(githubPr.number, lastCommonCommit.substring(0, 8))
+  }
+
+  printLog('Bundle sizes...')
+  await computeAndReportBundleSizes(pr)
+})

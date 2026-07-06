@@ -1,25 +1,19 @@
 import type { InputData, StyleSheetRuleData, ScrollData } from '@openobserve/browser-rum/src/types'
-import { NodeType, IncrementalSource, MouseInteractionType } from '@openobserve/browser-rum/src/types'
+import { IncrementalSource, ChangeType, RecordType } from '@openobserve/browser-rum/src/types'
 
-// Import from src to have properties of const enums
-import { FrustrationType } from '@openobserve/browser-rum-core/src/rawRumEvent.types'
-import { DefaultPrivacyLevel } from '@openobserve/browser-rum'
+import { DefaultPrivacyLevel, SESSION_STORE_KEY } from '@openobserve/browser-core'
 
+import { decodeChangeRecords, findChangeRecords } from '@openobserve/browser-rum/test/record/changes'
 import {
-  findElement,
-  findElementWithIdAttribute,
-  findTextContent,
-  findElementWithTagName,
-} from '@openobserve/browser-rum/test/nodes'
+  getElementIdsFromFullSnapshot,
+  getScrollPositionsFromFullSnapshot,
+} from '@openobserve/browser-rum/test/record/elements'
 import {
   findFullSnapshot,
   findIncrementalSnapshot,
   findAllIncrementalSnapshots,
   findMeta,
-  findAllFrustrationRecords,
-  findMouseInteractionRecords,
-} from '@openobserve/browser-rum/test/segments'
-import { createMutationPayloadValidatorFromSegment } from '@openobserve/browser-rum/test/mutationPayloadValidator'
+} from '@openobserve/browser-rum/test/record/segments'
 import { test, expect } from '@playwright/test'
 import { wait } from '@openobserve/browser-core/test/wait'
 import { createTest, html } from '../../lib/framework'
@@ -82,54 +76,54 @@ test.describe('recorder', () => {
   test.describe('full snapshot', () => {
     createTest('obfuscate elements')
       .withRum()
-      .withBody(html`
-        <div id="not-obfuscated">displayed</div>
-        <p id="hidden-by-attribute" data-oo-privacy="hidden">hidden</p>
-        <span id="hidden-by-classname" class="oo-privacy-hidden">hidden</span>
-        <input id="input-not-obfuscated" value="displayed" />
-        <input id="input-masked" data-oo-privacy="mask" value="masked" />
-      `)
+      .withBody(
+        html`<div id="not-obfuscated">displayed</div>
+          <p id="hidden-by-attribute" data-oo-privacy="hidden">hidden</p>
+          <span id="hidden-by-classname" class="oo-privacy-hidden">hidden</span>
+          <input id="input-not-obfuscated" value="displayed" />
+          <input id="input-masked" data-oo-privacy="mask" value="masked" />`
+      )
       .run(async ({ intakeRegistry, flushEvents }) => {
         await flushEvents()
-
         expect(intakeRegistry.replaySegments).toHaveLength(1)
 
-        const fullSnapshot = findFullSnapshot(intakeRegistry.replaySegments[0])!
-
-        const node = findElementWithIdAttribute(fullSnapshot.data.node, 'not-obfuscated')
-        expect(node).toBeTruthy()
-        expect(findTextContent(node!)).toBe('displayed')
-
-        const hiddenNodeByAttribute = findElement(fullSnapshot.data.node, (node) => node.tagName === 'p')
-        expect(hiddenNodeByAttribute).toBeTruthy()
-        expect(hiddenNodeByAttribute!.attributes['data-oo-privacy']).toBe('hidden')
-        expect(hiddenNodeByAttribute!.childNodes).toHaveLength(0)
-
-        const hiddenNodeByClassName = findElement(fullSnapshot.data.node, (node) => node.tagName === 'span')
-        expect(hiddenNodeByClassName).toBeTruthy()
-        expect(hiddenNodeByClassName!.attributes.class).toBeUndefined()
-        expect(hiddenNodeByClassName!.attributes['data-oo-privacy']).toBe('hidden')
-        expect(hiddenNodeByClassName!.childNodes).toHaveLength(0)
-
-        const inputIgnored = findElementWithIdAttribute(fullSnapshot.data.node, 'input-not-obfuscated')
-        expect(inputIgnored).toBeTruthy()
-        expect(inputIgnored!.attributes.value).toBe('displayed')
-
-        const inputMasked = findElementWithIdAttribute(fullSnapshot.data.node, 'input-masked')
-        expect(inputMasked).toBeTruthy()
-        expect(inputMasked!.attributes.value).toBe('***')
+        const records = findChangeRecords(intakeRegistry.replaySegments[0].records)
+        expect(decodeChangeRecords(records).at(0)!.data).toEqual([
+          [
+            ChangeType.AddNode,
+            [null, '#document'],
+            [1, '#doctype', 'html', '', ''],
+            [0, 'HTML'],
+            [1, 'HEAD'],
+            [0, 'BODY'],
+            [1, 'DIV', ['id', 'not-obfuscated']],
+            [1, '#text', 'displayed'],
+            [3, '#text', '\n          '],
+            [0, 'P', ['data-oo-privacy', 'hidden']],
+            [0, '#text', '\n          '],
+            [0, 'SPAN', ['data-oo-privacy', 'hidden']],
+            [0, '#text', '\n          '],
+            [0, 'INPUT', ['id', 'input-not-obfuscated'], ['value', 'displayed']],
+            [0, '#text', '\n          '],
+            [0, 'INPUT', ['id', 'input-masked'], ['data-oo-privacy', 'mask'], ['value', '***']],
+          ],
+          [ChangeType.Size, [8, expect.any(Number), expect.any(Number)], [10, expect.any(Number), expect.any(Number)]],
+          [ChangeType.ScrollPosition, [0, 0, 0]],
+        ])
       })
   })
 
   test.describe('mutations observer', () => {
+    const body = html`
+      <p>mutation observer</p>
+      <ul>
+        <li></li>
+      </ul>
+    `
+
     createTest('record mutations')
       .withRum()
-      .withBody(html`
-        <p>mutation observer</p>
-        <ul>
-          <li></li>
-        </ul>
-      `)
+      .withBody(body)
       .run(async ({ intakeRegistry, page, flushEvents }) => {
         await page.evaluate(() => {
           const li = document.createElement('li')
@@ -142,38 +136,18 @@ test.describe('recorder', () => {
           const p = document.querySelector('p') as HTMLParagraphElement
           p.appendChild(document.createElement('span'))
         })
-
         await flushEvents()
 
-        const { validate, expectNewNode, expectInitialNode } = createMutationPayloadValidatorFromSegment(
-          intakeRegistry.replaySegments[0],
-          { expect }
-        )
-
-        validate({
-          adds: [
-            {
-              parent: expectInitialNode({ tag: 'p' }),
-              node: expectNewNode({ type: NodeType.Element, tagName: 'span' }),
-            },
-          ],
-          removes: [
-            {
-              parent: expectInitialNode({ tag: 'body' }),
-              node: expectInitialNode({ tag: 'ul' }),
-            },
-          ],
-        })
+        const records = findChangeRecords(intakeRegistry.replaySegments[0].records)
+        expect(decodeChangeRecords(records).at(-1)!.data).toEqual([
+          [ChangeType.AddNode, [8, 'SPAN']],
+          [ChangeType.RemoveNode, 9],
+        ])
       })
 
     createTest('record character data mutations')
       .withRum()
-      .withBody(html`
-        <p>mutation observer</p>
-        <ul>
-          <li></li>
-        </ul>
-      `)
+      .withBody(body)
       .run(async ({ intakeRegistry, page, flushEvents }) => {
         await page.evaluate(() => {
           const li = document.createElement('li')
@@ -188,42 +162,18 @@ test.describe('recorder', () => {
           const p = document.querySelector('p') as HTMLParagraphElement
           p.innerText = 'mutated'
         })
-
         await flushEvents()
 
-        const { validate, expectNewNode, expectInitialNode } = createMutationPayloadValidatorFromSegment(
-          intakeRegistry.replaySegments[0],
-          { expect }
-        )
-
-        validate({
-          adds: [
-            {
-              parent: expectInitialNode({ tag: 'p' }),
-              node: expectNewNode({ type: NodeType.Text, textContent: 'mutated' }),
-            },
-          ],
-          removes: [
-            {
-              parent: expectInitialNode({ tag: 'body' }),
-              node: expectInitialNode({ tag: 'ul' }),
-            },
-            {
-              parent: expectInitialNode({ tag: 'p' }),
-              node: expectInitialNode({ text: 'mutation observer' }),
-            },
-          ],
-        })
+        const records = findChangeRecords(intakeRegistry.replaySegments[0].records)
+        expect(decodeChangeRecords(records).at(-1)!.data).toEqual([
+          [ChangeType.AddNode, [8, '#text', 'mutated']],
+          [ChangeType.RemoveNode, 9, 7],
+        ])
       })
 
     createTest('record attributes mutations')
       .withRum()
-      .withBody(html`
-        <p>mutation observer</p>
-        <ul>
-          <li></li>
-        </ul>
-      `)
+      .withBody(body)
       .run(async ({ intakeRegistry, page, flushEvents }) => {
         await page.evaluate(() => {
           const li = document.createElement('li')
@@ -236,28 +186,13 @@ test.describe('recorder', () => {
 
           document.body.setAttribute('test', 'true')
         })
-
         await flushEvents()
 
-        const { validate, expectInitialNode } = createMutationPayloadValidatorFromSegment(
-          intakeRegistry.replaySegments[0],
-          { expect }
-        )
-
-        validate({
-          attributes: [
-            {
-              node: expectInitialNode({ tag: 'body' }),
-              attributes: { test: 'true' },
-            },
-          ],
-          removes: [
-            {
-              parent: expectInitialNode({ tag: 'body' }),
-              node: expectInitialNode({ tag: 'ul' }),
-            },
-          ],
-        })
+        const records = findChangeRecords(intakeRegistry.replaySegments[0].records)
+        expect(decodeChangeRecords(records).at(-1)!.data).toEqual([
+          [ChangeType.RemoveNode, 9],
+          [ChangeType.Attribute, [4, ['test', 'true']]],
+        ])
       })
 
     createTest("don't record hidden elements mutations")
@@ -275,13 +210,12 @@ test.describe('recorder', () => {
           document.querySelector('li')!.textContent = 'hop'
           document.querySelector('div')!.appendChild(document.createElement('p'))
         })
-
         await flushEvents()
 
         expect(intakeRegistry.replaySegments).toHaveLength(1)
-        const segment = intakeRegistry.replaySegments[0]
-
-        expect(findAllIncrementalSnapshots(segment, IncrementalSource.Mutation)).toHaveLength(0)
+        const records = findChangeRecords(intakeRegistry.replaySegments[0].records)
+        expect(records).toHaveLength(1)
+        expect(records[0].type === RecordType.FullSnapshot)
       })
 
     createTest('record DOM node movement 1')
@@ -289,9 +223,9 @@ test.describe('recorder', () => {
       .withBody(
         // prettier-ignore
         html`
-          <div>a<p></p>b</div>
-          <span>c<i>d<b>e</b>f</i>g</span>
-        `
+            <div>a<p></p>b</div>
+            <span>c<i>d<b>e</b>f</i>g</span>
+          `
       )
       .run(async ({ intakeRegistry, page, flushEvents }) => {
         await page.evaluate(() => {
@@ -303,35 +237,23 @@ test.describe('recorder', () => {
           p.removeChild(span)
           div.appendChild(span)
         })
-
         await flushEvents()
 
-        const { validate, expectInitialNode } = createMutationPayloadValidatorFromSegment(
-          intakeRegistry.replaySegments[0],
-          { expect }
-        )
-        validate({
-          adds: [
-            {
-              parent: expectInitialNode({ tag: 'div' }),
-              node: expectInitialNode({ tag: 'span' }).withChildren(
-                expectInitialNode({ text: 'c' }),
-                expectInitialNode({ tag: 'i' }).withChildren(
-                  expectInitialNode({ text: 'd' }),
-                  expectInitialNode({ tag: 'b' }).withChildren(expectInitialNode({ text: 'e' })),
-                  expectInitialNode({ text: 'f' })
-                ),
-                expectInitialNode({ text: 'g' })
-              ),
-            },
+        const records = findChangeRecords(intakeRegistry.replaySegments[0].records)
+        expect(decodeChangeRecords(records).at(-1)!.data).toEqual([
+          [
+            ChangeType.AddNode,
+            [14, 'SPAN'],
+            [1, '#text', 'c'],
+            [0, 'I'],
+            [1, '#text', 'd'],
+            [0, 'B'],
+            [1, '#text', 'e'],
+            [4, '#text', 'f'],
+            [7, '#text', 'g'],
           ],
-          removes: [
-            {
-              parent: expectInitialNode({ tag: 'body' }),
-              node: expectInitialNode({ tag: 'span' }),
-            },
-          ],
-        })
+          [ChangeType.RemoveNode, 11],
+        ])
       })
 
     createTest('record DOM node movement 2')
@@ -339,8 +261,8 @@ test.describe('recorder', () => {
       .withBody(
         // prettier-ignore
         html`
-          <span>c<i>d<b>e</b>f</i>g</span>
-        `
+            <span>c<i>d<b>e</b>f</i>g</span>
+          `
       )
       .run(async ({ intakeRegistry, page, flushEvents }) => {
         await page.evaluate(() => {
@@ -349,40 +271,24 @@ test.describe('recorder', () => {
           document.body.appendChild(div)
           div.appendChild(span)
         })
-
         await flushEvents()
 
-        const { validate, expectInitialNode, expectNewNode } = createMutationPayloadValidatorFromSegment(
-          intakeRegistry.replaySegments[0],
-          { expect }
-        )
-
-        const div = expectNewNode({ type: NodeType.Element, tagName: 'div' })
-
-        validate({
-          adds: [
-            {
-              parent: expectInitialNode({ tag: 'body' }),
-              node: div.withChildren(
-                expectInitialNode({ tag: 'span' }).withChildren(
-                  expectInitialNode({ text: 'c' }),
-                  expectInitialNode({ tag: 'i' }).withChildren(
-                    expectInitialNode({ text: 'd' }),
-                    expectInitialNode({ tag: 'b' }).withChildren(expectInitialNode({ text: 'e' })),
-                    expectInitialNode({ text: 'f' })
-                  ),
-                  expectInitialNode({ text: 'g' })
-                )
-              ),
-            },
+        const records = findChangeRecords(intakeRegistry.replaySegments[0].records)
+        expect(decodeChangeRecords(records).at(-1)!.data).toEqual([
+          [
+            ChangeType.AddNode,
+            [11, 'DIV'],
+            [1, 'SPAN'],
+            [1, '#text', 'c'],
+            [0, 'I'],
+            [1, '#text', 'd'],
+            [0, 'B'],
+            [1, '#text', 'e'],
+            [4, '#text', 'f'],
+            [7, '#text', 'g'],
           ],
-          removes: [
-            {
-              parent: expectInitialNode({ tag: 'body' }),
-              node: expectInitialNode({ tag: 'span' }),
-            },
-          ],
-        })
+          [ChangeType.RemoveNode, 6],
+        ])
       })
 
     createTest('serialize node before record')
@@ -390,8 +296,8 @@ test.describe('recorder', () => {
       .withBody(
         // prettier-ignore
         html`
-          <ul><li></li></ul>
-        `
+            <ul><li></li></ul>
+          `
       )
       .run(async ({ intakeRegistry, page, flushEvents }) => {
         await page.evaluate(() => {
@@ -403,37 +309,12 @@ test.describe('recorder', () => {
             ul.appendChild(li)
           }
         })
-
         await flushEvents()
 
-        const { validate, expectInitialNode, expectNewNode } = createMutationPayloadValidatorFromSegment(
-          intakeRegistry.replaySegments[0],
-          { expect }
-        )
-
-        const ul = expectInitialNode({ tag: 'ul' })
-        const li1 = expectNewNode({ type: NodeType.Element, tagName: 'li' })
-        const li2 = expectNewNode({ type: NodeType.Element, tagName: 'li' })
-        const li3 = expectNewNode({ type: NodeType.Element, tagName: 'li' })
-
-        validate({
-          adds: [
-            {
-              parent: ul,
-              node: li1,
-            },
-            {
-              next: li1,
-              parent: ul,
-              node: li2,
-            },
-            {
-              next: li2,
-              parent: ul,
-              node: li3,
-            },
-          ],
-        })
+        const records = findChangeRecords(intakeRegistry.replaySegments[0].records)
+        expect(decodeChangeRecords(records).at(-1)!.data).toEqual([
+          [ChangeType.AddNode, [3, 'LI'], [4, 'LI'], [5, 'LI']],
+        ])
       })
   })
 
@@ -482,6 +363,9 @@ test.describe('recorder', () => {
 
         await flushEvents()
 
+        const fullSnapshot = findFullSnapshot({ records: intakeRegistry.replayRecords })!
+        const elementIds = getElementIdsFromFullSnapshot(fullSnapshot)
+
         const textInputRecords = filterRecordsByIdAttribute('text-input')
         expect(textInputRecords.length).toBeGreaterThanOrEqual(4)
         expect((textInputRecords[textInputRecords.length - 1].data as { text?: string }).text).toBe('test')
@@ -505,8 +389,7 @@ test.describe('recorder', () => {
         expect((selectRecords[0].data as { text?: string }).text).toBe('2')
 
         function filterRecordsByIdAttribute(idAttribute: string) {
-          const fullSnapshot = findFullSnapshot({ records: intakeRegistry.replayRecords })!
-          const id = findElementWithIdAttribute(fullSnapshot.data.node, idAttribute)!.id
+          const id = elementIds.get(idAttribute)
           const records = findAllIncrementalSnapshots(
             { records: intakeRegistry.replayRecords },
             IncrementalSource.Input
@@ -522,7 +405,7 @@ test.describe('recorder', () => {
       .withBody(html`
         <input type="text" id="first" name="first" />
         <input type="text" id="second" name="second" data-oo-privacy="input-ignored" />
-        <input type="text" id="third" name="third" class="dd-privacy-input-ignored" />
+        <input type="text" id="third" name="third" class="oo-privacy-input-ignored" />
         <input type="password" id="fourth" name="fourth" />
       `)
       .run(async ({ intakeRegistry, flushEvents, page }) => {
@@ -553,7 +436,7 @@ test.describe('recorder', () => {
       .withRum()
       .withBody(html`
         <input type="text" id="by-data-attribute" data-oo-privacy="mask" />
-        <input type="text" id="by-classname" class="dd-privacy-mask" />
+        <input type="text" id="by-classname" class="oo-privacy-mask" />
       `)
       .run(async ({ intakeRegistry, flushEvents, page }) => {
         const firstInput = page.locator('#by-data-attribute')
@@ -653,82 +536,12 @@ test.describe('recorder', () => {
       })
   })
 
-  test.describe('frustration records', () => {
-    createTest('should detect a dead click and match it to mouse interaction record')
-      .withRum({ trackUserInteractions: true })
-      .run(async ({ intakeRegistry, flushEvents, page }) => {
-        const html = page.locator('html')
-        await html.click()
-        await flushEvents()
-
-        expect(intakeRegistry.replaySegments).toHaveLength(1)
-        const segment = intakeRegistry.replaySegments[0]
-
-        const mouseupRecords = findMouseInteractionRecords(segment, MouseInteractionType.MouseUp)
-        const frustrationRecords = findAllFrustrationRecords(segment)
-
-        expect(mouseupRecords).toHaveLength(1)
-        expect(mouseupRecords[0].id, 'mouse interaction record should have an id').toBeTruthy()
-        expect(frustrationRecords).toHaveLength(1)
-        expect(frustrationRecords[0].data).toEqual({
-          frustrationTypes: [FrustrationType.DEAD_CLICK],
-          recordIds: [mouseupRecords[0].id!],
-        })
-      })
-
-    createTest('should detect a rage click and match it to mouse interaction records')
-      .withRum({ trackUserInteractions: true })
-      .withBody(html`
-        <div id="main-div" />
-        <button
-          id="my-button"
-          onclick="document.querySelector('#main-div').appendChild(document.createElement('div'));"
-        />
-      `)
-      .run(async ({ intakeRegistry, page, flushEvents }) => {
-        // We don't use the playwright's `page.locator('button').click()` here because the latency of the command is
-        // too high and the clicks won't be recognised as rage clicks.
-        await page.evaluate(() => {
-          const button = document.querySelector('button')!
-
-          function click() {
-            const coordinates = { clientX: 12, clientY: 20 }
-
-            button.dispatchEvent(new PointerEvent('pointerdown', { isPrimary: true, ...coordinates }))
-            button.dispatchEvent(new MouseEvent('mousedown', coordinates))
-            button.dispatchEvent(new PointerEvent('pointerup', { isPrimary: true, ...coordinates }))
-            button.dispatchEvent(new MouseEvent('mouseup', coordinates))
-            button.dispatchEvent(new PointerEvent('click', { isPrimary: true, ...coordinates }))
-          }
-
-          // Simulate a rage click
-          click()
-          click()
-          click()
-          click()
-        })
-
-        await flushEvents()
-
-        expect(intakeRegistry.replaySegments).toHaveLength(1)
-        const segment = intakeRegistry.replaySegments[0]
-
-        const mouseupRecords = findMouseInteractionRecords(segment, MouseInteractionType.MouseUp)
-        const frustrationRecords = findAllFrustrationRecords(segment)
-
-        expect(mouseupRecords).toHaveLength(4)
-        expect(frustrationRecords).toHaveLength(1)
-        expect(frustrationRecords[0].data).toEqual({
-          frustrationTypes: [FrustrationType.RAGE_CLICK],
-          recordIds: mouseupRecords.map((r) => r.id!),
-        })
-      })
-  })
-
   test.describe('scroll positions', () => {
-    createTest('should be recorded across navigation')
-      // to control initial position before recording
-      .withRum({ startSessionReplayRecordingManually: true })
+    createTest('should be recorded across view changes')
+      .withRum({
+        // to control initial position before recording
+        startSessionReplayRecordingManually: true,
+      })
       .withBody(html`
         <style>
           #container {
@@ -774,6 +587,10 @@ test.describe('recorder', () => {
           )
         }
 
+        await page.evaluate(() => {
+          document.getElementsByTagName('html')[0].setAttribute('id', 'html')
+        })
+
         // initial scroll positions
         await scroll({ windowY: 100, containerX: 10 })
 
@@ -797,23 +614,39 @@ test.describe('recorder', () => {
         expect(intakeRegistry.replaySegments).toHaveLength(2)
         const firstSegment = intakeRegistry.replaySegments[0]
 
-        const firstFullSnapshot = findFullSnapshot(firstSegment)!
-        let htmlElement = findElementWithTagName(firstFullSnapshot.data.node, 'html')!
-        expect(htmlElement.attributes.rr_scrollTop).toBe(100)
-        let containerElement = findElementWithIdAttribute(firstFullSnapshot.data.node, 'container')!
-        expect(containerElement.attributes.rr_scrollLeft).toBe(10)
+        {
+          const firstFullSnapshot = findFullSnapshot(firstSegment)!
+          const elementIds = getElementIdsFromFullSnapshot(firstFullSnapshot)
+          const scrollPositions = getScrollPositionsFromFullSnapshot(firstFullSnapshot)
 
-        const scrollRecords = findAllIncrementalSnapshots(firstSegment, IncrementalSource.Scroll)
-        expect(scrollRecords).toHaveLength(2)
-        const [windowScrollData, containerScrollData] = scrollRecords.map((record) => record.data as ScrollData)
-        expect(windowScrollData.y).toEqual(150)
-        expect(containerScrollData.x).toEqual(20)
+          const htmlId = elementIds.get('html')
+          expect(htmlId).not.toBeUndefined()
+          expect(scrollPositions.get(htmlId!)).toEqual({ left: 0, top: 100 })
 
-        const secondFullSnapshot = findFullSnapshot(intakeRegistry.replaySegments.at(-1)!)!
-        htmlElement = findElementWithTagName(secondFullSnapshot.data.node, 'html')!
-        expect(htmlElement.attributes.rr_scrollTop).toBe(150)
-        containerElement = findElementWithIdAttribute(secondFullSnapshot.data.node, 'container')!
-        expect(containerElement.attributes.rr_scrollLeft).toBe(20)
+          const containerId = elementIds.get('container')
+          expect(containerId).not.toBeUndefined()
+          expect(scrollPositions.get(containerId!)).toEqual({ left: 10, top: 0 })
+
+          const scrollRecords = findAllIncrementalSnapshots(firstSegment, IncrementalSource.Scroll)
+          expect(scrollRecords).toHaveLength(2)
+          const [windowScrollData, containerScrollData] = scrollRecords.map((record) => record.data as ScrollData)
+          expect(windowScrollData.y).toEqual(150)
+          expect(containerScrollData.x).toEqual(20)
+        }
+
+        {
+          const secondFullSnapshot = findFullSnapshot(intakeRegistry.replaySegments.at(-1)!)!
+          const elementIds = getElementIdsFromFullSnapshot(secondFullSnapshot)
+          const scrollPositions = getScrollPositionsFromFullSnapshot(secondFullSnapshot)
+
+          const htmlId = elementIds.get('html')
+          expect(htmlId).not.toBeUndefined()
+          expect(scrollPositions.get(htmlId!)).toEqual({ left: 0, top: 150 })
+
+          const containerId = elementIds.get('container')
+          expect(containerId).not.toBeUndefined()
+          expect(scrollPositions.get(containerId!)).toEqual({ left: 20, top: 0 })
+        }
       })
   })
 
@@ -836,8 +669,9 @@ test.describe('recorder', () => {
         await page.evaluate(() => {
           window.OO_RUM!.startSessionReplayRecording({ force: true })
         })
-        const [cookie] = await browserContext.cookies()
-        expect(cookie.value).toContain('forcedReplay=1')
+        const cookies = await browserContext.cookies()
+        const sessionCookie = cookies.find((c) => c.name === SESSION_STORE_KEY)
+        expect(sessionCookie?.value).toContain('forcedReplay=1')
 
         await flushEvents()
 

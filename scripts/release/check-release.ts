@@ -3,18 +3,6 @@ import { printLog, runMain } from '../lib/executionUtils.ts'
 import { command } from '../lib/command.ts'
 import { checkPackageJsonFiles } from '../lib/checkBrowserSdkPackageJsonFiles.ts'
 
-export interface PackageJsonFile {
-  relativePath: string
-  content: {
-    name: string
-    version: string
-    private?: boolean
-    dependencies?: Record<string, string>
-    devDependencies?: Record<string, string>
-    peerDependencies?: Record<string, string>
-  }
-}
-
 runMain(() => {
   checkGitTag()
   checkPackageJsonFiles()
@@ -29,7 +17,7 @@ function checkGitTag(): void {
   try {
     tagRef = command`git rev-list -n 1 v${releaseVersion} --`.run()
   } catch (error) {
-    throw new Error(`Failed to find git tag reference: ${error as string}`)
+    throw new Error('Failed to find git tag reference', { cause: error })
   }
   if (tagRef !== headRef) {
     throw new Error('Git tag not on HEAD')

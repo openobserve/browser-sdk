@@ -1,0 +1,892 @@
+import type { InitConfiguration } from '@openobserve/browser-core'
+import { DefaultPrivacyLevel, display, TraceContextInjection } from '@openobserve/browser-core'
+import type {
+  ExtractTelemetryConfiguration,
+  CamelToSnakeCase,
+  MapInitConfigurationKey,
+} from '@openobserve/browser-core/test'
+import { EXHAUSTIVE_INIT_CONFIGURATION, SERIALIZED_EXHAUSTIVE_INIT_CONFIGURATION } from '@openobserve/browser-core/test'
+import type { RumInitConfiguration } from './configuration'
+import {
+  DEFAULT_PROPAGATOR_TYPES,
+  DEFAULT_TRACKED_RESOURCE_HEADERS,
+  serializeRumConfiguration,
+  validateAndBuildRumConfiguration,
+} from './configuration'
+
+const DEFAULT_INIT_CONFIGURATION = { clientToken: 'xxx', applicationId: 'xxx' }
+
+describe('validateAndBuildRumConfiguration', () => {
+  let displayErrorSpy: jasmine.Spy<typeof display.error>
+  let displayWarnSpy: jasmine.Spy<typeof display.warn>
+
+  beforeEach(() => {
+    displayErrorSpy = spyOn(display, 'error')
+    displayWarnSpy = spyOn(display, 'warn')
+  })
+
+  describe('applicationId', () => {
+    it('does not validate the configuration if it is missing', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, applicationId: undefined as any })
+      ).toBeUndefined()
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith(
+        'Application ID is not configured, no RUM data will be collected.'
+      )
+    })
+  })
+
+  describe('sessionReplaySampleRate', () => {
+    it('defaults to 0 if the option is not provided', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.sessionReplaySampleRate).toBe(0)
+    })
+
+    it('is set to `sessionReplaySampleRate` provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, sessionReplaySampleRate: 50 })!
+          .sessionReplaySampleRate
+      ).toBe(50)
+    })
+
+    it('does not validate the configuration if an incorrect value is provided', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, sessionReplaySampleRate: 'foo' as any })
+      ).toBeUndefined()
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith(
+        'Session Replay Sample Rate should be a number between 0 and 100'
+      )
+
+      displayErrorSpy.calls.reset()
+
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, sessionReplaySampleRate: 200 })
+      ).toBeUndefined()
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith(
+        'Session Replay Sample Rate should be a number between 0 and 100'
+      )
+    })
+  })
+
+  describe('traceSampleRate', () => {
+    it('defaults to 100 if the option is not provided', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.traceSampleRate).toBe(100)
+    })
+
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, traceSampleRate: 50 })!.traceSampleRate
+      ).toBe(50)
+    })
+
+    it('does not validate the configuration if an incorrect value is provided', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, traceSampleRate: 'foo' as any })
+      ).toBeUndefined()
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Trace Sample Rate should be a number between 0 and 100')
+
+      displayErrorSpy.calls.reset()
+      expect(validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, traceSampleRate: 200 })).toBeUndefined()
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Trace Sample Rate should be a number between 0 and 100')
+    })
+  })
+
+  describe('rulePsr', () => {
+    it('is set to one hundredth of the traceSampleRate if defined', () => {
+      expect(validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, traceSampleRate: 50 })!.rulePsr).toBe(
+        0.5
+      )
+    })
+
+    it('is undefined is no traceSampleRate is defined', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.rulePsr).toBeUndefined()
+    })
+  })
+
+  describe('traceContextInjection', () => {
+    it('defaults to sampled if no options provided', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.traceContextInjection).toBe(
+        TraceContextInjection.SAMPLED
+      )
+    })
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, traceContextInjection: 'all' })!
+          .traceContextInjection
+      ).toBe(TraceContextInjection.ALL)
+    })
+    it('ignores incorrect value', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, traceContextInjection: 'foo' as any })!
+          .traceContextInjection
+      ).toBe(TraceContextInjection.SAMPLED)
+    })
+  })
+
+  describe('allowedTracingUrls', () => {
+    it('defaults to an empty array', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.allowedTracingUrls).toEqual([])
+    })
+
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          allowedTracingUrls: ['foo'],
+          service: 'bar',
+        })!.allowedTracingUrls
+      ).toEqual([{ match: 'foo', propagatorTypes: DEFAULT_PROPAGATOR_TYPES }])
+    })
+
+    it('accepts functions', () => {
+      const customOriginFunction = (url: string): boolean => url === 'https://my.origin.com'
+
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          allowedTracingUrls: [customOriginFunction],
+          service: 'bar',
+        })!.allowedTracingUrls
+      ).toEqual([{ match: customOriginFunction, propagatorTypes: DEFAULT_PROPAGATOR_TYPES }])
+    })
+
+    it('accepts RegExp', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          allowedTracingUrls: [/az/i],
+          service: 'bar',
+        })!.allowedTracingUrls
+      ).toEqual([{ match: /az/i, propagatorTypes: DEFAULT_PROPAGATOR_TYPES }])
+    })
+
+    it('keeps headers', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          allowedTracingUrls: [{ match: 'simple', propagatorTypes: ['b3multi', 'tracecontext'] }],
+          service: 'bar',
+        })!.allowedTracingUrls
+      ).toEqual([{ match: 'simple', propagatorTypes: ['b3multi', 'tracecontext'] }])
+    })
+
+    it('fallbacks to default propagators', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          allowedTracingUrls: [{ match: 'simple' }],
+          service: 'bar',
+        })!.allowedTracingUrls
+      ).toEqual([{ match: 'simple', propagatorTypes: DEFAULT_PROPAGATOR_TYPES }])
+
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          allowedTracingUrls: [{ match: 'simple', propagatorTypes: null }],
+          service: 'bar',
+        })!.allowedTracingUrls
+      ).toEqual([{ match: 'simple', propagatorTypes: DEFAULT_PROPAGATOR_TYPES }])
+    })
+
+    it('should filter out unexpected parameter types', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          service: 'bar',
+          allowedTracingUrls: [
+            42 as any,
+            undefined,
+            { match: 42, propagatorTypes: ['datadog'] },
+            { match: 'toto', propagatorTypes: 42 },
+          ],
+        })!.allowedTracingUrls
+      ).toEqual([])
+
+      expect(displayWarnSpy).toHaveBeenCalledTimes(4)
+    })
+
+    it('does not validate the configuration if a value is provided and service is undefined', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, allowedTracingUrls: ['foo'] })
+      ).toBeUndefined()
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Service needs to be configured when tracing is enabled')
+    })
+
+    it('does not validate the configuration if an incorrect value is provided', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, allowedTracingUrls: 'foo' as any })
+      ).toBeUndefined()
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Allowed Tracing URLs should be an array')
+    })
+  })
+
+  describe('excludedActivityUrls', () => {
+    it('defaults to an empty array', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.excludedActivityUrls).toEqual([])
+    })
+
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          excludedActivityUrls: ['foo'],
+          service: 'bar',
+        })!.excludedActivityUrls
+      ).toEqual(['foo'])
+    })
+
+    it('accepts functions', () => {
+      const customUrlFunction = (url: string): boolean => url === 'foo'
+
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          excludedActivityUrls: [customUrlFunction],
+          service: 'bar',
+        })!.excludedActivityUrls
+      ).toEqual([customUrlFunction])
+    })
+
+    it('does not validate the configuration if an incorrect value is provided', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, excludedActivityUrls: 'foo' as any })
+      ).toBeUndefined()
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Excluded Activity Urls should be an array')
+    })
+  })
+
+  describe('trackUserInteractions', () => {
+    it('defaults to true', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.trackUserInteractions).toBeTrue()
+    })
+
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackUserInteractions: true })!
+          .trackUserInteractions
+      ).toBeTrue()
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackUserInteractions: false })!
+          .trackUserInteractions
+      ).toBeFalse()
+    })
+
+    it('the provided value is cast to boolean', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackUserInteractions: 'foo' as any })!
+          .trackUserInteractions
+      ).toBeTrue()
+    })
+  })
+
+  describe('trackViewsManually', () => {
+    it('defaults to false', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.trackViewsManually).toBeFalse()
+    })
+
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackViewsManually: true })!
+          .trackViewsManually
+      ).toBeTrue()
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackViewsManually: false })!
+          .trackViewsManually
+      ).toBeFalse()
+    })
+
+    it('the provided value is cast to boolean', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackViewsManually: 'foo' as any })!
+          .trackViewsManually
+      ).toBeTrue()
+    })
+  })
+
+  describe('startSessionReplayRecordingManually', () => {
+    it('defaults to true if sessionReplaySampleRate is 0', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, sessionReplaySampleRate: 0 })!
+          .startSessionReplayRecordingManually
+      ).toBeTrue()
+    })
+
+    it('defaults to false if sessionReplaySampleRate is not 0', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, sessionReplaySampleRate: 50 })!
+          .startSessionReplayRecordingManually
+      ).toBeFalse()
+    })
+
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, startSessionReplayRecordingManually: true })!
+          .startSessionReplayRecordingManually
+      ).toBeTrue()
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, startSessionReplayRecordingManually: false })!
+          .startSessionReplayRecordingManually
+      ).toBeFalse()
+    })
+
+    it('the provided value is cast to boolean', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          startSessionReplayRecordingManually: 'foo' as any,
+        })!.startSessionReplayRecordingManually
+      ).toBeTrue()
+    })
+  })
+
+  describe('actionNameAttribute', () => {
+    it('defaults to undefined', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.actionNameAttribute).toBeUndefined()
+    })
+
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, actionNameAttribute: 'foo' })!
+          .actionNameAttribute
+      ).toBe('foo')
+    })
+  })
+
+  describe('defaultPrivacyLevel', () => {
+    it('defaults to MASK_USER_INPUT', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.defaultPrivacyLevel).toBe(
+        DefaultPrivacyLevel.MASK_USER_INPUT
+      )
+    })
+
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          defaultPrivacyLevel: DefaultPrivacyLevel.MASK,
+        })!.defaultPrivacyLevel
+      ).toBe(DefaultPrivacyLevel.MASK)
+    })
+
+    it('ignores incorrect values', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, defaultPrivacyLevel: 'foo' as any })!
+          .defaultPrivacyLevel
+      ).toBe(DefaultPrivacyLevel.MASK_USER_INPUT)
+    })
+  })
+
+  describe('enablePrivacyForActionName', () => {
+    it('defaults to true', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.enablePrivacyForActionName).toBeTrue()
+    })
+
+    it('is false when the option is false', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, enablePrivacyForActionName: false })!
+          .enablePrivacyForActionName
+      ).toBeFalse()
+    })
+  })
+
+  describe('trackResources', () => {
+    it('defaults to true', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.trackResources).toBeTrue()
+    })
+
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackResources: true })!.trackResources
+      ).toBeTrue()
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackResources: false })!.trackResources
+      ).toBeFalse()
+    })
+
+    it('the provided value is cast to boolean', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackResources: 'foo' as any })!
+          .trackResources
+      ).toBeTrue()
+    })
+  })
+
+  describe('trackResourceHeaders', () => {
+    describe('disabled', () => {
+      it('defaults to empty array', () => {
+        expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.trackResourceHeaders).toEqual([])
+      })
+
+      it('returns empty array when set to false', () => {
+        expect(
+          validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackResourceHeaders: false })!
+            .trackResourceHeaders
+        ).toEqual([])
+      })
+    })
+
+    describe('enabled with regular usage', () => {
+      it('returns default headers as MatchHeader[] when set to true', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: true,
+        })!.trackResourceHeaders
+
+        expect(result).toEqual(DEFAULT_TRACKED_RESOURCE_HEADERS.map((name) => ({ name })))
+      })
+
+      it('accepts a MatchHeader with only name', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ name: 'x-custom' }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([{ name: 'x-custom' }])
+      })
+
+      it('lowercases string name', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ name: 'X-Custom-Header' }],
+        })!.trackResourceHeaders
+
+        expect(result[0].name).toBe('x-custom-header')
+      })
+
+      it('accepts RegExp and function name matchers', () => {
+        const regexpMatcher = /x-custom-.*/i
+        const fnMatcher = (header: string) => header.startsWith('x-')
+
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ name: regexpMatcher }, { name: fnMatcher }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([{ name: regexpMatcher }, { name: fnMatcher }])
+      })
+
+      it('preserves url', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ url: /api/, name: 'x-id' }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([{ url: /api/, name: 'x-id' }])
+      })
+
+      it('preserves location', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ name: 'x-id', location: 'response' }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([{ name: 'x-id', location: 'response' }])
+      })
+
+      it('preserves extractor', () => {
+        const extractor = /max-age=(\d+)/
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ name: 'cache-control', extractor }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([{ name: 'cache-control', extractor }])
+      })
+    })
+
+    describe('enabled with incorrect usage', () => {
+      it('warns and returns empty array for invalid value', () => {
+        expect(
+          validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackResourceHeaders: 42 as any })!
+            .trackResourceHeaders
+        ).toEqual([])
+        expect(displayWarnSpy).toHaveBeenCalledOnceWith(
+          'trackResourceHeaders should be true or an array of MatchHeader'
+        )
+      })
+
+      it('warns and returns empty array when set to an empty array', () => {
+        expect(
+          validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackResourceHeaders: [] })!
+            .trackResourceHeaders
+        ).toEqual([])
+        expect(displayWarnSpy).toHaveBeenCalledOnceWith(
+          'trackResourceHeaders is an empty array, no headers will be captured'
+        )
+      })
+
+      it('keeps valid items and skips invalid ones', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ name: 'x-valid' }, 42 as any, { name: 'x-also-valid' }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([{ name: 'x-valid' }, { name: 'x-also-valid' }])
+        expect(displayWarnSpy).toHaveBeenCalledOnceWith(
+          "trackResourceHeaders[1] should be a MatchHeader object with a 'name' property"
+        )
+      })
+
+      it('warns and skips item without name', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ url: 'https://example.com' } as any],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([])
+        expect(displayWarnSpy).toHaveBeenCalledOnceWith(
+          "trackResourceHeaders[0] should be a MatchHeader object with a 'name' property"
+        )
+      })
+
+      it('warns and skips item with invalid url', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ name: 'x-foo', url: 42 as any }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([])
+        expect(displayWarnSpy).toHaveBeenCalledOnceWith('trackResourceHeaders[0].url should be a MatchOption')
+      })
+
+      it('warns and skips item with invalid location', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ name: 'x-foo', location: 'invalid' as any }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([])
+        expect(displayWarnSpy).toHaveBeenCalledOnceWith(
+          "trackResourceHeaders[0].location should be 'request', 'response', or 'any'"
+        )
+      })
+
+      it('warns and skips item with invalid extractor', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ name: 'x-foo', extractor: 'bad' as any }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([])
+        expect(displayWarnSpy).toHaveBeenCalledOnceWith('trackResourceHeaders[0].extractor should be a RegExp')
+      })
+    })
+  })
+
+  describe('trackLongTasks', () => {
+    it('defaults to false', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.trackLongTasks).toBeTrue()
+    })
+
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackLongTasks: true })!.trackLongTasks
+      ).toBeTrue()
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackLongTasks: false })!.trackLongTasks
+      ).toBeFalse()
+    })
+
+    it('the provided value is cast to boolean', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackLongTasks: 'foo' as any })!
+          .trackLongTasks
+      ).toBeTrue()
+    })
+  })
+
+  describe('serializeRumConfiguration', () => {
+    describe('selected tracing propagators serialization', () => {
+      it('should not return any propagator type', () => {
+        expect(serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION).selected_tracing_propagators).toEqual([])
+      })
+
+      it('should return the default propagator types', () => {
+        const simpleTracingConfig: RumInitConfiguration = {
+          ...DEFAULT_INIT_CONFIGURATION,
+          allowedTracingUrls: ['foo'],
+        }
+        expect(serializeRumConfiguration(simpleTracingConfig).selected_tracing_propagators).toEqual(
+          DEFAULT_PROPAGATOR_TYPES
+        )
+      })
+
+      it('should return all propagator types', () => {
+        const complexTracingConfig: RumInitConfiguration = {
+          ...DEFAULT_INIT_CONFIGURATION,
+          allowedTracingUrls: [
+            'foo',
+            { match: 'first', propagatorTypes: ['datadog'] },
+            { match: 'test', propagatorTypes: ['tracecontext'] },
+            { match: 'other', propagatorTypes: ['b3'] },
+            { match: 'final', propagatorTypes: ['b3multi'] },
+          ],
+        }
+        expect(serializeRumConfiguration(complexTracingConfig).selected_tracing_propagators).toEqual(
+          jasmine.arrayWithExactContents(['datadog', 'b3', 'b3multi', 'tracecontext'])
+        )
+      })
+
+      it('should survive a configuration with wrong parameters', () => {
+        const wrongTracingConfig: RumInitConfiguration = {
+          ...DEFAULT_INIT_CONFIGURATION,
+          allowedTracingUrls: [42 as any, { match: 'test', propagatorTypes: 42 }, undefined, null, {}],
+        }
+        expect(serializeRumConfiguration(wrongTracingConfig).selected_tracing_propagators).toEqual([])
+      })
+    })
+
+    describe('track_resource_headers telemetry', () => {
+      it('should omit track_resource_headers when trackResourceHeaders is undefined or false', () => {
+        expect(serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION).track_resource_headers).toBeUndefined()
+        expect(
+          serializeRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackResourceHeaders: false })
+            .track_resource_headers
+        ).toBeUndefined()
+      })
+
+      it('should set track_resource_headers to default_headers when trackResourceHeaders is true', () => {
+        expect(
+          serializeRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackResourceHeaders: true })
+            .track_resource_headers
+        ).toBe('default_headers')
+      })
+
+      it('should set track_resource_headers to custom when trackResourceHeaders is an array', () => {
+        expect(
+          serializeRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackResourceHeaders: [] }).track_resource_headers
+        ).toBe('custom')
+        expect(
+          serializeRumConfiguration({
+            ...DEFAULT_INIT_CONFIGURATION,
+            trackResourceHeaders: [{ name: 'x-foo' }],
+          }).track_resource_headers
+        ).toBe('custom')
+      })
+
+      it('should omit track_resource_headers when trackResourceHeaders has an unexpected type', () => {
+        expect(
+          serializeRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, trackResourceHeaders: 42 as any })
+            .track_resource_headers
+        ).toBeUndefined()
+      })
+    })
+  })
+
+  describe('workerUrl', () => {
+    it('defaults to undefined', () => {
+      const configuration = validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!
+      expect(configuration.workerUrl).toBeUndefined()
+    })
+
+    it('is set to provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, workerUrl: '/worker.js' })!.workerUrl
+      ).toBe('/worker.js')
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, workerUrl: 'https://example.org/worker.js' })!
+          .workerUrl
+      ).toBe('https://example.org/worker.js')
+    })
+  })
+
+  describe('version parameter validation', () => {
+    it('should not reject null', () => {
+      const configuration = validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, version: null })
+      expect(displayErrorSpy).not.toHaveBeenCalled()
+      expect(configuration!.version).toBeUndefined()
+    })
+  })
+
+  describe('plugins', () => {
+    it('should be set in the configuration', () => {
+      const plugin = {
+        name: 'foo',
+      }
+      const configuration = validateAndBuildRumConfiguration({
+        ...DEFAULT_INIT_CONFIGURATION,
+        plugins: [plugin],
+      })
+      expect(configuration!.plugins).toEqual([plugin])
+    })
+  })
+  describe('trackFeatureFlagsForEvents', () => {
+    it('defaults to an empty set', () => {
+      const configuration = validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!
+      expect(configuration.trackFeatureFlagsForEvents).toEqual([])
+    })
+
+    it('should accept valid input', () => {
+      const configuration = validateAndBuildRumConfiguration({
+        ...DEFAULT_INIT_CONFIGURATION,
+        trackFeatureFlagsForEvents: ['resource', 'long_task', 'vital'],
+      })!
+      expect(configuration.trackFeatureFlagsForEvents).toEqual(['resource', 'long_task', 'vital'])
+      expect(displayWarnSpy).not.toHaveBeenCalled()
+    })
+    it('does not validate the configuration if an incorrect value is provided', () => {
+      validateAndBuildRumConfiguration({
+        ...DEFAULT_INIT_CONFIGURATION,
+        trackFeatureFlagsForEvents: 123 as any,
+      })!
+      expect(displayWarnSpy).toHaveBeenCalledOnceWith('trackFeatureFlagsForEvents should be an array')
+    })
+  })
+
+  describe('allowedGraphQlUrls', () => {
+    it('defaults to an empty array', () => {
+      const configuration = validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!
+      expect(configuration.allowedGraphQlUrls).toEqual([])
+    })
+
+    it('should accept string URLs', () => {
+      const configuration = validateAndBuildRumConfiguration({
+        ...DEFAULT_INIT_CONFIGURATION,
+        allowedGraphQlUrls: ['https://api.example.com/graphql', '/graphql'],
+      })!
+      expect(configuration.allowedGraphQlUrls).toEqual([
+        { match: 'https://api.example.com/graphql', trackPayload: false, trackResponseErrors: false },
+        { match: '/graphql', trackPayload: false, trackResponseErrors: false },
+      ])
+    })
+
+    it('should accept MatchOption objects', () => {
+      const configuration = validateAndBuildRumConfiguration({
+        ...DEFAULT_INIT_CONFIGURATION,
+        allowedGraphQlUrls: [{ match: /\/graphql$/i }, { match: 'https://api.example.com/graphql' }],
+      })!
+      expect(configuration.allowedGraphQlUrls).toEqual([
+        { match: /\/graphql$/i, trackPayload: false, trackResponseErrors: false },
+        { match: 'https://api.example.com/graphql', trackPayload: false, trackResponseErrors: false },
+      ])
+    })
+
+    it('should accept function matchers', () => {
+      const customMatcher = (url: string) => url.includes('graphql')
+      const configuration = validateAndBuildRumConfiguration({
+        ...DEFAULT_INIT_CONFIGURATION,
+        allowedGraphQlUrls: [{ match: customMatcher }],
+      })!
+      expect(configuration.allowedGraphQlUrls).toEqual([
+        { match: customMatcher, trackPayload: false, trackResponseErrors: false },
+      ])
+    })
+
+    it('should accept GraphQL options with trackPayload', () => {
+      const configuration = validateAndBuildRumConfiguration({
+        ...DEFAULT_INIT_CONFIGURATION,
+        allowedGraphQlUrls: [{ match: '/graphql', trackPayload: true }],
+      })!
+      expect(configuration.allowedGraphQlUrls).toEqual([
+        { match: '/graphql', trackPayload: true, trackResponseErrors: false },
+      ])
+    })
+
+    it('should accept GraphQL options with trackResponseErrors', () => {
+      const configuration = validateAndBuildRumConfiguration({
+        ...DEFAULT_INIT_CONFIGURATION,
+        allowedGraphQlUrls: [{ match: '/graphql', trackResponseErrors: true }],
+      })!
+      expect(configuration.allowedGraphQlUrls).toEqual([
+        { match: '/graphql', trackPayload: false, trackResponseErrors: true },
+      ])
+    })
+
+    it('should reject invalid values', () => {
+      validateAndBuildRumConfiguration({
+        ...DEFAULT_INIT_CONFIGURATION,
+        allowedGraphQlUrls: 'not-an-array' as any,
+      })
+      expect(displayWarnSpy).toHaveBeenCalledOnceWith('allowedGraphQlUrls should be an array')
+    })
+  })
+})
+
+describe('serializeRumConfiguration', () => {
+  it('should serialize the configuration', () => {
+    const exhaustiveRumInitConfiguration: Required<RumInitConfiguration> = {
+      ...EXHAUSTIVE_INIT_CONFIGURATION,
+      applicationId: 'applicationId',
+      beforeSend: () => true,
+      excludedActivityUrls: ['toto.com'],
+      workerUrl: './worker.js',
+      compressIntakeRequests: true,
+      allowedTracingUrls: ['foo'],
+      allowedGraphQlUrls: ['bar'],
+      traceSampleRate: 50,
+      traceContextInjection: TraceContextInjection.ALL,
+      defaultPrivacyLevel: 'allow',
+      enablePrivacyForActionName: false,
+      subdomain: 'foo',
+      sessionReplaySampleRate: 60,
+      startSessionReplayRecordingManually: true,
+      trackUserInteractions: true,
+      actionNameAttribute: 'test-id',
+      trackViewsManually: true,
+      trackResources: true,
+      trackLongTasks: true,
+      remoteConfigurationId: '123',
+      remoteConfiguration: { id: '123', sync: false },
+      remoteConfigurationProxy: 'config',
+      plugins: [{ name: 'foo', getConfigurationTelemetry: () => ({ bar: true }) }],
+      trackFeatureFlagsForEvents: ['vital'],
+      profilingSampleRate: 42,
+      propagateTraceBaggage: true,
+      trackResourceHeaders: true,
+    }
+
+    type MapRumInitConfigurationKey<Key extends string> = Key extends keyof InitConfiguration
+      ? MapInitConfigurationKey<Key>
+      : Key extends
+            | 'workerUrl'
+            | 'allowedTracingUrls'
+            | 'excludedActivityUrls'
+            | 'remoteConfigurationProxy'
+            | 'allowedGraphQlUrls'
+        ? `use_${CamelToSnakeCase<Key>}`
+        : Key extends 'trackLongTasks'
+          ? 'track_long_task' // We forgot the s, keeping this for backward compatibility
+          : // The following options are not reported as telemetry. Please avoid adding more of them.
+            // `remoteConfiguration` is covered by the legacy `remote_configuration_id` field.
+            Key extends 'applicationId' | 'subdomain' | 'remoteConfiguration'
+            ? never
+            : CamelToSnakeCase<Key>
+    // By specifying the type here, we can ensure that serializeConfiguration is returning an
+    // object containing all expected properties.
+    const serializedConfiguration: ExtractTelemetryConfiguration<
+      | MapRumInitConfigurationKey<keyof RumInitConfiguration>
+      | 'selected_tracing_propagators'
+      | 'use_track_graph_ql_payload'
+      | 'use_track_graph_ql_response_errors'
+    > = serializeRumConfiguration(exhaustiveRumInitConfiguration)
+
+    expect(serializedConfiguration).toEqual({
+      ...SERIALIZED_EXHAUSTIVE_INIT_CONFIGURATION,
+      session_replay_sample_rate: 60,
+      trace_sample_rate: 50,
+      trace_context_injection: TraceContextInjection.ALL,
+      propagate_trace_baggage: true,
+      use_allowed_tracing_urls: true,
+      use_allowed_graph_ql_urls: true,
+      use_track_graph_ql_payload: false,
+      use_track_graph_ql_response_errors: false,
+      selected_tracing_propagators: ['tracecontext', 'datadog'],
+      use_excluded_activity_urls: true,
+      track_user_interactions: true,
+      track_views_manually: true,
+      start_session_replay_recording_manually: true,
+      action_name_attribute: 'test-id',
+      default_privacy_level: 'allow',
+      enable_privacy_for_action_name: false,
+      track_resources: true,
+      track_long_task: true,
+      use_worker_url: true,
+      compress_intake_requests: true,
+      plugins: [{ name: 'foo', bar: true }],
+      track_feature_flags_for_events: ['vital'],
+      remote_configuration_id: '123',
+      use_remote_configuration_proxy: true,
+      profiling_sample_rate: 42,
+      track_resource_headers: 'default_headers',
+    })
+  })
+})

@@ -1,6 +1,6 @@
-import { DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT } from '@openobserve/browser-logs/cjs/domain/configuration'
+import { DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT } from '@openobserve/browser-logs/src/domain/configuration'
 import { test, expect } from '@playwright/test'
-import { createTest } from '../lib/framework'
+import { createTest, createWorker } from '../lib/framework'
 import { APPLICATION_ID } from '../lib/helpers/configuration'
 
 const UNREACHABLE_URL = 'http://localhost:9999/unreachable'
@@ -12,57 +12,62 @@ declare global {
 }
 
 test.describe('logs', () => {
-  createTest('service worker with worker logs - esm')
-    .withWorker()
-    .run(async ({ flushEvents, intakeRegistry, browserName, interactWithWorker }) => {
-      test.skip(browserName !== 'chromium', 'Non-Chromium browsers do not support ES modules in Service Workers')
+  test.describe('service workers', () => {
+    createTest('service worker with worker logs - esm')
+      .withWorker(createWorker().withLogs())
+      .run(async ({ flushEvents, intakeRegistry, browserName, evaluateInWorker }) => {
+        test.skip(browserName !== 'chromium', 'Non-Chromium browsers do not support ES modules in Service Workers')
 
-      await interactWithWorker((worker) => {
-        worker.postMessage('Some message')
+        await evaluateInWorker(() => {
+          self.OO_LOGS!.logger.log('Some message')
+        })
+
+        await flushEvents()
+
+        expect(intakeRegistry.logsRequests).toHaveLength(1)
+        expect(intakeRegistry.logsEvents[0].message).toBe('Some message')
+        expect(intakeRegistry.logsEvents[0].session_id).toBeDefined()
       })
 
-      await flushEvents()
+    createTest('service worker with worker logs - importScripts')
+      .withWorker(createWorker({ importScripts: true }).withLogs())
+      .run(async ({ flushEvents, intakeRegistry, browserName, evaluateInWorker }) => {
+        test.skip(
+          browserName === 'webkit',
+          'BrowserStack overrides the localhost URL with bs-local.com and cannot be used to install a Service Worker'
+        )
 
-      expect(intakeRegistry.logsRequests).toHaveLength(1)
-      expect(intakeRegistry.logsEvents[0].message).toBe('Some message')
-    })
+        await evaluateInWorker(() => {
+          self.OO_LOGS!.logger.log('Other message')
+        })
 
-  createTest('service worker with worker logs - importScripts')
-    .withWorker({ importScript: true })
-    .run(async ({ flushEvents, intakeRegistry, browserName, interactWithWorker }) => {
-      test.skip(
-        browserName === 'webkit',
-        'BrowserStack overrides the localhost URL with bs-local.com and cannot be used to install a Service Worker'
-      )
+        await flushEvents()
 
-      await interactWithWorker((worker) => {
-        worker.postMessage('Other message')
+        expect(intakeRegistry.logsRequests).toHaveLength(1)
+        expect(intakeRegistry.logsEvents[0].message).toBe('Other message')
+        expect(intakeRegistry.logsEvents[0].session_id).toBeDefined()
       })
 
-      await flushEvents()
+    createTest('service worker console forwarding')
+      .withWorker(createWorker({ importScripts: true }).withLogs({ forwardConsoleLogs: 'all' }))
+      .run(async ({ flushEvents, intakeRegistry, evaluateInWorker, browserName }) => {
+        test.skip(
+          browserName === 'webkit',
+          'BrowserStack overrides the localhost URL with bs-local.com and cannot be used to install a Service Worker'
+        )
 
-      expect(intakeRegistry.logsRequests).toHaveLength(1)
-      expect(intakeRegistry.logsEvents[0].message).toBe('Other message')
-    })
+        await evaluateInWorker(() => {
+          console.log('SW console log test')
+        })
 
-  createTest('service worker console forwarding')
-    .withWorker({ importScript: true, nativeLog: true })
-    .run(async ({ flushEvents, intakeRegistry, interactWithWorker, browserName }) => {
-      test.skip(
-        browserName === 'webkit',
-        'BrowserStack overrides the localhost URL with bs-local.com and cannot be used to install a Service Worker'
-      )
+        await flushEvents()
 
-      await interactWithWorker((worker) => {
-        worker.postMessage('SW console log test')
+        // Expect logs for console, error, and report events from service worker
+        expect(intakeRegistry.logsRequests).toHaveLength(1)
+        expect(intakeRegistry.logsEvents[0].message).toBe('SW console log test')
+        expect(intakeRegistry.logsEvents[0].session_id).toBeDefined()
       })
-
-      await flushEvents()
-
-      // Expect logs for console, error, and report events from service worker
-      expect(intakeRegistry.logsRequests).toHaveLength(1)
-      expect(intakeRegistry.logsEvents[0].message).toBe('SW console log test')
-    })
+  })
 
   createTest('send logs')
     .withLogs()
@@ -93,8 +98,8 @@ test.describe('logs', () => {
       })
     })
 
-  createTest('send console errors')
-    .withLogs({ forwardErrorsToLogs: true })
+  createTest('send console errors with forwardConsoleLogs set to ["error"]')
+    .withLogs({ forwardConsoleLogs: ['error'] })
     .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs }) => {
       await page.evaluate(() => {
         console.error('oh snap')
@@ -150,6 +155,38 @@ test.describe('logs', () => {
         // * blocked by CORS policy
         expect(browserLogs.length).toBeGreaterThanOrEqual(1)
       })
+    })
+
+  createTest('do not send XHR network errors for aborted requests')
+    .withLogs({ forwardErrorsToLogs: true })
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) => {
+            const xhr = new XMLHttpRequest()
+            xhr.addEventListener('loadend', () => resolve())
+            xhr.open('GET', '/')
+            xhr.send()
+            xhr.abort()
+          })
+      )
+
+      await flushEvents()
+      expect(intakeRegistry.logsEvents).toHaveLength(0)
+    })
+
+  createTest('do not send fetch network errors for aborted requests')
+    .withLogs({ forwardErrorsToLogs: true })
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(() => {
+        const controller = new AbortController()
+        const p = fetch('/', { signal: controller.signal }).catch(() => undefined)
+        controller.abort()
+        return p
+      })
+
+      await flushEvents()
+      expect(intakeRegistry.logsEvents).toHaveLength(0)
     })
 
   createTest('keep only the first bytes of the response')

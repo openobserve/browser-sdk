@@ -6,24 +6,39 @@
     "compat:tsc": "tsc -p tsconfig.json",
     "compat:ssr": "webpack --config ./webpack.ssr.js && node dist/app.js"
   },
-  "dependencies": {
-    "@openobserve/browser-logs": "file:../../../packages/logs/package.tgz",
-    "@openobserve/browser-rum": "file:../../../packages/rum/package.tgz"
+  "peerDependencies": {
+    "@openobserve/browser-logs": "*",
+    "@openobserve/browser-rum": "*",
+    "@openobserve/browser-debugger": "*"
+  },
+  "peerDependenciesMeta": {
+    "@openobserve/browser-logs": {
+      "optional": true
+    },
+    "@openobserve/browser-rum": {
+      "optional": true
+    },
+    "@openobserve/browser-debugger": {
+      "optional": true
+    }
   },
   "resolutions": {
-    "@openobserve/browser-core": "file:../../../packages/core/package.tgz",
-    "@openobserve/browser-rum-core": "file:../../../packages/rum-core/package.tgz",
-    "@openobserve/browser-rum-react": "file:../../../packages/rum-react/package.tgz",
-    "@openobserve/browser-rum-slim": "file:../../../packages/rum-slim/package.tgz",
-    "@openobserve/browser-worker": "file:../../../packages/worker/package.tgz"
+    "@openobserve/browser-core": "file:../../../packages/browser-core/package.tgz",
+    "@openobserve/js-core": "file:../../../packages/js-core/package.tgz",
+    "@openobserve/browser-rum": "file:../../../packages/browser-rum/package.tgz",
+    "@openobserve/browser-logs": "file:../../../packages/browser-logs/package.tgz",
+    "@openobserve/browser-rum-core": "file:../../../packages/browser-rum-core/package.tgz",
+    "@openobserve/browser-rum-react": "file:../../../packages/browser-rum-react/package.tgz",
+    "@openobserve/browser-rum-slim": "file:../../../packages/browser-rum-slim/package.tgz",
+    "@openobserve/browser-worker": "file:../../../packages/browser-worker/package.tgz",
+    "@openobserve/browser-debugger": "file:../../../packages/browser-debugger/package.tgz"
   },
   "devDependencies": {
-    "ts-loader": "6.2.1",
-    "typescript": "3.8.2",
-    "webpack": "5.94.0"
+    "ts-loader": "9.6.0",
+    "typescript": "6.0.2",
+    "webpack": "5.107.2"
   },
   "volta": {
     "extends": "../../../package.json"
-  },
-  "packageManager": "yarn@3.5.1"
+  }
 }

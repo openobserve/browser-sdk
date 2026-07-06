@@ -1,0 +1,249 @@
+import type { ContextManager, SessionManager } from '@openobserve/browser-core'
+import {
+  objectEntries,
+  shallowClone,
+  matchList,
+  TraceContextInjection,
+  correctedChildSampleRate,
+  isSampled,
+  canUseEventBridge,
+  getEventBridge,
+} from '@openobserve/browser-core'
+import type { RumConfiguration } from '../configuration'
+import type {
+  RumFetchResolveContext,
+  RumFetchStartContext,
+  RumXhrCompleteContext,
+  RumXhrStartContext,
+} from '../requestCollection'
+import type { PropagatorType } from './tracer.types'
+import type { SpanIdentifier, TraceIdentifier } from './identifier'
+import { createSpanIdentifier, createTraceIdentifier, toPaddedHexadecimalString } from './identifier'
+
+export interface Tracer {
+  traceFetch: (context: Partial<RumFetchStartContext>) => void
+  traceXhr: (context: Partial<RumXhrStartContext>, xhr: XMLHttpRequest) => void
+  clearTracingIfNeeded: (context: RumFetchResolveContext | RumXhrCompleteContext) => void
+}
+
+interface TracingHeaders {
+  [key: string]: string
+}
+
+/**
+ * Clear tracing information to avoid incomplete traces. Ideally, we should do it when the
+ * request did not reach the server, but the browser does not expose this. So, we clear tracing
+ * information if the request ended with status 0 without being aborted by the application.
+ *
+ * Reasoning:
+ *
+ * * Applications are usually aborting requests after a bit of time, for example when the user is
+ * typing (autocompletion) or navigating away (in a SPA). With a performant device and good
+ * network conditions, the request is likely to reach the server before being canceled.
+ *
+ * * Requests aborted otherwise (ex: lack of internet, CORS issue, blocked by a privacy extension)
+ * are likely to finish quickly and without reaching the server.
+ *
+ * Of course, it might not be the case every time, but it should limit having incomplete traces a
+ * bit.
+ * */
+export function clearTracingIfNeeded(context: RumFetchResolveContext | RumXhrCompleteContext) {
+  if (context.status === 0 && !context.isAborted) {
+    context.traceId = undefined
+    context.spanId = undefined
+    context.traceSampled = undefined
+  }
+}
+
+export function startTracer(
+  configuration: RumConfiguration,
+  sessionManager: SessionManager,
+  userContext: ContextManager,
+  accountContext: ContextManager
+): Tracer {
+  return {
+    clearTracingIfNeeded,
+    traceFetch: (context) =>
+      injectHeadersIfTracingAllowed(
+        configuration,
+        context,
+        sessionManager,
+        userContext,
+        accountContext,
+        (tracingHeaders: TracingHeaders) => {
+          if (context.input instanceof Request && !context.init?.headers) {
+            context.input = new Request(context.input)
+            Object.keys(tracingHeaders).forEach((key) => {
+              ;(context.input as Request).headers.append(key, tracingHeaders[key])
+            })
+          } else {
+            context.init = shallowClone(context.init)
+            const headers: Array<[string, string]> = []
+            if (context.init.headers instanceof Headers) {
+              context.init.headers.forEach((value, key) => {
+                headers.push([key, value])
+              })
+            } else if (Array.isArray(context.init.headers)) {
+              context.init.headers.forEach((header) => {
+                headers.push(header)
+              })
+            } else if (context.init.headers) {
+              Object.keys(context.init.headers).forEach((key) => {
+                headers.push([key, (context.init!.headers as Record<string, string>)[key]])
+              })
+            }
+            context.init.headers = headers.concat(objectEntries(tracingHeaders))
+          }
+        }
+      ),
+    traceXhr: (context, xhr) =>
+      injectHeadersIfTracingAllowed(
+        configuration,
+        context,
+        sessionManager,
+        userContext,
+        accountContext,
+        (tracingHeaders: TracingHeaders) => {
+          try {
+            Object.keys(tracingHeaders).forEach((name) => {
+              xhr.setRequestHeader(name, tracingHeaders[name])
+            })
+          } catch {
+            // XHR may have already been sent (buffered replay via microtask)
+          }
+        }
+      ),
+  }
+}
+
+function injectHeadersIfTracingAllowed(
+  configuration: RumConfiguration,
+  context: Partial<RumFetchStartContext | RumXhrStartContext>,
+  sessionManager: SessionManager,
+  userContext: ContextManager,
+  accountContext: ContextManager,
+  inject: (tracingHeaders: TracingHeaders) => void
+) {
+  const session = sessionManager.findTrackedSession()
+  if (!session) {
+    return
+  }
+
+  const tracingOption = configuration.allowedTracingUrls.find((tracingOption) =>
+    matchList([tracingOption.match], context.url!, true)
+  )
+  if (!tracingOption) {
+    return
+  }
+
+  const fallbackTraceSampled = isSampled(
+    session.id,
+    correctedChildSampleRate(configuration.sessionSampleRate, configuration.traceSampleRate)
+  )
+  const traceSampled = canUseEventBridge()
+    ? (getEventBridge()?.getIsTraceSampled() ?? fallbackTraceSampled)
+    : fallbackTraceSampled
+
+  const shouldInjectHeaders = traceSampled || configuration.traceContextInjection === TraceContextInjection.ALL
+  if (!shouldInjectHeaders) {
+    return
+  }
+
+  context.traceSampled = traceSampled
+  context.traceId = createTraceIdentifier()
+  context.spanId = createSpanIdentifier()
+
+  inject(
+    makeTracingHeaders(
+      context.traceId,
+      context.spanId,
+      context.traceSampled,
+      session.id,
+      tracingOption.propagatorTypes,
+      userContext,
+      accountContext,
+      configuration
+    )
+  )
+}
+
+/**
+ * When trace is not sampled, set priority to '0' instead of not adding the tracing headers
+ * to prepare the implementation for sampling delegation.
+ */
+function makeTracingHeaders(
+  traceId: TraceIdentifier,
+  spanId: SpanIdentifier,
+  traceSampled: boolean,
+  sessionId: string,
+  propagatorTypes: PropagatorType[],
+  userContext: ContextManager,
+  accountContext: ContextManager,
+  configuration: RumConfiguration
+): TracingHeaders {
+  const tracingHeaders: TracingHeaders = {}
+
+  propagatorTypes.forEach((propagatorType) => {
+    switch (propagatorType) {
+      case 'datadog': {
+        Object.assign(tracingHeaders, {
+          'x-openobserve-origin': 'rum',
+          'x-openobserve-parent-id': spanId.toString(),
+          'x-openobserve-sampling-priority': traceSampled ? '1' : '0',
+          'x-openobserve-trace-id': traceId.toString(),
+        })
+        break
+      }
+      // https://www.w3.org/TR/trace-context/
+      case 'tracecontext': {
+        Object.assign(tracingHeaders, {
+          traceparent: `00-0000000000000000${toPaddedHexadecimalString(traceId)}-${toPaddedHexadecimalString(spanId)}-0${
+            traceSampled ? '1' : '0'
+          }`,
+          tracestate: `dd=s:${traceSampled ? '1' : '0'};o:rum`,
+        })
+        break
+      }
+      // https://github.com/openzipkin/b3-propagation
+      case 'b3': {
+        Object.assign(tracingHeaders, {
+          b3: `${toPaddedHexadecimalString(traceId)}-${toPaddedHexadecimalString(spanId)}-${traceSampled ? '1' : '0'}`,
+        })
+        break
+      }
+      case 'b3multi': {
+        Object.assign(tracingHeaders, {
+          'X-B3-TraceId': toPaddedHexadecimalString(traceId),
+          'X-B3-SpanId': toPaddedHexadecimalString(spanId),
+          'X-B3-Sampled': traceSampled ? '1' : '0',
+        })
+        break
+      }
+    }
+  })
+
+  if (configuration.propagateTraceBaggage) {
+    const baggageItems: Record<string, string> = {
+      'session.id': sessionId,
+    }
+
+    const userId = userContext.getContext().id
+    if (typeof userId === 'string') {
+      baggageItems['user.id'] = userId
+    }
+
+    const accountId = accountContext.getContext().id
+    if (typeof accountId === 'string') {
+      baggageItems['account.id'] = accountId
+    }
+
+    const baggageHeader = Object.entries(baggageItems)
+      .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+      .join(',')
+    if (baggageHeader) {
+      tracingHeaders['baggage'] = baggageHeader
+    }
+  }
+
+  return tracingHeaders
+}

@@ -52,7 +52,7 @@ export async function createGitHubRelease({ version, body }: GitHubReleaseParams
     throw new Error(`Release ${version} already exists`)
   } catch (error) {
     const fetchError = findError(error, FetchError)
-    if (!fetchError || fetchError.response.status !== 404) {
+    if (fetchError?.response.status !== 404) {
       throw error
     }
   }
@@ -66,10 +66,11 @@ export async function createGitHubRelease({ version, body }: GitHubReleaseParams
   })
 }
 
-export function createPullRequest(mainBranch: string) {
+export function createPullRequest(mainBranch: string, labels?: string[]) {
   using token = getGithubPullRequestToken()
   command`gh auth login --with-token`.withInput(token.value).run()
-  const pullRequestUrl = command`gh pr create --fill --base ${mainBranch}`.run()
+  const labelArgs = labels?.flatMap((label) => ['--label', label]) ?? []
+  const pullRequestUrl = command`gh pr create --fill --base ${mainBranch} ${labelArgs}`.run()
   return pullRequestUrl.trim()
 }
 
@@ -77,8 +78,7 @@ export function getLastCommonCommit(baseBranch: string): string {
   try {
     command`git fetch --depth=100 origin ${baseBranch}`.run()
     const commandOutput = command`git merge-base origin/${baseBranch} HEAD`.run()
-    // SHA commit is truncated to 8 characters as bundle sizes commit are exported in short format to logs for convenience and readability.
-    return commandOutput.trim().substring(0, 8)
+    return commandOutput.trim()
   } catch (error) {
     throw new Error('Failed to get last common commit', { cause: error })
   }

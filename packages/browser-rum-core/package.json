@@ -1,0 +1,37 @@
+{
+  "name": "@openobserve/browser-rum-core",
+  "version": "0.3.4",
+  "license": "Apache-2.0",
+  "main": "cjs/index.js",
+  "module": "esm/index.mjs",
+  "types": "cjs/index.d.ts",
+  "files": [
+    "cjs",
+    "esm",
+    "src",
+    "!src/**/*.spec.ts",
+    "!src/**/*.specHelper.ts"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build/build-package.ts --modules",
+    "prepack": "yarn build"
+  },
+  "dependencies": {
+    "@openobserve/browser-core": "0.3.4",
+    "@openobserve/js-core": "0.3.4"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openobserve/browser-sdk.git",
+    "directory": "packages/browser-rum-core"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

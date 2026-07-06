@@ -5,7 +5,7 @@ import { DevServerStatus, useDevServerStatus } from '../../hooks/useDevServerSta
 import { useSettings } from '../../hooks/useSettings'
 import { Columns } from '../columns'
 import { TabBase } from '../tabBase'
-import type { DevBundlesOverride, EventCollectionStrategy } from '../../../common/extension.types'
+import type { DevBundlesOverride } from '../../../common/extension.types'
 
 export function SettingsTab() {
   const sdkDevServerStatus = useDevServerStatus(DEV_LOGS_URL)
@@ -27,7 +27,7 @@ export function SettingsTab() {
 
   return (
     <TabBase>
-      <div className="dd-privacy-allow">
+      <div className="oo-privacy-allow">
         <Columns>
           <Columns.Column title="Overrides">
             <Accordion defaultValue="browser-sdk">
@@ -127,7 +127,7 @@ export function SettingsTab() {
                   </Accordion.Control>
                   <Accordion.Panel>
                     <Box>
-                      Use the OpenObserve-internal local development version of the live replay sandbox. The development
+                      Use the Datadog-internal local development version of the live replay sandbox. The development
                       server must be running; to start it, run
                       <Code>yarn dev</Code>.
                     </Box>
@@ -169,7 +169,7 @@ export function SettingsTab() {
                       />
                     }
                     description={
-                      <>Block requests made to the intake, preventing any data from being sent to Openobserve.</>
+                      <>Block requests made to the intake, preventing any data from being sent to Datadog.</>
                     }
                   />
                 </Accordion.Panel>
@@ -202,7 +202,7 @@ export function SettingsTab() {
                       { label: 'SDK', value: 'sdk' },
                       { label: 'Requests', value: 'requests' },
                     ]}
-                    onChange={(value) => setSetting('eventCollectionStrategy', value as EventCollectionStrategy)}
+                    onChange={(value) => setSetting('eventCollectionStrategy', value)}
                   />
                 </Group>
               }
@@ -251,13 +251,13 @@ export function SettingsTab() {
             <SettingItem
               input={
                 <Checkbox
-                  label="OpenObserve employee mode"
+                  label="Datadog employee mode"
                   checked={datadogMode}
                   onChange={(e) => setSetting('datadogMode', isChecked(e.target))}
                   color="violet"
                 />
               }
-              description={<>Enable OpenObserve-internal debugging features</>}
+              description={<>Enable Datadog-internal debugging features</>}
             />
           </Columns.Column>
         </Columns>
