@@ -43,10 +43,10 @@
     "woke": "scripts/cli woke"
   },
   "devDependencies": {
-    "@openobserve/rum-events-format": "openobserve/rum-events-format#commit=e5c81e0ce460adfb56da538888eec09be370d96e",
     "@eslint/js": "10.0.1",
     "@jsdevtools/coverage-istanbul-loader": "3.0.5",
     "@microsoft/api-extractor": "7.58.9",
+    "@openobserve/rum-events-format": "openobserve/rum-events-format#commit=e5c81e0ce460adfb56da538888eec09be370d96e",
     "@playwright/test": "1.60.0",
     "@swc/core": "1.15.41",
     "@types/busboy": "1.5.4",
