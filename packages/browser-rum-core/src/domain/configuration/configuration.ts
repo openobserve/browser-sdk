@@ -18,7 +18,7 @@ import type { RumPlugin } from '../plugins'
 import type { PropagatorType, TracingOption } from '../tracing/tracer.types'
 import { getRemoteConfigurationId } from './remoteConfiguration'
 
-export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext', 'datadog']
+export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext']
 
 /**
  * Default list of headers collected on resource events when {@link RumInitConfiguration.trackResourceHeaders | trackResourceHeaders}
