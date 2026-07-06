@@ -1,5 +1,4 @@
 import type { SessionContext } from '@openobserve/browser-core'
-import { INTAKE_SITE_STAGING, INTAKE_SITE_US1, INTAKE_SITE_EU1 } from '@openobserve/js-core/transport'
 import type { RumConfiguration } from './configuration'
 import type { ViewHistoryEntry } from './contexts/viewHistory'
 
@@ -36,14 +35,7 @@ export function getDatadogSiteUrl(rumConfiguration: RumConfiguration) {
   return `https://${subdomain ? `${subdomain}.` : ''}${site}`
 }
 
-function getSiteDefaultSubdomain(configuration: RumConfiguration): string | undefined {
-  switch (configuration.site) {
-    case INTAKE_SITE_US1:
-    case INTAKE_SITE_EU1:
-      return 'app'
-    case INTAKE_SITE_STAGING:
-      return 'dd'
-    default:
-      return undefined
-  }
+function getSiteDefaultSubdomain(_configuration: RumConfiguration): string | undefined {
+  // OpenObserve: the configured site is the full console host, no subdomain is prepended.
+  return undefined
 }
