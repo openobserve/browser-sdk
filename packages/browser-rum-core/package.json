@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-rum-core",
-  "version": "0.4.0-beta.2",
+  "version": "0.4.0-beta.3",
   "license": "Apache-2.0",
   "main": "cjs/index.js",
   "module": "esm/index.mjs",
@@ -17,8 +17,8 @@
     "prepack": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.0-beta.2",
-    "@openobserve/js-core": "0.4.0-beta.2"
+    "@openobserve/browser-core": "0.4.0-beta.3",
+    "@openobserve/js-core": "0.4.0-beta.3"
   },
   "devDependencies": {
     "ajv": "8.20.0"
