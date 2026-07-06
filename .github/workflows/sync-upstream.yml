@@ -1,0 +1,157 @@
+name: Sync upstream
+
+on:
+  schedule:
+    # First day of every month, 06:00 UTC. Minor/patch releases of the current major
+    # are picked up automatically; majors require a manual dispatch with allow_major.
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Upstream tag to sync to (e.g. v7.5.0). Empty = latest of current major.'
+        required: false
+        default: ''
+      allow_major:
+        description: 'Allow crossing a major version boundary'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: openobserve
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable corepack (yarn from .yarnrc.yml)
+        run: corepack enable
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/DataDog/browser-sdk.git
+
+      - name: Configure git author
+        run: |
+          git config user.name 'openobserve-sync[bot]'
+          git config user.email 'engineering@openobserve.ai'
+
+      - name: Run sync
+        id: sync
+        env:
+          ALLOW_MAJOR: ${{ inputs.allow_major && '1' || '0' }}
+        run: |
+          set +e
+          bash scripts/openobserve/sync-upstream.sh "${{ inputs.target }}" 2>&1 | tee sync.log
+          code=${PIPESTATUS[0]}
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" = "0" ]; then
+            if grep -q 'Already up to date' sync.log; then
+              echo "status=up-to-date" >> "$GITHUB_OUTPUT"
+            else
+              echo "status=synced" >> "$GITHUB_OUTPUT"
+              echo "target=$(cat scripts/openobserve/UPSTREAM_BASE)" >> "$GITHUB_OUTPUT"
+              echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> "$GITHUB_OUTPUT"
+            fi
+          elif [ "$code" = "3" ]; then
+            echo "status=major-blocked" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=failed" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Typecheck
+        id: typecheck
+        if: steps.sync.outputs.status == 'synced'
+        continue-on-error: true
+        run: yarn typecheck
+
+      - name: Build
+        id: build
+        if: steps.sync.outputs.status == 'synced'
+        continue-on-error: true
+        run: yarn build
+
+      - name: Unit tests (informational)
+        id: tests
+        if: steps.sync.outputs.status == 'synced'
+        continue-on-error: true
+        run: yarn test:unit 2>&1 | tail -5 | tee test-summary.txt
+
+      - name: Push sync branch and open PR
+        if: steps.sync.outputs.status == 'synced'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH='${{ steps.sync.outputs.branch }}'
+          TARGET='${{ steps.sync.outputs.target }}'
+          git push -f origin "$BRANCH"
+          BODY=$(cat <<EOF
+          Automated upstream sync to **DataDog/browser-sdk $TARGET**.
+
+          Pipeline: upstream tag → keep-ours overlay → rebrand codemod → lockfile → \`openobserve-patches/\` (3-way).
+
+          | Gate | Result |
+          | --- | --- |
+          | Typecheck | ${{ steps.typecheck.outcome }} |
+          | Build | ${{ steps.build.outcome }} |
+          | Unit tests (informational) | ${{ steps.tests.outcome }} |
+
+          \`\`\`
+          $(cat test-summary.txt 2>/dev/null || echo 'no test summary')
+          \`\`\`
+
+          Known-failing suites (upstream specs asserting Datadog-specific behavior we intentionally
+          change) are listed in SYNC.md. Review the commits individually: the first commit is the
+          mechanical rebrand; the following ones are the OpenObserve feature patches.
+
+          🤖 Generated with [Claude Code](https://claude.com/claude-code)
+          EOF
+          )
+          gh pr create \
+            --base openobserve \
+            --head "$BRANCH" \
+            --title "chore(sync): upstream $TARGET" \
+            --body "$BODY" \
+            || gh pr edit "$BRANCH" --body "$BODY"
+
+      - name: Report blocked major
+        if: steps.sync.outputs.status == 'major-blocked'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE='Upstream major version available - manual sync required'
+          if ! gh issue list --state open --search "$TITLE" --json title --jq '.[].title' | grep -qF "$TITLE"; then
+            gh issue create --title "$TITLE" --body "$(tail -20 sync.log)
+
+          Run the **Sync upstream** workflow manually with \`allow_major: true\` after reviewing the upstream migration guide. Majors usually require re-porting \`openobserve-patches/\`."
+          fi
+
+      - name: Report failure
+        if: steps.sync.outputs.status == 'failed'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --title "Upstream sync failed ($(date -u +%Y-%m-%d))" \
+            --body "The automated upstream sync failed (usually a patch conflict — see exit code ${{ steps.sync.outputs.exit_code }}).
+
+          \`\`\`
+          $(tail -40 sync.log)
+          \`\`\`
+
+          To resolve locally:
+          1. \`bash scripts/openobserve/sync-upstream.sh\` — reproduces the git-am conflict
+          2. Fix conflicts, \`git am --continue\`
+          3. Refresh the series: \`git format-patch --zero-commit -o openobserve-patches '<base-commit>..HEAD^'\`
+          4. Commit the refreshed patches on the sync branch and push."
+          exit 1

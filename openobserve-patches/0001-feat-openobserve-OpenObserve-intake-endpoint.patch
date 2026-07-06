@@ -1,0 +1,186 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bhargav <BJP232004@GMAIL.COM>
+Date: Mon, 6 Jul 2026 13:07:29 +0530
+Subject: [PATCH 1/4] feat(openobserve): OpenObserve intake endpoint
+
+- new init options: apiVersion (default 'v1'), organizationIdentifier
+  (default 'default'), insecureHTTP
+- intake path is /rum/{apiVersion}/{organizationIdentifier}/{trackType}
+  instead of /api/v2/{trackType}
+- the configured site is used verbatim as the intake host (no
+  browser-intake-* domain construction, no subdomain prefix)
+- Datadog site validation removed
+- OpenObserve-specific options are excluded from telemetry serialization
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ .../src/domain/configuration/configuration.ts | 39 ++++++++++++++-----
+ .../domain/configuration/endpointBuilder.ts   | 20 +++++-----
+ .../browser-core/test/coreConfiguration.ts    |  7 ++++
+ 3 files changed, 48 insertions(+), 18 deletions(-)
+
+diff --git a/packages/browser-core/src/domain/configuration/configuration.ts b/packages/browser-core/src/domain/configuration/configuration.ts
+index 096595f44..a3a7d39f1 100644
+--- a/packages/browser-core/src/domain/configuration/configuration.ts
++++ b/packages/browser-core/src/domain/configuration/configuration.ts
+@@ -142,6 +142,30 @@ export interface InitConfiguration {
+    */
+   site?: Site | undefined
+ 
++  /**
++   * The OpenObserve ingestion API version used to build intake URLs.
++   *
++   * @category Transport
++   * @defaultValue v1
++   */
++  apiVersion?: string | undefined
++
++  /**
++   * The OpenObserve organization identifier, used as a path segment of intake URLs.
++   *
++   * @category Transport
++   * @defaultValue default
++   */
++  organizationIdentifier?: string | undefined
++
++  /**
++   * Send data to the intake over plain HTTP instead of HTTPS. Only intended for local
++   * development against a non-TLS OpenObserve instance.
++   *
++   * @category Transport
++   */
++  insecureHTTP?: boolean | undefined
++
+   // tag and context options
+   /**
+    * The service name for your application. Follows the [tag syntax requirements](https://docs.datadoghq.com/getting_started/tagging/#define-tags).
+@@ -288,6 +312,9 @@ export interface Configuration {
+   datacenter: string | undefined
+   proxy: string | ProxyFn | undefined
+   site: Site
++  apiVersion: string
++  organizationIdentifier: string
++  insecureHTTP: boolean | undefined
+   source: SdkSource
+   beforeSend: GenericBeforeSendCallback | undefined
+   cookieOptions: CookieOptions | undefined
+@@ -318,14 +345,6 @@ function isString(tag: unknown, tagName: string): tag is string | undefined | nu
+   return true
+ }
+ 
+-function isDatadogSite(site: unknown) {
+-  if (site && typeof site === 'string' && !/(datadog|ddog|datad0g|dd0g)/.test(site)) {
+-    display.error(`Site should be a valid Datadog site. ${MORE_DETAILS} ${DOCS_ORIGIN}/getting_started/site/.`)
+-    return false
+-  }
+-  return true
+-}
+-
+ export function isSampleRate(sampleRate: unknown, name: string) {
+   if (sampleRate !== undefined && !isPercentage(sampleRate)) {
+     display.error(`${name} Sample Rate should be a number between 0 and 100`)
+@@ -352,7 +371,6 @@ export function validateAndBuildConfiguration(
+   }
+ 
+   if (
+-    !isDatadogSite(initConfiguration.site) ||
+     !isSampleRate(initConfiguration.sessionSampleRate, 'Session') ||
+     !isSampleRate(initConfiguration.telemetrySampleRate, 'Telemetry') ||
+     !isSampleRate(initConfiguration.telemetryConfigurationSampleRate, 'Telemetry Configuration') ||
+@@ -377,6 +395,9 @@ export function validateAndBuildConfiguration(
+     clientToken: initConfiguration.clientToken,
+     proxy: initConfiguration.proxy,
+     site: initConfiguration.site || INTAKE_SITE_US1,
++    apiVersion: initConfiguration.apiVersion ?? 'v1',
++    organizationIdentifier: initConfiguration.organizationIdentifier ?? 'default',
++    insecureHTTP: initConfiguration.insecureHTTP,
+     source: validateSource(initConfiguration.source),
+     beforeSend:
+       initConfiguration.beforeSend && catchUserErrors(initConfiguration.beforeSend, 'beforeSend threw an error:'),
+diff --git a/packages/browser-core/src/domain/configuration/endpointBuilder.ts b/packages/browser-core/src/domain/configuration/endpointBuilder.ts
+index f543a71e2..6cd9c758a 100644
+--- a/packages/browser-core/src/domain/configuration/endpointBuilder.ts
++++ b/packages/browser-core/src/domain/configuration/endpointBuilder.ts
+@@ -31,6 +31,9 @@ interface EndpointBuilderConfiguration {
+   proxy?: string | ProxyFn
+   site?: Site
+   source?: TransportSource
++  apiVersion?: string
++  organizationIdentifier?: string
++  insecureHTTP?: boolean
+ }
+ 
+ export type EndpointBuilder = ReturnType<typeof createEndpointBuilder>
+@@ -45,7 +48,8 @@ export function createEndpointBuilder(
+       return buildEndpointUrl({
+         proxy: configuration.proxy,
+         site: configuration.site,
+-        path: `/api/v2/${trackType}`,
++        insecureHTTP: configuration.insecureHTTP,
++        path: `/rum/${configuration.apiVersion ?? 'v1'}/${configuration.organizationIdentifier ?? 'default'}/${trackType}`,
+         parameters: buildEndpointParameters(configuration, trackType, api, payload, extraParameters),
+       })
+     },
+@@ -81,6 +85,7 @@ export interface BuildEndpointUrlOptions {
+   subdomain?: string
+   path: string
+   parameters?: string
++  insecureHTTP?: boolean
+ }
+ 
+ export function buildEndpointUrl({
+@@ -89,6 +94,7 @@ export function buildEndpointUrl({
+   path,
+   parameters = '',
+   subdomain,
++  insecureHTTP,
+ }: BuildEndpointUrlOptions): string {
+   let pathAndParameters = path
+   if (parameters) {
+@@ -107,14 +113,10 @@ export function buildEndpointUrl({
+     return proxy({ path, parameters, subdomain })
+   }
+ 
+-  const domainParts = site.split('.')
+-  const extension = domainParts.pop()
+-  let domain = `browser-intake-${domainParts.join('-')}.${extension!}`
+-  if (subdomain) {
+-    domain = `${subdomain}.${domain}`
+-  }
+-
+-  return `https://${domain}${pathAndParameters}`
++  // OpenObserve: the configured `site` is used verbatim as the intake host, without the
++  // Datadog `browser-intake-` domain construction or subdomain prefixes.
++  const protocol = insecureHTTP ? 'http' : 'https'
++  return `${protocol}://${site}${pathAndParameters}`
+ }
+ 
+ /**
+diff --git a/packages/browser-core/test/coreConfiguration.ts b/packages/browser-core/test/coreConfiguration.ts
+index 944271132..2e5bf20cc 100644
+--- a/packages/browser-core/test/coreConfiguration.ts
++++ b/packages/browser-core/test/coreConfiguration.ts
+@@ -11,6 +11,9 @@ import type { CamelToSnakeCase, RemoveIndex } from './typeUtils'
+  */
+ export const EXHAUSTIVE_INIT_CONFIGURATION: Required<InitConfiguration> = {
+   clientToken: 'yes',
++  apiVersion: 'v1',
++  organizationIdentifier: 'my-org',
++  insecureHTTP: false,
+   beforeSend: () => true,
+   sessionSampleRate: 50,
+   telemetrySampleRate: 60,
+@@ -80,6 +83,10 @@ export type MapInitConfigurationKey<Key extends string> =
+           | 'datacenter'
+           | 'replica'
+           | 'enableExperimentalFeatures'
++          // OpenObserve-specific options are not reported through telemetry
++          | 'apiVersion'
++          | 'organizationIdentifier'
++          | 'insecureHTTP'
+       ? never
+       : // Other keys are simply snake cased
+         CamelToSnakeCase<Key>
+-- 
+2.39.5 (Apple Git-154)
+
