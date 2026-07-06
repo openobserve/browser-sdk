@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-rum-angular",
-  "version": "0.4.0-beta.6",
+  "version": "0.4.0-beta.7",
   "license": "Apache-2.0",
   "main": "cjs/entries/main.js",
   "module": "esm/entries/main.mjs",
@@ -17,9 +17,9 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.0-beta.6",
-    "@openobserve/browser-rum-core": "0.4.0-beta.6",
-    "@openobserve/js-core": "0.4.0-beta.6"
+    "@openobserve/browser-core": "0.4.0-beta.7",
+    "@openobserve/browser-rum-core": "0.4.0-beta.7",
+    "@openobserve/js-core": "0.4.0-beta.7"
   },
   "peerDependencies": {
     "@angular/core": ">=15 <=22",
