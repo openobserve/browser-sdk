@@ -142,6 +142,30 @@ export interface InitConfiguration {
    */
   site?: Site | undefined
 
+  /**
+   * The OpenObserve ingestion API version used to build intake URLs.
+   *
+   * @category Transport
+   * @defaultValue v1
+   */
+  apiVersion?: string | undefined
+
+  /**
+   * The OpenObserve organization identifier, used as a path segment of intake URLs.
+   *
+   * @category Transport
+   * @defaultValue default
+   */
+  organizationIdentifier?: string | undefined
+
+  /**
+   * Send data to the intake over plain HTTP instead of HTTPS. Only intended for local
+   * development against a non-TLS OpenObserve instance.
+   *
+   * @category Transport
+   */
+  insecureHTTP?: boolean | undefined
+
   // tag and context options
   /**
    * The service name for your application. Follows the [tag syntax requirements](https://docs.datadoghq.com/getting_started/tagging/#define-tags).
@@ -288,6 +312,9 @@ export interface Configuration {
   datacenter: string | undefined
   proxy: string | ProxyFn | undefined
   site: Site
+  apiVersion: string
+  organizationIdentifier: string
+  insecureHTTP: boolean | undefined
   source: SdkSource
   beforeSend: GenericBeforeSendCallback | undefined
   cookieOptions: CookieOptions | undefined
@@ -313,14 +340,6 @@ export interface Configuration {
 function isString(tag: unknown, tagName: string): tag is string | undefined | null {
   if (tag !== undefined && tag !== null && typeof tag !== 'string') {
     display.error(`${tagName} must be defined as a string`)
-    return false
-  }
-  return true
-}
-
-function isDatadogSite(site: unknown) {
-  if (site && typeof site === 'string' && !/(datadog|ddog|datad0g|dd0g)/.test(site)) {
-    display.error(`Site should be a valid Datadog site. ${MORE_DETAILS} ${DOCS_ORIGIN}/getting_started/site/.`)
     return false
   }
   return true
@@ -352,7 +371,6 @@ export function validateAndBuildConfiguration(
   }
 
   if (
-    !isDatadogSite(initConfiguration.site) ||
     !isSampleRate(initConfiguration.sessionSampleRate, 'Session') ||
     !isSampleRate(initConfiguration.telemetrySampleRate, 'Telemetry') ||
     !isSampleRate(initConfiguration.telemetryConfigurationSampleRate, 'Telemetry Configuration') ||
@@ -377,6 +395,9 @@ export function validateAndBuildConfiguration(
     clientToken: initConfiguration.clientToken,
     proxy: initConfiguration.proxy,
     site: initConfiguration.site || INTAKE_SITE_US1,
+    apiVersion: initConfiguration.apiVersion ?? 'v1',
+    organizationIdentifier: initConfiguration.organizationIdentifier ?? 'default',
+    insecureHTTP: initConfiguration.insecureHTTP,
     source: validateSource(initConfiguration.source),
     beforeSend:
       initConfiguration.beforeSend && catchUserErrors(initConfiguration.beforeSend, 'beforeSend threw an error:'),
