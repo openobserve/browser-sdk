@@ -1809,9 +1809,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@openobserve/rum-events-format@openobserve/rum-events-format#commit=e5c81e0ce460adfb56da538888eec09be370d96e":
+"@openobserve/rum-events-format@openobserve/rum-events-format#commit=772b8ada6dcd6880adf78c1a5b2f608d85517ec6":
   version: 0.0.0
-  resolution: "@openobserve/rum-events-format@https://github.com/openobserve/rum-events-format.git#commit=e5c81e0ce460adfb56da538888eec09be370d96e"
+  resolution: "@openobserve/rum-events-format@https://github.com/openobserve/rum-events-format.git#commit=772b8ada6dcd6880adf78c1a5b2f608d85517ec6"
   checksum: 10c0/39a090fa215c929d701688427baa64e2192957c70d78c8702f31632b96729120990c4527ee4a8c434373d7b8a2fbaa8017b4de96222065da015b97e29ef72fec
   languageName: node
   linkType: hard
@@ -3922,7 +3922,7 @@ __metadata:
     "@eslint/js": "npm:10.0.1"
     "@jsdevtools/coverage-istanbul-loader": "npm:3.0.5"
     "@microsoft/api-extractor": "npm:7.58.9"
-    "@openobserve/rum-events-format": "openobserve/rum-events-format#commit=e5c81e0ce460adfb56da538888eec09be370d96e"
+    "@openobserve/rum-events-format": "openobserve/rum-events-format#commit=772b8ada6dcd6880adf78c1a5b2f608d85517ec6"
     "@playwright/test": "npm:1.60.0"
     "@swc/core": "npm:1.15.41"
     "@types/busboy": "npm:1.5.4"
