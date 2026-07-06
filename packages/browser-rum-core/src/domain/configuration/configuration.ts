@@ -23,7 +23,7 @@ import type { PropagatorType, TracingOption } from '../tracing/tracer.types'
 import { getRemoteConfigurationId } from './remoteConfiguration'
 import type { RemoteConfigurationMetadata } from './remoteConfigurationCache'
 
-export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext', 'datadog']
+export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext']
 
 /**
  * Default list of headers collected on resource events when {@link RumInitConfiguration.trackResourceHeaders | trackResourceHeaders}
@@ -544,7 +544,7 @@ export const RUM_SCHEMA = {
           match: { type: 'match-option', required: true },
           propagatorTypes: {
             type: 'enum',
-            values: ['datadog', 'b3', 'b3multi', 'tracecontext'] as const,
+            values: ['datadog', 'openobserve', 'b3', 'b3multi', 'tracecontext'] as const,
             multiple: true,
             strict: false,
             default: DEFAULT_PROPAGATOR_TYPES,
