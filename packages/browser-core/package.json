@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-core",
-  "version": "0.4.0-beta.3",
+  "version": "0.4.0-beta.4",
   "license": "Apache-2.0",
   "main": "cjs/index.js",
   "module": "esm/index.mjs",
@@ -23,7 +23,7 @@
     "directory": "packages/browser-core"
   },
   "dependencies": {
-    "@openobserve/js-core": "0.4.0-beta.3"
+    "@openobserve/js-core": "0.4.0-beta.4"
   },
   "devDependencies": {
     "@types/pako": "2.0.4",
