@@ -1,0 +1,42 @@
+{
+  "name": "vue-router-app",
+  "private": true,
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "3.5.38",
+    "vue-router": "5.1.0"
+  },
+  "peerDependencies": {
+    "@openobserve/browser-rum": "*",
+    "@openobserve/browser-rum-vue": "*"
+  },
+  "peerDependenciesMeta": {
+    "@openobserve/browser-rum": {
+      "optional": true
+    },
+    "@openobserve/browser-rum-vue": {
+      "optional": true
+    }
+  },
+  "resolutions": {
+    "@openobserve/browser-rum-core": "file:../../../packages/browser-rum-core/package.tgz",
+    "@openobserve/browser-core": "file:../../../packages/browser-core/package.tgz",
+    "@openobserve/js-core": "file:../../../packages/js-core/package.tgz",
+    "@openobserve/browser-rum": "file:../../../packages/browser-rum/package.tgz",
+    "@openobserve/browser-rum-vue": "file:../../../packages/browser-rum-vue/package.tgz",
+    "@openobserve/browser-rum-slim": "file:../../../packages/browser-rum-slim/package.tgz",
+    "@openobserve/browser-worker": "file:../../../packages/browser-worker/package.tgz"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "6.x",
+    "typescript": "6.x",
+    "vite": "8.x"
+  },
+  "volta": {
+    "extends": "../../../package.json"
+  }
+}

@@ -1,4 +1,4 @@
-import { DefaultPrivacyLevel } from '@openobserve/browser-rum'
+import { DefaultPrivacyLevel } from '@openobserve/browser-core'
 
 export const APPLICATION_ID = '37fe52bf-b3d5-4ac7-ad9b-44882d479ec8'
 export const CLIENT_TOKEN = 'pubf2099de38f9c85797d20d64c7d632a69'
@@ -24,4 +24,9 @@ export const DEFAULT_LOGS_CONFIGURATION = {
   telemetrySampleRate: 100,
   telemetryUsageSampleRate: 100,
   telemetryConfigurationSampleRate: 100,
+}
+
+export const DEFAULT_DEBUGGER_CONFIGURATION = {
+  clientToken: CLIENT_TOKEN,
+  service: 'browser-sdk-e2e-test',
 }

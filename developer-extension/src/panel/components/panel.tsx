@@ -30,12 +30,12 @@ export function Panel() {
   const [activeTab, setActiveTab] = useState<string | null>(DEFAULT_PANEL_TAB)
   function updateActiveTab(activeTab: string | null) {
     setActiveTab(activeTab)
-    activeTab && openobserveRum.startView(activeTab!)
+    openobserveRum.startView(activeTab!)
   }
 
   return (
     <Tabs color="violet" value={activeTab} className={classes.tabs} onChange={updateActiveTab}>
-      <Tabs.List className={classes.topBox} data-dd-privacy="allow">
+      <Tabs.List className={classes.topBox} data-oo-privacy="allow">
         <div className={classes.tabBox}>
           <Tabs.Tab value={PanelTabs.Events}>Events</Tabs.Tab>
           <Tabs.Tab
@@ -68,7 +68,7 @@ export function Panel() {
         </div>
         <Anchor
           className={classes.link}
-          href="https://github.com/DataDog/browser-sdk/tree/main/developer-extension#browser-sdk-developer-extension"
+          href="https://github.com/openobserve/browser-sdk/tree/main/developer-extension#browser-sdk-developer-extension"
           target="_blank"
         >
           🔗 Documentation

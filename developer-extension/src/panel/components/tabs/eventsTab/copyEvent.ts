@@ -1,5 +1,5 @@
-import type { EndpointBuilder, InitConfiguration } from '@openobserve/browser-core'
-import { computeTransportConfiguration } from '../../../../../../packages/core/src/domain/configuration'
+import type { EndpointBuilder } from '@openobserve/browser-core'
+import { createEndpointBuilder } from '../../../../../../packages/browser-core/src/domain/configuration'
 import { copy } from '../../../copy'
 import type { SdkInfos } from '../../../hooks/useSdkInfos'
 import type { SdkEvent } from '../../../sdkEvent'
@@ -75,7 +75,7 @@ export function getIntakeUrlForEvent(sdkInfos: SdkInfos, event: SdkEvent) {
         return
       }
       version = sdkInfos.rum.version
-      builder = computeTransportConfiguration(sdkInfos.rum.config as InitConfiguration).rumEndpointBuilder
+      builder = createEndpointBuilder(sdkInfos.rum.config, 'rum')
       break
     }
 
@@ -84,11 +84,11 @@ export function getIntakeUrlForEvent(sdkInfos: SdkInfos, event: SdkEvent) {
         return
       }
       version = sdkInfos.logs.version
-      builder = computeTransportConfiguration(sdkInfos.logs.config as InitConfiguration).logsEndpointBuilder
+      builder = createEndpointBuilder(sdkInfos.logs.config, 'logs')
       break
   }
 
   return builder
     .build('manual', { data: 'a', bytesCount: 1 })
-    .replace(/dd-evp-origin-version=[^&]+/g, `dd-evp-origin-version=${encodeURIComponent(version)}`)
+    .replace(/o2-evp-origin-version=[^&]+/g, `o2-evp-origin-version=${encodeURIComponent(version)}`)
 }

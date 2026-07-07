@@ -1,6 +1,6 @@
-import type { RumEvent } from '../../../../../packages/rum-core/src/rumEvent.types'
-import type { LogsEvent } from '../../../../../packages/logs/src/logsEvent.types'
-import { isSafari } from '../../../../../packages/core/src/tools/utils/browserDetection'
+import type { RumEvent } from '../../../../../packages/browser-rum-core/src/rumEvent.types'
+import type { LogsEvent } from '../../../../../packages/browser-logs/src/logsEvent.types'
+import { isSafari } from '../../../../../packages/browser-core/src/tools/utils/browserDetection'
 import { parseQuery, matchWithWildcard, filterFacets } from './eventFilters'
 import type { FacetValuesFilter } from './eventFilters'
 import { FacetRegistry } from './facetRegistry'
@@ -22,7 +22,7 @@ if (!isSafari()) {
       expect(
         filterFacets(
           [RUM_ACTION_EVENT, RUM_ERROR_EVENT, RUM_ERROR_EVENT],
-          { type: 'exclude', facetValues: { type: ['error'] } } as FacetValuesFilter,
+          { type: 'exclude', facetValues: { type: ['error'] } },
           facetRegistry
         )
       ).toEqual([RUM_ACTION_EVENT])
@@ -31,7 +31,7 @@ if (!isSafari()) {
       expect(
         filterFacets(
           [RUM_ACTION_EVENT, RUM_ERROR_EVENT, RUM_ERROR_EVENT],
-          { type: 'include', facetValues: { type: ['error'] } } as FacetValuesFilter,
+          { type: 'include', facetValues: { type: ['error'] } },
           facetRegistry
         )
       ).toEqual([RUM_ERROR_EVENT, RUM_ERROR_EVENT])
@@ -46,7 +46,7 @@ if (!isSafari()) {
               type: ['action'],
               'resource.type': ['xhr'],
             },
-          } as FacetValuesFilter,
+          },
           facetRegistry
         )
       ).toEqual([RUM_ACTION_EVENT, RUM_XHR_RESOURCE_EVENT])

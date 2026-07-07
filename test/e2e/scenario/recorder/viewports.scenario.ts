@@ -1,7 +1,7 @@
-import type { ViewportResizeData, ScrollData } from '@openobserve/browser-rum/cjs/types'
-import { IncrementalSource } from '@openobserve/browser-rum/cjs/types'
+import type { ViewportResizeData, ScrollData } from '@openobserve/browser-rum/src/types'
+import { IncrementalSource } from '@openobserve/browser-rum/src/types'
 
-import { findAllIncrementalSnapshots, findAllVisualViewports } from '@openobserve/browser-rum/test/segments'
+import { findAllIncrementalSnapshots, findAllVisualViewports } from '@openobserve/browser-rum/test/record/segments'
 import type { Page } from '@playwright/test'
 import { test, expect } from '@playwright/test'
 import { wait } from '@openobserve/browser-core/test/wait'

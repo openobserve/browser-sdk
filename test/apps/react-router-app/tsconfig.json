@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist/",
+    "strict": true,
+    "module": "commonjs",
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "jsx": "react",
+    "target": "es2015",
+    "lib": ["ES2015", "DOM"],
+    "types": []
+  }
+}

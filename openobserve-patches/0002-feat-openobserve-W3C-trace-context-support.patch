@@ -1,0 +1,363 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bhargav <BJP232004@GMAIL.COM>
+Date: Mon, 6 Jul 2026 13:07:29 +0530
+Subject: [PATCH 2/4] feat(openobserve): W3C trace context support
+
+- 128-bit UUIDv7-shaped trace identifiers (inline generation, no new
+  dependency), span identifiers unchanged
+- reuse an existing valid traceparent header on the request instead of
+  starting a new trace; injected tracing headers replace pre-existing
+  ones instead of appending duplicates
+- 'openobserve' accepted as an alias of the 'datadog' propagator type
+- default propagators reduced to ['tracecontext']
+- trace/span ids serialized as hex in resource tracing info
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+---
+ .../domain/telemetry/telemetryEvent.types.ts  |   2 +-
+ .../src/domain/configuration/configuration.ts |   2 +-
+ .../src/domain/resource/resourceCollection.ts |   6 +-
+ .../src/domain/tracing/identifier.ts          |  52 ++++++-
+ .../src/domain/tracing/tracer.ts              | 130 ++++++++++++++++--
+ .../src/domain/tracing/tracer.types.ts        |   3 +-
+ 6 files changed, 174 insertions(+), 21 deletions(-)
+
+diff --git a/packages/browser-core/src/domain/telemetry/telemetryEvent.types.ts b/packages/browser-core/src/domain/telemetry/telemetryEvent.types.ts
+index db2f6990d..868e56105 100644
+--- a/packages/browser-core/src/domain/telemetry/telemetryEvent.types.ts
++++ b/packages/browser-core/src/domain/telemetry/telemetryEvent.types.ts
+@@ -223,7 +223,7 @@ export type TelemetryConfigurationEvent = CommonTelemetryProperties & {
+       /**
+        * A list of selected tracing propagators
+        */
+-      selected_tracing_propagators?: ('datadog' | 'b3' | 'b3multi' | 'tracecontext')[]
++      selected_tracing_propagators?: ('datadog' | 'openobserve' | 'b3' | 'b3multi' | 'tracecontext')[]
+       /**
+        * Session replay default privacy level
+        */
+diff --git a/packages/browser-rum-core/src/domain/configuration/configuration.ts b/packages/browser-rum-core/src/domain/configuration/configuration.ts
+index ebb5ef1b7..51dbb73db 100644
+--- a/packages/browser-rum-core/src/domain/configuration/configuration.ts
++++ b/packages/browser-rum-core/src/domain/configuration/configuration.ts
+@@ -18,7 +18,7 @@ import type { RumPlugin } from '../plugins'
+ import type { PropagatorType, TracingOption } from '../tracing/tracer.types'
+ import { getRemoteConfigurationId } from './remoteConfiguration'
+ 
+-export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext', 'datadog']
++export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext']
+ 
+ /**
+  * Default list of headers collected on resource events when {@link RumInitConfiguration.trackResourceHeaders | trackResourceHeaders}
+diff --git a/packages/browser-rum-core/src/domain/resource/resourceCollection.ts b/packages/browser-rum-core/src/domain/resource/resourceCollection.ts
+index c9c9ab4ad..33b999e55 100644
+--- a/packages/browser-rum-core/src/domain/resource/resourceCollection.ts
++++ b/packages/browser-rum-core/src/domain/resource/resourceCollection.ts
+@@ -216,8 +216,8 @@ function computeRequestTracingInfo(request: RequestCompleteEvent, configuration:
+   }
+   return {
+     _oo: {
+-      span_id: request.spanId!.toString(),
+-      trace_id: request.traceId!.toString(),
++      span_id: request.spanId!.toString(16),
++      trace_id: request.traceId!.toString(16),
+       rule_psr: configuration.rulePsr,
+     },
+   }
+@@ -234,7 +234,7 @@ function computeResourceEntryTracingInfo(entry: ResourceLikeEntry, configuration
+   return {
+     _oo: {
+       trace_id: traceId,
+-      span_id: createSpanIdentifier().toString(),
++      span_id: createSpanIdentifier().toString(16),
+       rule_psr: configuration.rulePsr,
+     },
+   }
+diff --git a/packages/browser-rum-core/src/domain/tracing/identifier.ts b/packages/browser-rum-core/src/domain/tracing/identifier.ts
+index 7c38b9349..885475c7b 100644
+--- a/packages/browser-rum-core/src/domain/tracing/identifier.ts
++++ b/packages/browser-rum-core/src/domain/tracing/identifier.ts
+@@ -12,14 +12,35 @@ export interface SpanIdentifier extends BaseIdentifier {
+   __brand: 'spanIdentifier'
+ }
+ 
++/**
++ * OpenObserve: trace identifiers are 128-bit UUIDv7-shaped values (timestamp-ordered), so they
++ * can be correlated with OpenObserve traces and stay unique across sessions. Span identifiers
++ * remain 63-bit like upstream.
++ */
+ export function createTraceIdentifier() {
+-  return createIdentifier(64) as TraceIdentifier
++  return createUuidV7Identifier() as TraceIdentifier
+ }
+ 
+ export function createSpanIdentifier() {
+   return createIdentifier(63) as SpanIdentifier
+ }
+ 
++/**
++ * Creates a TraceIdentifier from a 32-character hex string (e.g. from an existing W3C
++ * traceparent header).
++ */
++export function createTraceIdentifierFromHex(hexString: string): TraceIdentifier {
++  return BigInt(`0x${hexString}`) as unknown as TraceIdentifier
++}
++
++/**
++ * Creates a SpanIdentifier from a 16-character hex string (e.g. from an existing W3C
++ * traceparent header).
++ */
++export function createSpanIdentifierFromHex(hexString: string): SpanIdentifier {
++  return BigInt(`0x${hexString}`) as unknown as SpanIdentifier
++}
++
+ function createIdentifier(bits: 63 | 64): BaseIdentifier {
+   // TODO: when Safari 15 becomes the minimum, simplify to:
+   //   crypto.getRandomValues(new BigUint64Array(1))[0]
+@@ -33,6 +54,33 @@ function createIdentifier(bits: 63 | 64): BaseIdentifier {
+   return value
+ }
+ 
++/**
++ * Builds a 128-bit identifier following the UUIDv7 layout:
++ * 48-bit unix timestamp (ms) | 4-bit version (7) | 12-bit random | 2-bit variant (0b10) | 62-bit random
++ *
++ * See https://www.rfc-editor.org/rfc/rfc9562#name-uuid-version-7
++ */
++function createUuidV7Identifier(): BaseIdentifier {
++  const buffer = crypto.getRandomValues(new Uint32Array(3))
++  const timestamp = BigInt(Date.now())
++  /* eslint-disable no-bitwise */
++  const randA = BigInt(buffer[0] & 0x0fff) // 12 bits
++  const randB = (BigInt(buffer[1]) << 32n) | BigInt(buffer[2]) // 64 bits, truncated to 62 below
++  return (
++    (timestamp << 80n) | // unix_ts_ms
++    (0x7n << 76n) | // version 7
++    (randA << 64n) | // rand_a
++    (0x2n << 62n) | // variant 0b10
++    (randB & 0x3fffffffffffffffn) // rand_b
++  )
++  /* eslint-enable no-bitwise */
++}
++
++/**
++ * Pads an identifier to its canonical hex length: 16 characters for 64-bit identifiers, 32
++ * characters for 128-bit (trace) identifiers.
++ */
+ export function toPaddedHexadecimalString(id: BaseIdentifier) {
+-  return id.toString(16).padStart(16, '0')
++  const hexString = id.toString(16)
++  return hexString.padStart(hexString.length > 16 ? 32 : 16, '0')
+ }
+diff --git a/packages/browser-rum-core/src/domain/tracing/tracer.ts b/packages/browser-rum-core/src/domain/tracing/tracer.ts
+index a03b05781..46e861738 100644
+--- a/packages/browser-rum-core/src/domain/tracing/tracer.ts
++++ b/packages/browser-rum-core/src/domain/tracing/tracer.ts
+@@ -18,7 +18,13 @@ import type {
+ } from '../requestCollection'
+ import type { PropagatorType } from './tracer.types'
+ import type { SpanIdentifier, TraceIdentifier } from './identifier'
+-import { createSpanIdentifier, createTraceIdentifier, toPaddedHexadecimalString } from './identifier'
++import {
++  createSpanIdentifier,
++  createSpanIdentifierFromHex,
++  createTraceIdentifier,
++  createTraceIdentifierFromHex,
++  toPaddedHexadecimalString,
++} from './identifier'
+ 
+ export interface Tracer {
+   traceFetch: (context: Partial<RumFetchStartContext>) => void
+@@ -74,22 +80,31 @@ export function startTracer(
+           if (context.input instanceof Request && !context.init?.headers) {
+             context.input = new Request(context.input)
+             Object.keys(tracingHeaders).forEach((key) => {
+-              ;(context.input as Request).headers.append(key, tracingHeaders[key])
++              // OpenObserve: use set instead of append to replace existing tracing headers
++              ;(context.input as Request).headers.set(key, tracingHeaders[key])
+             })
+           } else {
+             context.init = shallowClone(context.init)
+             const headers: Array<[string, string]> = []
++            // OpenObserve: skip existing tracing headers so the injected ones replace them
++            const tracingHeaderKeys = Object.keys(tracingHeaders).map((key) => key.toLowerCase())
+             if (context.init.headers instanceof Headers) {
+               context.init.headers.forEach((value, key) => {
+-                headers.push([key, value])
++                if (!tracingHeaderKeys.includes(key.toLowerCase())) {
++                  headers.push([key, value])
++                }
+               })
+             } else if (Array.isArray(context.init.headers)) {
+               context.init.headers.forEach((header) => {
+-                headers.push(header)
++                if (!tracingHeaderKeys.includes(header[0].toLowerCase())) {
++                  headers.push(header)
++                }
+               })
+             } else if (context.init.headers) {
+               Object.keys(context.init.headers).forEach((key) => {
+-                headers.push([key, (context.init!.headers as Record<string, string>)[key]])
++                if (!tracingHeaderKeys.includes(key.toLowerCase())) {
++                  headers.push([key, (context.init!.headers as Record<string, string>)[key]])
++                }
+               })
+             }
+             context.init.headers = headers.concat(objectEntries(tracingHeaders))
+@@ -149,15 +164,24 @@ function injectHeadersIfTracingAllowed(
+     return
+   }
+ 
+-  context.traceSampled = traceSampled
+-  context.traceId = createTraceIdentifier()
+-  context.spanId = createSpanIdentifier()
++  // OpenObserve: if the request already carries a valid W3C traceparent (e.g. set by an
++  // instrumented app), continue that trace instead of starting a new one.
++  const existingTraceparent = extractExistingTraceparent(context)
++  if (existingTraceparent) {
++    context.traceSampled = existingTraceparent.sampled
++    context.traceId = existingTraceparent.traceId
++    context.spanId = existingTraceparent.spanId
++  } else {
++    context.traceSampled = traceSampled
++    context.traceId = createTraceIdentifier()
++    context.spanId = createSpanIdentifier()
++  }
+ 
+   inject(
+     makeTracingHeaders(
+-      context.traceId,
+-      context.spanId,
+-      context.traceSampled,
++      context.traceId!,
++      context.spanId!,
++      context.traceSampled!,
+       session.id,
+       tracingOption.propagatorTypes,
+       userContext,
+@@ -167,6 +191,85 @@ function injectHeadersIfTracingAllowed(
+   )
+ }
+ 
++/**
++ * Parses a W3C Trace Context traceparent header value.
++ *
++ * Format: {version}-{trace-id}-{parent-id}-{flags}
++ * Example: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
++ *
++ * See https://www.w3.org/TR/trace-context/#traceparent-header
++ */
++function parseTraceparent(
++  traceparentValue: string
++): { traceId: TraceIdentifier; spanId: SpanIdentifier; sampled: boolean } | null {
++  const parts = traceparentValue.trim().split('-')
++  if (parts.length !== 4) {
++    return null
++  }
++  const [version, traceIdHex, parentIdHex, flags] = parts
++  if (version !== '00') {
++    return null
++  }
++  if (!/^[0-9a-f]{32}$/i.test(traceIdHex) || traceIdHex === '00000000000000000000000000000000') {
++    return null
++  }
++  if (!/^[0-9a-f]{16}$/i.test(parentIdHex) || parentIdHex === '0000000000000000') {
++    return null
++  }
++  if (!/^[0-9a-f]{2}$/i.test(flags)) {
++    return null
++  }
++  // eslint-disable-next-line no-bitwise
++  const sampled = (parseInt(flags, 16) & 1) === 1
++  return {
++    traceId: createTraceIdentifierFromHex(traceIdHex.toLowerCase()),
++    spanId: createSpanIdentifierFromHex(parentIdHex.toLowerCase()),
++    sampled,
++  }
++}
++
++/**
++ * Extracts and validates an existing traceparent header from the request context (fetch init
++ * headers in all their forms, or a Request object). When the header appears multiple times,
++ * the first valid value wins, per the W3C spec.
++ */
++function extractExistingTraceparent(
++  context: Partial<RumFetchStartContext | RumXhrStartContext>
++): { traceId: TraceIdentifier; spanId: SpanIdentifier; sampled: boolean } | null {
++  let traceparentValue: string | null = null
++
++  const fetchContext = context as Partial<RumFetchStartContext>
++  if (fetchContext.init?.headers) {
++    if (fetchContext.init.headers instanceof Headers) {
++      traceparentValue = fetchContext.init.headers.get('traceparent')
++    } else if (Array.isArray(fetchContext.init.headers)) {
++      const traceparentHeader = fetchContext.init.headers.find(
++        ([key]: [string, string]) => key.toLowerCase() === 'traceparent'
++      )
++      traceparentValue = traceparentHeader?.[1] || null
++    } else if (typeof fetchContext.init.headers === 'object') {
++      const headers = fetchContext.init.headers as Record<string, string>
++      traceparentValue = headers['traceparent'] || headers['Traceparent'] || null
++    }
++  }
++
++  if (!traceparentValue && fetchContext.input instanceof Request) {
++    traceparentValue = fetchContext.input.headers.get('traceparent')
++  }
++
++  if (!traceparentValue) {
++    return null
++  }
++
++  for (const value of traceparentValue.split(',')) {
++    const parsed = parseTraceparent(value)
++    if (parsed) {
++      return parsed
++    }
++  }
++  return null
++}
++
+ /**
+  * When trace is not sampled, set priority to '0' instead of not adding the tracing headers
+  * to prepare the implementation for sampling delegation.
+@@ -185,7 +288,8 @@ function makeTracingHeaders(
+ 
+   propagatorTypes.forEach((propagatorType) => {
+     switch (propagatorType) {
+-      case 'datadog': {
++      case 'datadog':
++      case 'openobserve': {
+         Object.assign(tracingHeaders, {
+           'x-openobserve-origin': 'rum',
+           'x-openobserve-parent-id': spanId.toString(),
+@@ -197,7 +301,7 @@ function makeTracingHeaders(
+       // https://www.w3.org/TR/trace-context/
+       case 'tracecontext': {
+         Object.assign(tracingHeaders, {
+-          traceparent: `00-0000000000000000${toPaddedHexadecimalString(traceId)}-${toPaddedHexadecimalString(spanId)}-0${
++          traceparent: `00-${traceId.toString(16).padStart(32, '0')}-${toPaddedHexadecimalString(spanId)}-0${
+             traceSampled ? '1' : '0'
+           }`,
+           tracestate: `dd=s:${traceSampled ? '1' : '0'};o:rum`,
+diff --git a/packages/browser-rum-core/src/domain/tracing/tracer.types.ts b/packages/browser-rum-core/src/domain/tracing/tracer.types.ts
+index 382868051..5612ebf9c 100644
+--- a/packages/browser-rum-core/src/domain/tracing/tracer.types.ts
++++ b/packages/browser-rum-core/src/domain/tracing/tracer.types.ts
+@@ -1,12 +1,13 @@
+ import type { MatchOption } from '@openobserve/browser-core'
+ 
+ /**
++ * openobserve: OpenObserve (x-openobserve-*), alias of datadog
+  * datadog: Datadog (x-openobserve-*)
+  * tracecontext: W3C Trace Context (traceparent, tracestate)
+  * b3: B3 Single Header (b3)
+  * b3multi: B3 Multiple Headers (X-B3-*)
+  */
+-export type PropagatorType = 'datadog' | 'b3' | 'b3multi' | 'tracecontext'
++export type PropagatorType = 'datadog' | 'openobserve' | 'b3' | 'b3multi' | 'tracecontext'
+ export interface TracingOption {
+   match: MatchOption
+   propagatorTypes: PropagatorType[]
+-- 
+2.39.5 (Apple Git-154)
+

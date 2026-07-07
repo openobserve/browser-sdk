@@ -1,0 +1,72 @@
+{
+  "comment": "Ordered rebrand rules applied by rebrand.mjs to every tracked text file. Order matters: more specific rules must come before rules that match a substring of them. 'literal' rules are plain string replacement; 'regex' rules are applied with the 'g' flag. Surgical by design: only tokens that affect package identity, public API, wire format, storage keys, and DOM attributes are renamed. Cosmetic mentions of Datadog in comments/docs are intentionally left alone (docs are covered by the keep-ours overlay).",
+  "rules": [
+    { "literal": "@datadog/browser-", "to": "@openobserve/browser-", "why": "npm package names and imports" },
+    { "literal": "@datadog/js-core", "to": "@openobserve/js-core", "why": "shared utils workspace package introduced in v7" },
+    { "literal": "'@datadog/*'", "to": "'@openobserve/*'", "why": "workspace glob in root package.json pack script" },
+    { "literal": "@datadog/browser-sdk-developer-extension", "to": "@openobserve/browser-sdk-developer-extension", "why": "dev extension package name" },
+    { "literal": "github.com/DataDog/browser-sdk", "to": "github.com/openobserve/browser-sdk", "why": "repository URLs" },
+
+    { "literal": "@datadog/rum-events-format", "to": "@openobserve/rum-events-format", "why": "schema package: imports, dep key, help text (fork provides the _oo schemas)" },
+    { "literal": "@datadog\\/rum-events-format", "to": "@openobserve\\/rum-events-format", "why": "schema package name inside the escaped regex literal in scripts/json-schemas.ts" },
+    { "literal": "DataDog/rum-events-format", "to": "openobserve/rum-events-format", "why": "schema git URL in the dep value, README, and the GitHub API URL in scripts/json-schemas.ts" },
+    { "literal": "DataDog\\/rum-events-format", "to": "openobserve\\/rum-events-format", "why": "schema git URL inside the escaped regex literal in scripts/json-schemas.ts" },
+
+    { "literal": "DD_RUM_SYNTHETICS", "to": "OO_RUM_SYNTHETICS", "why": "synthetics global (before DD_RUM rule)" },
+    { "literal": "DD_RUM", "to": "OO_RUM", "why": "RUM global API name" },
+    { "literal": "DD_LOGS", "to": "OO_LOGS", "why": "Logs global API name" },
+    { "literal": "datadogRum", "to": "openobserveRum", "why": "exported RUM API" },
+    { "literal": "datadogLogs", "to": "openobserveLogs", "why": "exported Logs API" },
+    { "literal": "_DATADOG_SYNTHETICS_", "to": "_OO_SYNTHETICS_", "why": "synthetics window values" },
+    { "literal": "datadog-synthetics-", "to": "openobserve-synthetics-", "why": "synthetics cookie names" },
+
+    { "literal": "x-datadog-", "to": "x-openobserve-", "why": "datadog trace propagator request headers" },
+    { "literal": "data-dd-privacy", "to": "data-oo-privacy", "why": "privacy DOM attribute (before dd-privacy- rule)" },
+    { "literal": "dd-privacy-", "to": "oo-privacy-", "why": "privacy class names" },
+    { "literal": "dd-trace-id", "to": "oo-trace-id", "why": "e2e/synthetics trace header" },
+    { "literal": "dd-trace-time", "to": "oo-trace-time", "why": "e2e/synthetics trace header" },
+
+    { "literal": "__ddIsTrusted", "to": "__ooIsTrusted", "why": "trusted event marker" },
+    { "literal": "__ddBrowserSdk", "to": "__ooBrowserSdk", "why": "dev extension messaging globals" },
+    { "literal": "__dd_vital_reference", "to": "__oo_vital_reference", "why": "vital reference marker" },
+
+    { "literal": "_dd_s", "to": "_oo_s", "why": "session cookie name" },
+    { "literal": "_dd_c", "to": "_oo_c", "why": "context storage key prefix" },
+    { "literal": "_dd_r", "to": "_oo_r", "why": "rum storage key prefix" },
+    { "literal": "_dd_l", "to": "_oo_l", "why": "logs storage key prefix" },
+    { "literal": "_dd_test_", "to": "_oo_test_", "why": "test cookie prefix" },
+    { "literal": "_dd_temp", "to": "_oo_temp", "why": "temp cookie prefix" },
+    { "literal": "dd_cookie_test_", "to": "oo_cookie_test_", "why": "cookie support probe" },
+    { "literal": "dd_site_test_", "to": "oo_site_test_", "why": "site cookie probe" },
+    { "literal": "dd_fingerprint", "to": "oo_fingerprint", "why": "error fingerprint field" },
+
+    { "literal": "ddsource", "to": "o2source", "why": "intake query parameter" },
+    { "literal": "dd-api-key", "to": "o2-api-key", "why": "intake query parameter" },
+    { "literal": "dd-evp-", "to": "o2-evp-", "why": "intake query parameters (origin, origin-version, encoding)" },
+    { "literal": "dd-request-id", "to": "o2-request-id", "why": "intake query parameter" },
+    { "literal": "ddforward", "to": "o2forward", "why": "proxy forwarding query parameter" },
+    { "literal": "_dd.api=", "to": "_o2.api=", "why": "intake query parameter" },
+    { "literal": "_dd.retry_count=", "to": "_o2.retry_count=", "why": "intake query parameter" },
+    { "literal": "_dd.retry_after=", "to": "_o2.retry_after=", "why": "intake query parameter" },
+    { "literal": "ddtags", "to": "ootags", "why": "tags event attribute" },
+
+    { "literal": "DATADOG_COMMENT", "to": "OPENOBSERVE_COMMENT", "why": "CI comment markers in scripts" },
+    { "literal": "DATADOG_CLIENT_TOKEN", "to": "OPENOBSERVE_CLIENT_TOKEN", "why": "sample app env var" },
+    { "literal": "DATADOG_SITE", "to": "OPENOBSERVE_SITE", "why": "sample app env var" },
+    { "literal": "DATADOG_APPLICATION_ID", "to": "OPENOBSERVE_APPLICATION_ID", "why": "doc example placeholder" },
+    { "literal": "app.datadoghq.com", "to": "api.openobserve.ai", "why": "session replay deep links in dev extension" },
+
+    { "literal": "Datadog Browser SDK:", "to": "OpenObserve Browser SDK:", "why": "user-visible console log prefix" },
+    { "literal": "Datadog Browser SDK developer extension", "to": "OpenObserve Browser SDK developer extension", "why": "extension display name" },
+    { "literal": "'https://docs.datadoghq.com'", "to": "'https://openobserve.ai'", "why": "DOCS_ORIGIN constant shown in user-facing error messages" },
+    { "literal": "${DOCS_ORIGIN}/real_user_monitoring/browser/troubleshooting", "to": "${DOCS_ORIGIN}/docs/user-guide/rum/", "why": "troubleshooting link shown in user-facing error messages" },
+    { "literal": "DATADOG;", "to": "OPENOBSERVE;", "why": "server-injected HTML comment marker parsed by getDocumentTraceId" },
+
+    { "literal": "datadog-logs", "to": "openobserve-logs", "why": "bundle file name" },
+    { "literal": "datadog-rum", "to": "openobserve-rum", "why": "bundle file names (rum, rum-slim, rum-recorder)" },
+    { "literal": "datadog-flagging", "to": "openobserve-flagging", "why": "bundle file name" },
+    { "literal": "datadog-worker", "to": "openobserve-worker", "why": "bundle file name" },
+
+    { "regex": "\\b_dd\\b", "to": "_oo", "why": "event attribute namespace (_dd.session, event._dd, telemetry types...). Word-boundary regex so __dd* markers (handled above) are untouched." }
+  ]
+}

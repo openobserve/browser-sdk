@@ -8,8 +8,21 @@ schema-version: v1
 kind: integration-branch
 name: $CURRENT_STAGING
 team: rum-browser
+ephemeral: false
 update_automatically: false # update_automatically is updating the integration branch on a schedule, instead we're updating it in a CI job for any commit to the base branch.
 reset_pattern: '' # use `staging-reset.js` instead so that a new staging branch is created weekly
+contacts:
+  - type: slack
+    contact: browser-sdk-deploy
+---
+schema-version: v1
+kind: integration-branch
+name: v7
+team: rum-browser
+ephemeral: false
+update_automatically: false # update_automatically is updating the integration branch on a schedule, instead we're updating it in a CI job for any commit to the base branch.
+reset_pattern: '' # This branch should never be reseted
+hide_reset_branch_instructions_on_conflict: true
 contacts:
   - type: slack
     contact: browser-sdk-deploy
@@ -20,3 +33,17 @@ team: ci-platforms
 enabled_strategies:
   - yarn_berry_strategy
 preprocess: true
+---
+schema-version: v2
+kind: adms # Automated Dependency Management Service
+auto-version-updates:
+  disabled:
+    reason: We use renovate for now
+---
+schema-version: v1
+kind: mergegate
+name: rum-browser
+rules:
+  - require: reviewers-approval
+    enforcement: disabled
+  - require: all-files-are-owned

@@ -66,23 +66,66 @@ test.describe('rum views', () => {
         expect(viewEvent).toBeDefined()
         expect(viewEvent.view.loading_time).toBeGreaterThan(0)
       })
-  })
 
-  createTest('send performance first input delay')
-    .withRum()
-    .withBody(html` <button>Hop</button> `)
-    .run(async ({ browserName, flushEvents, intakeRegistry, page }) => {
-      test.skip(
-        browserName === 'webkit',
-        "Safari have an issue with 'event.timeStamp', so the 'first-input' polyfill is ignoring it and doesn't send a performance entry. See https://bugs.webkit.org/show_bug.cgi?id=211101"
-      )
-      const button = page.locator('button')
-      await button.click()
-      await flushEvents()
-      const viewEvent = intakeRegistry.rumViewEvents[0]
-      expect(viewEvent).toBeDefined()
-      expect(viewEvent.view.first_input_delay).toBeGreaterThanOrEqual(0)
-    })
+    createTest('has a manual loading time')
+      .withRum()
+      .withBody(SPINNER)
+      .run(async ({ flushEvents, intakeRegistry, page }) => {
+        await page.evaluate(
+          () =>
+            new Promise<void>((resolve) => {
+              setTimeout(() => {
+                window.OO_RUM!.setViewLoadingTime()
+                resolve()
+              }, 200)
+            })
+        )
+
+        await flushEvents()
+        const viewEvent = intakeRegistry.rumViewEvents.at(-1)
+        expect(viewEvent).toBeDefined()
+        expect(viewEvent!.view.loading_time).toBeGreaterThanOrEqual(200 * 1e6)
+      })
+
+    createTest('overwrites manual loading time on subsequent calls (last-call-wins)')
+      .withRum()
+      .withBody(SPINNER)
+      .run(async ({ flushEvents, intakeRegistry, page }) => {
+        await page.evaluate(
+          () =>
+            new Promise<void>((resolve) => {
+              setTimeout(() => {
+                window.OO_RUM!.setViewLoadingTime()
+              }, 200)
+
+              setTimeout(() => {
+                window.OO_RUM!.setViewLoadingTime()
+                resolve()
+              }, 500)
+            })
+        )
+
+        await flushEvents()
+        const viewEvent = intakeRegistry.rumViewEvents.at(-1)
+        expect(viewEvent).toBeDefined()
+        // Should reflect the second value (~500ms), not the first (~200ms)
+        expect(viewEvent!.view.loading_time).toBeGreaterThanOrEqual(500 * 1e6)
+      })
+
+    createTest('reports manual loading time when called before init')
+      .withRum()
+      .withRumInit((configuration) => {
+        window.OO_RUM!.setViewLoadingTime()
+        window.OO_RUM!.init(configuration)
+      })
+      .withBody(SPINNER)
+      .run(async ({ flushEvents, intakeRegistry }) => {
+        await flushEvents()
+        const viewEvent = intakeRegistry.rumViewEvents.at(-1)
+        expect(viewEvent).toBeDefined()
+        expect(viewEvent!.view.loading_time).toBeGreaterThanOrEqual(0)
+      })
+  })
 
   test.describe('anchor navigation', () => {
     createTest("don't create a new view when it is an Anchor navigation")

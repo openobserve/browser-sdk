@@ -1,28 +1,55 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "experimentalDecorators": true,
     "esModuleInterop": true,
     "importHelpers": false,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "module": "ES2020",
     "resolveJsonModule": true,
     "strict": true,
-    "target": "ES2018",
+    "target": "ES2020",
     "sourceMap": true,
     "jsx": "react",
+    "allowJs": true,
     "skipLibCheck": true,
 
     "types": [],
     "lib": ["ES2020", "DOM", "WebWorker"],
 
     "paths": {
-      "@openobserve/browser-core": ["./packages/core/src"],
-      "@openobserve/browser-rum-core": ["./packages/rum-core/src"],
-      "@openobserve/browser-rum-react": ["./packages/rum-react/src/entries/main"],
-      "@openobserve/browser-rum-react/react-router-v6": ["./packages/rum-react/src/entries/reactRouterV6"],
-      "@openobserve/browser-rum-react/react-router-v7": ["./packages/rum-react/src/entries/reactRouterV7"],
-      "@openobserve/browser-flagging": ["./packages/flagging/src/entries/main"]
+      "@openobserve/browser-core": ["./packages/browser-core/src"],
+
+      "@openobserve/browser-logs": ["./packages/browser-logs/src/entries/main"],
+
+      "@openobserve/browser-rum-core": ["./packages/browser-rum-core/src"],
+
+      "@openobserve/browser-rum": ["./packages/browser-rum/src/entries/main"],
+      "@openobserve/browser-rum/internal": ["./packages/browser-rum/src/entries/internal"],
+      "@openobserve/browser-rum/internal-synthetics": ["./packages/browser-rum/src/entries/internalSynthetics"],
+
+      "@openobserve/browser-rum-slim": ["./packages/browser-rum-slim/src/entries/main"],
+
+      "@openobserve/browser-rum-react": ["./packages/browser-rum-react/src/entries/main"],
+      "@openobserve/browser-rum-react/internal": ["./packages/browser-rum-react/src/entries/internal"],
+      "@openobserve/browser-rum-react/react-router-v6": ["./packages/browser-rum-react/src/entries/reactRouterV6"],
+      "@openobserve/browser-rum-react/react-router-v7": ["./packages/browser-rum-react/src/entries/reactRouterV7"],
+      "@openobserve/browser-rum-react/tanstack-router": ["./packages/browser-rum-react/src/entries/tanstackRouter"],
+
+      "@openobserve/browser-rum-vue": ["./packages/browser-rum-vue/src/entries/main"],
+      "@openobserve/browser-rum-vue/vue-router-v4": ["./packages/browser-rum-vue/src/entries/vueRouter"],
+
+      "@openobserve/browser-rum-nuxt": ["./packages/browser-rum-nuxt/src/entries/main"],
+
+      "@openobserve/browser-rum-nextjs": ["./packages/browser-rum-nextjs/src/entries/main"],
+
+      "@openobserve/browser-worker": ["./packages/browser-worker/src/entries/main"],
+
+      "@openobserve/browser-debugger": ["./packages/browser-debugger/src/entries/main"],
+
+      "@openobserve/js-core/assembly": ["./packages/js-core/src/entries/assembly"],
+      "@openobserve/js-core/time": ["./packages/js-core/src/entries/time"],
+      "@openobserve/js-core/monitor": ["./packages/js-core/src/entries/monitor"],
+      "@openobserve/js-core/util": ["./packages/js-core/src/entries/util"]
     }
   }
 }

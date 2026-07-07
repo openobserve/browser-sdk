@@ -1,0 +1,29 @@
+{
+  "name": "instrumentation-overhead-app",
+  "private": true,
+  "scripts": {
+    "build": "webpack --config ./webpack.config.js"
+  },
+  "peerDependencies": {
+    "@openobserve/browser-debugger": "*"
+  },
+  "peerDependenciesMeta": {
+    "@openobserve/browser-debugger": {
+      "optional": true
+    }
+  },
+  "resolutions": {
+    "@openobserve/browser-core": "file:../../../packages/browser-core/package.tgz",
+    "@openobserve/js-core": "file:../../../packages/js-core/package.tgz",
+    "@openobserve/browser-debugger": "file:../../../packages/browser-debugger/package.tgz"
+  },
+  "devDependencies": {
+    "ts-loader": "9.6.0",
+    "typescript": "6.0.3",
+    "webpack": "5.107.2"
+  },
+  "volta": {
+    "extends": "../../../package.json"
+  },
+  "packageManager": "yarn@4.16.0"
+}

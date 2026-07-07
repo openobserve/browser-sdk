@@ -1,0 +1,48 @@
+{
+  "name": "angular-app",
+  "private": true,
+  "scripts": {
+    "build": "webpack"
+  },
+  "dependencies": {
+    "@angular/common": "15.2.10",
+    "@angular/compiler": "15.2.10",
+    "@angular/compiler-cli": "15.2.10",
+    "@angular/core": "15.2.10",
+    "@angular/platform-browser": "15.2.10",
+    "@angular/router": "15.2.10",
+    "rxjs": "7.8.2",
+    "zone.js": "0.16.2"
+  },
+  "peerDependencies": {
+    "@openobserve/browser-rum": "*",
+    "@openobserve/browser-rum-angular": "*"
+  },
+  "peerDependenciesMeta": {
+    "@openobserve/browser-rum": {
+      "optional": true
+    },
+    "@openobserve/browser-rum-angular": {
+      "optional": true
+    }
+  },
+  "resolutions": {
+    "@openobserve/browser-rum-core": "file:../../../packages/browser-rum-core/package.tgz",
+    "@openobserve/browser-core": "file:../../../packages/browser-core/package.tgz",
+    "@openobserve/js-core": "file:../../../packages/js-core/package.tgz",
+    "@openobserve/browser-rum": "file:../../../packages/browser-rum/package.tgz",
+    "@openobserve/browser-rum-angular": "file:../../../packages/browser-rum-angular/package.tgz",
+    "@openobserve/browser-rum-slim": "file:../../../packages/browser-rum-slim/package.tgz",
+    "@openobserve/browser-worker": "file:../../../packages/browser-worker/package.tgz"
+  },
+  "devDependencies": {
+    "@ngtools/webpack": "15.2.11",
+    "babel-loader": "10.1.1",
+    "typescript": "4.9.5",
+    "webpack": "5.107.2",
+    "webpack-cli": "7.0.3"
+  },
+  "volta": {
+    "extends": "../../../package.json"
+  }
+}

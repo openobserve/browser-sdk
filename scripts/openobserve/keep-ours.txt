@@ -1,0 +1,34 @@
+# Paths always taken from the `openobserve` branch during an upstream sync,
+# restored with `git checkout openobserve -- <path>` after the rebrand codemod
+# runs. One path per line; directories apply recursively. Lines starting with
+# '#' are comments.
+#
+# Rule of thumb: OpenObserve-authored files and fork-identity files live here.
+# Everything else comes from upstream (rebranded by rebrand.mjs, then patched
+# by openobserve-patches/).
+
+# Fork identity / docs
+README.md
+CHANGELOG.md
+NOTICE
+CONTRIBUTING.md
+Dockerfile
+.gitlab-ci.yml
+.github
+lerna.json
+
+# Package READMEs intentionally come from upstream (rebranded by the codemod),
+# so they track upstream layout changes. Only the root README is ours.
+
+# Note: the schema package is the OpenObserve fork @openobserve/rum-events-format
+# (openobserve/rum-events-format), whose schemas describe `_oo` directly. The commit is
+# pinned in scripts/openobserve/rum-events-format-pin.txt and reapplied to package.json by
+# rebrand.mjs on every sync. Events validate against the fork schemas with no _oo->_dd shim.
+
+# OpenObserve-authored files
+packages/prd
+
+# Sync tooling itself
+SYNC.md
+scripts/openobserve
+openobserve-patches

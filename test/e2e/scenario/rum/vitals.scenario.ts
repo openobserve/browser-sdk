@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test'
-import { ExperimentalFeature } from '@openobserve/browser-core'
 import { createTest } from '../../lib/framework'
 
 test.describe('vital collection', () => {
@@ -7,10 +6,10 @@ test.describe('vital collection', () => {
     .withRum()
     .run(async ({ flushEvents, intakeRegistry, page }) => {
       await page.evaluate(() => {
-        const vital = window.OO_RUM!.startDurationVital('foo')
+        window.OO_RUM!.startDurationVital('foo')
         return new Promise<void>((resolve) => {
           setTimeout(() => {
-            window.OO_RUM!.stopDurationVital(vital)
+            window.OO_RUM!.stopDurationVital('foo')
             resolve()
           }, 5)
         })
@@ -22,13 +21,34 @@ test.describe('vital collection', () => {
       expect(intakeRegistry.rumVitalEvents[0].vital.duration).toEqual(expect.any(Number))
     })
 
-  createTest('send operation step vital')
-    .withRum({
-      enableExperimentalFeatures: [ExperimentalFeature.FEATURE_OPERATION_VITAL],
-    })
+  createTest('send two simultaneous duration vitals using vitalKey')
+    .withRum()
     .run(async ({ flushEvents, intakeRegistry, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startFeatureOperation('foo')
+        const key1 = 'key-1'
+        const key2 = 'key-2'
+        window.OO_RUM!.startDurationVital('foo', { vitalKey: key1 })
+        window.OO_RUM!.startDurationVital('foo', { vitalKey: key2 })
+        return new Promise<void>((resolve) => {
+          setTimeout(() => {
+            window.OO_RUM!.stopDurationVital('foo', { vitalKey: key1 })
+            window.OO_RUM!.stopDurationVital('foo', { vitalKey: key2 })
+            resolve()
+          }, 5)
+        })
+      })
+      await flushEvents()
+
+      expect(intakeRegistry.rumVitalEvents).toHaveLength(2)
+      expect(intakeRegistry.rumVitalEvents[0].vital.name).toEqual('foo')
+      expect(intakeRegistry.rumVitalEvents[1].vital.name).toEqual('foo')
+    })
+
+  createTest('send operation step vital')
+    .withRum()
+    .run(async ({ flushEvents, intakeRegistry, page }) => {
+      await page.evaluate(() => {
+        window.OO_RUM!.startOperation('foo')
       })
       await flushEvents()
 

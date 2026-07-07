@@ -5,6 +5,7 @@ import { getTestReportDirectory } from '../envUtils.ts'
 import jasmineSeedReporterPlugin from './jasmineSeedReporterPlugin.js'
 import karmaSkippedFailedReporterPlugin from './karmaSkippedFailedReporterPlugin.js'
 import karmaDuplicateTestNameReporterPlugin from './karmaDuplicateTestNameReporterPlugin.js'
+import karmaUnexpectedErrorLogReporterPlugin from './karmaUnexpectedErrorLogReporterPlugin.js'
 
 const webpackConfig = webpackBase({
   mode: 'development',
@@ -14,6 +15,9 @@ const webpackConfig = webpackBase({
 })
 
 const reporters = ['spec', 'jasmine-seed', 'karma-skipped-failed', 'karma-duplicate-test-name']
+if (process.env.CI) {
+  reporters.push('karma-unexpected-error-log')
+}
 
 const testReportDirectory = getTestReportDirectory()
 if (testReportDirectory) {
@@ -21,11 +25,14 @@ if (testReportDirectory) {
 }
 
 const FILES = [
+  // Polyfill globalThis for older browsers (e.g. Chrome 63) that don't support it.
+  // Required because @angular/core uses globalThis internally.
+  { pattern: 'test/unit/globalThisPolyfill.js', watched: false },
   // Make sure 'forEach.spec' is the first file to be loaded, so its `beforeEach` hook is executed
   // before all other `beforeEach` hooks, and its `afterEach` hook is executed after all other
   // `afterEach` hooks.
-  'packages/core/test/forEach.spec.ts',
-  'packages/rum/test/toto.css',
+  'packages/browser-core/test/forEach.spec.ts',
+  'packages/browser-rum/test/record/toto.css',
 ]
 
 const FILES_SPECS = [
@@ -33,14 +40,29 @@ const FILES_SPECS = [
   'developer-extension/@(src|test)/**/*.spec.@(ts|tsx)',
 ]
 
-// eslint-disable-next-line import/no-default-export
+const { values } = parseArgs({
+  allowPositionals: true,
+  strict: false,
+  options: {
+    spec: {
+      type: 'string',
+      multiple: true,
+    },
+    seed: {
+      type: 'string',
+    },
+  },
+})
+
+// eslint-disable-next-line import-x/no-default-export
 export default {
   basePath: '../..',
-  files: getFiles(),
+  files: [...FILES, ...(values.spec || FILES_SPECS)],
   frameworks: ['jasmine', 'webpack'],
   client: {
     jasmine: {
       random: true,
+      seed: values.seed,
       stopSpecOnExpectationFailure: true,
     },
   },
@@ -68,12 +90,6 @@ export default {
     devtool: false,
     mode: 'development',
     plugins: webpackConfig.plugins,
-    optimization: {
-      // By default, karma-webpack creates a bundle with one entry point for each spec file, but
-      // with all dependencies shared.  Our test suite does not support sharing dependencies, each
-      // spec bundle should include its own copy of dependencies.
-      runtimeChunk: false,
-    },
     ignoreWarnings: [
       // we will see warnings about missing exports in some files
       // this is because we set transpileOnly option in ts-loader
@@ -89,13 +105,14 @@ export default {
     jasmineSeedReporterPlugin,
     karmaSkippedFailedReporterPlugin,
     karmaDuplicateTestNameReporterPlugin,
+    karmaUnexpectedErrorLogReporterPlugin,
   ],
 
   // Running tests on low performance environments (ex: BrowserStack) can block JS execution for a
   // few seconds. We need to increase those two timeout values to make sure Karma (and underlying
   // Socket.io) does not consider that the browser crashed.
   pingTimeout: 60_000,
-  browserNoActivityTimeout: 60_000,
+  browserNoActivityTimeout: 2 * 60_000,
 }
 
 function overrideTsLoaderRule(module) {
@@ -114,10 +131,10 @@ function overrideTsLoaderRule(module) {
   })
 
   // TODO next major see if we can remove this transpilation when bumping browsers
-  // We use swc-loader to transpile some dependencies that are using syntax not compatible with browsers we use for testing
+  // We use swc-loader to transpile dependencies that are using syntax not compatible with browsers we use for testing
   module.rules.push({
     test: /\.m?js$/,
-    include: /node_modules\/(react|react-router-dom|react-dom|react-router|turbo-stream)/,
+    include: /node_modules/,
     use: {
       loader: 'swc-loader',
       options: {
@@ -131,23 +148,4 @@ function overrideTsLoaderRule(module) {
   })
 
   return module
-}
-
-function getFiles() {
-  const { values } = parseArgs({
-    allowPositionals: true,
-    strict: false,
-    options: {
-      spec: {
-        type: 'string',
-        multiple: true,
-      },
-    },
-  })
-
-  if (values.spec) {
-    return FILES.concat(values.spec)
-  }
-
-  return FILES.concat(FILES_SPECS)
 }

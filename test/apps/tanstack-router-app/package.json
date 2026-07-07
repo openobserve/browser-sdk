@@ -1,0 +1,42 @@
+{
+  "name": "tanstack-router-app",
+  "private": true,
+  "scripts": {
+    "build": "webpack"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "1.170.15",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "peerDependencies": {
+    "@openobserve/browser-rum": "*",
+    "@openobserve/browser-rum-react": "*"
+  },
+  "peerDependenciesMeta": {
+    "@openobserve/browser-rum": {
+      "optional": true
+    },
+    "@openobserve/browser-rum-react": {
+      "optional": true
+    }
+  },
+  "resolutions": {
+    "@openobserve/browser-rum-core": "file:../../../packages/browser-rum-core/package.tgz",
+    "@openobserve/browser-core": "file:../../../packages/browser-core/package.tgz",
+    "@openobserve/js-core": "file:../../../packages/js-core/package.tgz",
+    "@openobserve/browser-rum": "file:../../../packages/browser-rum/package.tgz",
+    "@openobserve/browser-rum-react": "file:../../../packages/browser-rum-react/package.tgz",
+    "@openobserve/browser-rum-slim": "file:../../../packages/browser-rum-slim/package.tgz",
+    "@openobserve/browser-worker": "file:../../../packages/browser-worker/package.tgz"
+  },
+  "devDependencies": {
+    "ts-loader": "9.6.0",
+    "typescript": "6.0.3",
+    "webpack": "5.107.2",
+    "webpack-cli": "7.0.3"
+  },
+  "volta": {
+    "extends": "../../../package.json"
+  }
+}
