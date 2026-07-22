@@ -105,6 +105,9 @@ if [ "${SKIP_INSTALL:-0}" != "1" ]; then
   yarn install --no-immutable
 fi
 
+# Apache-2.0 §4 attribution gate: fail the sync if Datadog attribution was erased.
+node scripts/openobserve/check-attribution.mjs
+
 git add -A
 git commit --quiet -m "chore(sync): rebrand upstream $TARGET as OpenObserve browser SDK
 

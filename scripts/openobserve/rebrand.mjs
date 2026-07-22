@@ -57,16 +57,26 @@ const compiled = rules.map((rule) => ({
   matcher: rule.regex ? new RegExp(rule.regex, 'g') : null,
 }))
 
+// Apache-2.0 §4(b)/(c): never rewrite upstream attribution lines — the per-file
+// license header (in ANY comment style: /* */, #, <!-- ~ -->) and the third-party
+// copyright manifest (LICENSE-3rdparty.csv). Matched by CONTENT, per line, so the
+// Datadog->OpenObserve rules only touch code. Datadog's copyright/attribution stays
+// verbatim; the OpenObserve modification statement lives in NOTICE + README (kept
+// via keep-ours.txt).
+const ATTRIBUTION_RE = /software developed at Datadog \(https:\/\/www\.datadoghq\.com\/\)|Copyright\b[^\n]*\bDatadog, Inc\./
 function applyRules(content) {
-  let out = content
-  for (const rule of compiled) {
-    if (rule.matcher) {
-      out = out.replace(rule.matcher, rule.to)
-    } else {
-      out = out.split(rule.literal).join(rule.to)
-    }
-  }
-  return out
+  return content
+    .split('\n')
+    .map((line) => {
+      if (ATTRIBUTION_RE.test(line)) return line
+      let out = line
+      for (const rule of compiled) {
+        if (rule.matcher) out = out.replace(rule.matcher, rule.to)
+        else out = out.split(rule.literal).join(rule.to)
+      }
+      return out
+    })
+    .join('\n')
 }
 
 let changed = 0
@@ -104,7 +114,13 @@ for (const file of trackedFiles.filter((f) => f.endsWith('package.json'))) {
   const pkg = JSON.parse(raw)
   let touched = false
 
-  if (typeof pkg.name === 'string' && pkg.name.startsWith('@openobserve/') && pkg.version) {
+  // The root package.json is named `browser-sdk`, not `@openobserve/*`, but its version is
+  // what `scripts/lib/browserSdkVersion.ts` reads and bakes into built artifacts as
+  // `__BUILD_ENV__SDK_VERSION__` (the `o2-evp-origin-version` intake param, the `sdk_version`
+  // telemetry tag). Leaving upstream's version here makes shipped SDKs report the DataDog
+  // version instead of ours, so normalize it alongside the workspace packages.
+  const isRootPkg = file === 'package.json'
+  if (pkg.version && (isRootPkg || (typeof pkg.name === 'string' && pkg.name.startsWith('@openobserve/')))) {
     if (pkg.version !== VERSION) {
       pkg.version = VERSION
       touched = true
