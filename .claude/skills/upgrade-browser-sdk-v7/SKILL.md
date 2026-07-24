@@ -138,13 +138,13 @@ These are **default changes** — no code breaks, but behavior differs from v6:
 | Cancelled request errors removed (Logs)                              | Aborted fetch/XHR no longer generate network error logs.                                   | No action needed — reduces noise.                                                                                    |
 | Logs always requires session storage                                 | Without cookies or localStorage, Logs SDK won't start.                                     | Use `sessionPersistence: 'memory'` for worker environments.                                                          |
 | Session Replay: Change Records                                       | New serialization format. More accurate, less bandwidth.                                   | Update if you depend on raw segment format.                                                                          |
-| Async chunk names prefixed with `datadog`                            | e.g., `datadogRecorder-<hash>-openobserve-rum.js`, `datadogProfiler-<hash>-openobserve-rum.js`.    | Update CSP `script-src` rules or caching configs (allow `datadog*-openobserve-rum.js`).                                  |
+| Async chunks are now content-hashed                                  | e.g., `chunks/recorder-<hash>-openobserve-rum.js`, `chunks/profiler-<hash>-openobserve-rum.js`.    | Update CSP `script-src` rules or caching configs to allow `chunks/*-openobserve-rum.js`.                                 |
 
 ## Step 6: Update infrastructure
 
 - **CSP**:
   - Add `crossorigin` to script-src.
-  - Update chunk names like `datadog*-openobserve-rum.js` (e.g. `datadogRecorder`, `datadogProfiler`).
+  - Allow the hashed async chunks under `chunks/` (e.g. `recorder-<hash>-openobserve-rum.js`, `profiler-<hash>-openobserve-rum.js`).
   - If you removed `usePciIntake`, update CSP for standard intake domain.
 - **Cookies**: Add `_oo_s_v2` to cookie allowlists. The SDK auto-migrates from `_oo_s` on first load. Rollback to v6 starts new sessions.
 - **CORS** (if using `allowedTracingUrls`): Add `"baggage"` to `Access-Control-Allow-Headers` on traced origins — or set `propagateTraceBaggage: false`.

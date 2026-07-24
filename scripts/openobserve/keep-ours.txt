@@ -17,8 +17,22 @@ Dockerfile
 .github
 lerna.json
 
-# Package READMEs intentionally come from upstream (rebranded by the codemod),
-# so they track upstream layout changes. Only the root README is ours.
+# READMEs of PUBLISHED packages are ours. npm always ships README.md regardless of the
+# package.json "files" field, so these are the first thing a user sees on npmjs.com. The
+# rebrand codemod is surgical by design and deliberately leaves cosmetic Datadog prose and
+# docs.datadoghq.com links alone, which is fine for internal files but not for our public
+# package pages. Keeping them here means an upstream sync cannot reintroduce that prose.
+#
+# READMEs of packages we do NOT publish (browser-debugger and the framework integrations)
+# are intentionally absent: they still come from upstream so they track upstream layout,
+# and their Datadog references must be resolved before those packages are ever published.
+packages/js-core/README.md
+packages/browser-core/README.md
+packages/browser-worker/README.md
+packages/browser-rum-core/README.md
+packages/browser-rum/README.md
+packages/browser-logs/README.md
+packages/browser-rum-slim/README.md
 
 # Note: the schema package is the OpenObserve fork @openobserve/rum-events-format
 # (openobserve/rum-events-format), whose schemas describe `_oo` directly. The commit is

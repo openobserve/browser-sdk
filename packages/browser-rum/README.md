@@ -1,8 +1,8 @@
 # RUM Browser Monitoring
 
-Datadog Real User Monitoring (RUM) enables you to visualize and analyze the real-time performance and user journeys of your application's individual users.
+OpenObserve Real User Monitoring (RUM) enables you to visualize and analyze the real-time performance and user journeys of your application's individual users.
 
-See the [dedicated datadog documentation][1] for more details.
+See the [OpenObserve RUM documentation][1] for more details.
 
 ## Usage
 
@@ -15,6 +15,7 @@ openobserveRum.init({
   applicationId: '<OPENOBSERVE_APPLICATION_ID>',
   clientToken: '<OPENOBSERVE_CLIENT_TOKEN>',
   site: '<OPENOBSERVE_SITE>',
+  organizationIdentifier: '<OPENOBSERVE_ORGANIZATION_IDENTIFIER>',
   //  service: 'my-web-application',
   //  env: 'production',
   //  version: '1.0.0',
@@ -28,7 +29,15 @@ openobserveRum.init({
 
 **Note**: The `trackUserInteractions` parameter enables the automatic collection of user clicks in your application. **Sensitive and private data** contained in your pages may be included to identify the elements interacted with.
 
+## CDN
+
+The bundle is also served from the OpenObserve CDN:
+
+```html
+<script src="https://browsersdk.openobserve.ai/<VERSION>/openobserve-rum.js"></script>
+```
+
 <!-- Note: all URLs should be absolute -->
 
-[1]: https://docs.datadoghq.com/real_user_monitoring/browser
+[1]: https://openobserve.ai/docs/user-guide/rum/
 [2]: https://www.npmjs.com/package/@openobserve/browser-rum

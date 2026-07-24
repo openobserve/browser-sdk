@@ -1,10 +1,10 @@
 # @openobserve/js-core
 
-> **Internal package.** This package is intended for use by Datadog SDKs only and is not designed
-> for direct consumption by end users. APIs may change without notice outside of Datadog SDK
-> releases.
+> **Internal package.** This package is intended for use by OpenObserve SDKs only and is not
+> designed for direct consumption by end users. APIs may change without notice outside of
+> OpenObserve SDK releases.
 
-Runtime-agnostic core utilities shared across Datadog JavaScript SDKs.
+Runtime-agnostic core utilities shared across OpenObserve JavaScript SDKs.
 
 ## Installation
 
@@ -14,6 +14,10 @@ npm install @openobserve/js-core
 yarn add @openobserve/js-core
 ```
 
-## API
+## Documentation
 
-See the [API documentation](https://datadoghq.dev/browser-sdk/modules/_datadog_js-core.html).
+See the [OpenObserve RUM documentation][1].
+
+<!-- Note: all URLs should be absolute -->
+
+[1]: https://openobserve.ai/docs/user-guide/rum/

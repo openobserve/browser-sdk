@@ -56,6 +56,11 @@
     { "literal": "DATADOG_APPLICATION_ID", "to": "OPENOBSERVE_APPLICATION_ID", "why": "doc example placeholder" },
     { "literal": "app.datadoghq.com", "to": "api.openobserve.ai", "why": "session replay deep links in dev extension" },
 
+    { "literal": "webpackChunkName: \"datadogRecorder\"", "to": "webpackChunkName: \"recorder\"", "why": "lazy-loaded chunk name is a PUBLIC CDN filename (chunks/<name>-<hash>-openobserve-rum.js); must not ship as datadogRecorder-*. Only the magic comment is rewritten, not the './datadogRecorder' import path, so upstream's filenames still resolve after a sync." },
+    { "literal": "webpackChunkName: \"datadogProfiler\"", "to": "webpackChunkName: \"profiler\"", "why": "same as datadogRecorder: public CDN chunk filename for the lazy-loaded profiler" },
+    { "literal": "chunks/datadogRecorder-", "to": "chunks/recorder-", "why": "emitted chunk path in deploy script expectations and comments; keeps them in step with the webpackChunkName rules above" },
+    { "literal": "chunks/datadogProfiler-", "to": "chunks/profiler-", "why": "emitted chunk path in deploy script expectations and comments; keeps them in step with the webpackChunkName rules above" },
+
     { "literal": "Datadog Browser SDK:", "to": "OpenObserve Browser SDK:", "why": "user-visible console log prefix" },
     { "literal": "Datadog Browser SDK developer extension", "to": "OpenObserve Browser SDK developer extension", "why": "extension display name" },
     { "literal": "'https://docs.datadoghq.com'", "to": "'https://openobserve.ai'", "why": "DOCS_ORIGIN constant shown in user-facing error messages" },
