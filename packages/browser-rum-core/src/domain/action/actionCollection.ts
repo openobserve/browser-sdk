@@ -129,7 +129,7 @@ function processAction(action: AutoAction | ManualAction): RawRumEventCollectedD
       },
       ...(isAuto
         ? {
-            _oo: {
+            _o2: {
               action: {
                 target: {
                   selector: action.target?.selector || undefined,

@@ -80,7 +80,7 @@ function processViewUpdate(
   const replayStats = recorderApi.getReplayStats(view.id)
   const clsDevicePixelRatio = view.commonViewMetrics?.cumulativeLayoutShift?.devicePixelRatio
   const viewEvent: RawRumViewEvent = {
-    _oo: {
+    _o2: {
       document_version: view.documentVersion,
       replay_stats: replayStats,
       cls: clsDevicePixelRatio

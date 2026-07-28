@@ -13,7 +13,7 @@ The only manual step in the normal flow is approving the sync PR.
 
 | Piece | Purpose |
 | --- | --- |
-| `scripts/openobserve/rename-map.json` | Ordered rename rules (package names, globals, `_dd`→`_oo`, intake params, …) |
+| `scripts/openobserve/rename-map.json` | Ordered rename rules (package names, globals, `_dd`→`_o2`, intake params, …) |
 | `scripts/openobserve/rebrand.mjs` | Applies the map to every tracked text file + normalizes package versions from `lerna.json` |
 | `scripts/openobserve/keep-ours.txt` | Fork-owned paths always taken from the `openobserve` branch (README, `.github/`, this tooling, …) |
 | `openobserve-patches/*.patch` | The real functional customizations, applied with `git am -3` |
@@ -36,7 +36,7 @@ The only manual step in the normal flow is approving the sync PR.
 
 The event schemas come from the **OpenObserve fork** `@openobserve/rum-events-format`
 ([openobserve/rum-events-format](https://github.com/openobserve/rum-events-format)), whose schemas
-describe `_oo` directly — so unit tests validate events against them with no `_oo`→`_dd` shim (the
+describe `_o2` directly — so unit tests validate events against them with no `_o2`→`_dd` shim (the
 former patch 0004 is gone). The fork commit is pinned in
 `scripts/openobserve/rum-events-format-pin.txt`; `rebrand.mjs` rewrites the `package.json` entry to
 that pin on every sync, so upstream's DataDog SHA is never inherited. After an rum-events-format

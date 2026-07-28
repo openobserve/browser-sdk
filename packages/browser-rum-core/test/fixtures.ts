@@ -54,7 +54,7 @@ export function createRawRumEvent(type: RumEventType, overrides?: Context): RawR
             duration: 0 as ServerDuration,
             entry_type: RumLongTaskEntryType.LONG_TASK,
           },
-          _oo: {
+          _o2: {
             discarded: false,
           },
         },
@@ -87,7 +87,7 @@ export function createRawRumEvent(type: RumEventType, overrides?: Context): RawR
             type: ResourceType.OTHER,
             url: 'http://foo.bar',
           },
-          _oo: {
+          _o2: {
             discarded: false,
           },
         },
@@ -97,7 +97,7 @@ export function createRawRumEvent(type: RumEventType, overrides?: Context): RawR
       return combine(
         {
           type,
-          _oo: {
+          _o2: {
             document_version: 0,
             configuration: {
               start_session_replay_recording_manually: false,
@@ -128,7 +128,7 @@ export function createRawRumEvent(type: RumEventType, overrides?: Context): RawR
           type,
           date: 0 as TimeStamp,
           view: {},
-          _oo: {
+          _o2: {
             document_version: 1,
           },
         },

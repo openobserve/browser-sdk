@@ -186,7 +186,7 @@ export function startTelemetryCollection(
       service: telemetryService,
       version: __BUILD_ENV__SDK_VERSION__,
       source: 'browser' as const,
-      _oo: {
+      _o2: {
         format_version: 2 as const,
       },
       telemetry: combine(rawEvent, {

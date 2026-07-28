@@ -143,7 +143,7 @@ for (const file of trackedFiles.filter((f) => f.endsWith('package.json'))) {
 }
 
 // ---- rum-events-format schema pin ------------------------------------------
-// The schema package is the OpenObserve fork (its schemas describe `_oo`, not `_dd`),
+// The schema package is the OpenObserve fork (its schemas describe `_o2`, not `_dd`),
 // pinned to a controlled fork commit rather than the DataDog commit upstream ships.
 // The commit lives in scripts/openobserve/rum-events-format-pin.txt and is bumped after
 // an rum-events-format fork sync merges. Rewrite the root package.json entry

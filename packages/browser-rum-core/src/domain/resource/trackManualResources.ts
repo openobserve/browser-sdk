@@ -102,7 +102,7 @@ export function trackManualResources(lifeCycle: LifeCycle, resourceTracker: Even
         status_code: options.statusCode,
         size: options.size,
       },
-      _oo: {},
+      _o2: {},
       context: stopped.context,
     }
 

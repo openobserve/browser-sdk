@@ -44,8 +44,8 @@ test.describe('partial view updates', () => {
 
       // Collect document_versions from all view-related events (view + view_update)
       const allDocVersions = [
-        ...intakeRegistry.rumViewEvents.map((e) => e._oo.document_version),
-        ...intakeRegistry.rumViewUpdateEvents.map((e) => (e._oo as { document_version: number }).document_version),
+        ...intakeRegistry.rumViewEvents.map((e) => e._o2.document_version),
+        ...intakeRegistry.rumViewUpdateEvents.map((e) => (e._o2 as { document_version: number }).document_version),
       ]
 
       expect(allDocVersions.length).toBeGreaterThanOrEqual(2)
@@ -109,7 +109,7 @@ test.describe('partial view updates', () => {
         expect(event.application.id).toBeDefined()
         expect(event.session.id).toBeDefined()
         expect(event.view.id).toBeDefined()
-        expect(event._oo.document_version).toBeDefined()
+        expect(event._o2.document_version).toBeDefined()
         expect(event.date).toBeDefined()
       }
     })

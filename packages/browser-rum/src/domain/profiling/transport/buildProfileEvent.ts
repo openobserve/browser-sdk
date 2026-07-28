@@ -49,7 +49,7 @@ export function buildProfileEvent(
     format: 'json',
     version: 4, // Ingestion event version (not the version application tag)
     tags_profiler: profileEventTags.join(','),
-    _oo: {
+    _o2: {
       clock_drift: clockDrift(),
     },
   }

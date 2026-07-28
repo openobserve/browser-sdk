@@ -76,7 +76,7 @@ export interface RawRumResourceEvent {
     request?: ResourceRequest
     response?: ResourceResponse
   }
-  _oo: {
+  _o2: {
     trace_id?: string
     span_id?: string // not available for initial document tracing
     rule_psr?: number
@@ -161,7 +161,7 @@ export interface RawRumViewEvent {
   privacy?: {
     replay_level: DefaultPrivacyLevel
   }
-  _oo: {
+  _o2: {
     document_version: number
     replay_stats?: ReplayStats
     page_states?: PageStateServerEntry[]
@@ -183,7 +183,7 @@ export interface RawRumViewUpdateEvent {
   date: TimeStamp
   type: typeof RumEventType.VIEW_UPDATE
   view: Partial<RawRumViewEvent['view']>
-  _oo: Partial<RawRumViewEvent['_oo']> & {
+  _o2: Partial<RawRumViewEvent['_o2']> & {
     document_version: number
   }
   display?: Partial<ViewDisplay>
@@ -278,7 +278,7 @@ export interface RawRumLongTaskEvent {
     entry_type: typeof RumLongTaskEntryType.LONG_TASK
     duration: ServerDuration
   }
-  _oo: {
+  _o2: {
     discarded: boolean
   }
 }
@@ -319,7 +319,7 @@ export interface RawRumLongAnimationFrameEvent {
       window_attribution: string
     }>
   }
-  _oo: {
+  _o2: {
     discarded: boolean
   }
 }
@@ -344,7 +344,7 @@ export interface RawRumActionEvent {
   view?: {
     in_foreground: boolean
   }
-  _oo?: {
+  _o2?: {
     action?: {
       target?: {
         selector?: string
@@ -396,7 +396,7 @@ export interface RawRumVitalEvent {
     description?: string
     duration?: number
   }
-  _oo?: {
+  _o2?: {
     vital: {
       computed_value: true
     }

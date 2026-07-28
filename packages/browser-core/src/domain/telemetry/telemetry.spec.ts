@@ -467,7 +467,7 @@ describe('startTelemetryTransport', () => {
         status: StatusType.error,
         message: 'test error',
       },
-      _oo: {
+      _o2: {
         format_version: 2,
       },
     })

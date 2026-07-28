@@ -78,7 +78,7 @@ describe('longTaskCollection', () => {
           ],
         },
         type: RumEventType.LONG_TASK,
-        _oo: {
+        _o2: {
           discarded: false,
         },
       })
@@ -121,7 +121,7 @@ describe('longTaskCollection', () => {
           duration: (100 * 1e6) as ServerDuration,
         },
         type: RumEventType.LONG_TASK,
-        _oo: {
+        _o2: {
           discarded: false,
         },
       })

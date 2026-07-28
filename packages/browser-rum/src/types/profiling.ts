@@ -17,7 +17,7 @@ export type BrowserProfileEvent = ProfileCommonProperties & {
   /**
    * Datadog internal metadata.
    */
-  readonly _oo: {
+  readonly _o2: {
     /**
      * Clock drift value. Used by Browser SDK.
      */

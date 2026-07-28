@@ -24,7 +24,7 @@ export function startProfilingContext(hooks: Hooks): ProfilingContextManager {
 
     return {
       type: eventType,
-      _oo: {
+      _o2: {
         profiling: currentContext,
       },
     }

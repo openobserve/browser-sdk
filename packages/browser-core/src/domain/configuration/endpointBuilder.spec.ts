@@ -81,7 +81,7 @@ describe('endpointBuilder', () => {
     })
   })
 
-  describe('_oo attributes', () => {
+  describe('_o2 attributes', () => {
     it('should contain api', () => {
       expect(createEndpointBuilder(initConfiguration, 'rum').build('fetch', DEFAULT_PAYLOAD)).toContain('_o2.api=fetch')
     })
@@ -98,7 +98,7 @@ describe('endpointBuilder', () => {
       ).toContain('_o2.retry_count=5&_o2.retry_after=408')
     })
 
-    it('should not contain any _oo attributes for non rum endpoints', () => {
+    it('should not contain any _o2 attributes for non rum endpoints', () => {
       expect(
         createEndpointBuilder(initConfiguration, 'logs').build('fetch', {
           ...DEFAULT_PAYLOAD,

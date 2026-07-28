@@ -101,7 +101,7 @@ function computeIntakeRequestInfos(req: express.Request): IntakeRequestInfos {
   const { pathname, searchParams } = new URL(o2forward, 'https://example.org')
 
   const encoding = req.headers['content-encoding'] || searchParams.get('o2-evp-encoding')
-  const transport = searchParams.get('_oo.api')
+  const transport = searchParams.get('_o2.api')
   const batchTimeRaw = searchParams.get('batch_time')
   const batchTime = batchTimeRaw ? Number(batchTimeRaw) : null
 

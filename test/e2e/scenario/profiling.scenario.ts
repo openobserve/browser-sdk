@@ -59,7 +59,7 @@ test.describe('profiling', () => {
         format: 'json',
         version: 4,
         tags_profiler: 'sdk_version:dev,language:javascript,runtime:chrome,family:chrome,host:browser',
-        _oo: {
+        _o2: {
           clock_drift: expect.any(Number),
         },
       })

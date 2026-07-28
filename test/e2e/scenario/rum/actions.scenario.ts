@@ -47,7 +47,7 @@ test.describe('action collection', () => {
               type: [],
             },
           },
-          _oo: expect.objectContaining({
+          _o2: expect.objectContaining({
             action: {
               target: expect.objectContaining({
                 selector: expect.any(String),
@@ -86,7 +86,7 @@ test.describe('action collection', () => {
 
       expect(actionEvents).toHaveLength(1)
       expect(actionEvents[0].action?.target?.name).toBe('click me')
-      expect(actionEvents[0]._oo.action?.target?.selector).toBe('BODY>BUTTON')
+      expect(actionEvents[0]._o2.action?.target?.selector).toBe('BODY>BUTTON')
     })
 
   createTest('does not report a click on the body when the target element changes between mousedown and mouseup')
@@ -544,7 +544,7 @@ test.describe('action collection with shadow DOM', () => {
       const actionEvents = intakeRegistry.rumActionEvents
       expect(actionEvents).toHaveLength(1)
       expect(actionEvents[0].action?.target?.name).toBe('Shadow Button')
-      expect(actionEvents[0]._oo.action?.target?.selector).toEqual('#shadow-host::shadow BUTTON')
+      expect(actionEvents[0]._o2.action?.target?.selector).toEqual('#shadow-host::shadow BUTTON')
     })
 
   createTest('traverse shadow boundary for data-dd-action-name')
@@ -599,7 +599,7 @@ test.describe('action collection with shadow DOM', () => {
 
       const actionEvents = intakeRegistry.rumActionEvents
       expect(actionEvents).toHaveLength(1)
-      expect(actionEvents[0]._oo.action?.target?.selector).toEqual(
+      expect(actionEvents[0]._o2.action?.target?.selector).toEqual(
         '#shadow-host::shadow BUTTON[data-testid="shadow-btn"]'
       )
     })
@@ -775,7 +775,7 @@ test.describe('action collection with composed path selector', () => {
 
       const actionEvents = intakeRegistry.rumActionEvents
       expect(actionEvents).toHaveLength(1)
-      expect(actionEvents[0]._oo.action?.target?.composed_path_selector).toBe(
+      expect(actionEvents[0]._o2.action?.target?.composed_path_selector).toBe(
         'BUTTON#my-button[data-test-id="test-btn"].bar.baz.foo:nth-child(2):nth-of-type(2);'
       )
     })

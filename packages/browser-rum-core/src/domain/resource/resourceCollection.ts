@@ -143,7 +143,7 @@ function assembleResource(
         ...computeResourceEntryDetails(entry),
       },
       type: RumEventType.RESOURCE,
-      _oo: {
+      _o2: {
         discarded: !configuration.trackResources,
       },
     },
@@ -215,7 +215,7 @@ function computeRequestTracingInfo(request: RequestCompleteEvent, configuration:
     return undefined
   }
   return {
-    _oo: {
+    _o2: {
       span_id: request.spanId!.toString(16),
       trace_id: request.traceId!.toString(16),
       rule_psr: configuration.rulePsr,
@@ -232,7 +232,7 @@ function computeResourceEntryTracingInfo(entry: ResourceLikeEntry, configuration
     return undefined
   }
   return {
-    _oo: {
+    _o2: {
       trace_id: traceId,
       span_id: createSpanIdentifier().toString(16),
       rule_psr: configuration.rulePsr,

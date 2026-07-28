@@ -7,7 +7,7 @@
     { "literal": "@datadog/browser-sdk-developer-extension", "to": "@openobserve/browser-sdk-developer-extension", "why": "dev extension package name" },
     { "literal": "github.com/DataDog/browser-sdk", "to": "github.com/openobserve/browser-sdk", "why": "repository URLs" },
 
-    { "literal": "@datadog/rum-events-format", "to": "@openobserve/rum-events-format", "why": "schema package: imports, dep key, help text (fork provides the _oo schemas)" },
+    { "literal": "@datadog/rum-events-format", "to": "@openobserve/rum-events-format", "why": "schema package: imports, dep key, help text (fork provides the _o2 schemas)" },
     { "literal": "@datadog\\/rum-events-format", "to": "@openobserve\\/rum-events-format", "why": "schema package name inside the escaped regex literal in scripts/json-schemas.ts" },
     { "literal": "DataDog/rum-events-format", "to": "openobserve/rum-events-format", "why": "schema git URL in the dep value, README, and the GitHub API URL in scripts/json-schemas.ts" },
     { "literal": "DataDog\\/rum-events-format", "to": "openobserve\\/rum-events-format", "why": "schema git URL inside the escaped regex literal in scripts/json-schemas.ts" },
@@ -72,6 +72,6 @@
     { "literal": "datadog-flagging", "to": "openobserve-flagging", "why": "bundle file name" },
     { "literal": "datadog-worker", "to": "openobserve-worker", "why": "bundle file name" },
 
-    { "regex": "\\b_dd\\b", "to": "_oo", "why": "event attribute namespace (_dd.session, event._dd, telemetry types...). Word-boundary regex so __dd* markers (handled above) are untouched." }
+    { "regex": "\\b_dd\\b", "to": "_o2", "why": "event attribute namespace (_dd.session, event._dd, telemetry types...) serialized/flattened as _o2_* in captured data. Word-boundary regex so __dd* markers and the _dd_s/_dd_c/_dd_r/_dd_l storage-key literals (handled above) are untouched." }
   ]
 }

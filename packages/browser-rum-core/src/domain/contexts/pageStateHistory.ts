@@ -91,7 +91,7 @@ export function startPageStateHistory(
       const pageStates = pageStateEntryHistory.findAll(startTime, duration)
       return {
         type: eventType,
-        _oo: { page_states: processPageStates(pageStates, startTime, maxPageStateEntriesSelectable) },
+        _o2: { page_states: processPageStates(pageStates, startTime, maxPageStateEntriesSelectable) },
       }
     }
 

@@ -147,8 +147,8 @@ test.describe('tracing', () => {
       (event) => event.resource.type === 'xhr' || event.resource.type === 'fetch'
     )
     expect(requests).toHaveLength(1)
-    expect(requests[0]._oo.trace_id).toMatch(/\d+/)
-    expect(requests[0]._oo.span_id).toMatch(/\d+/)
+    expect(requests[0]._o2.trace_id).toMatch(/\d+/)
+    expect(requests[0]._o2.span_id).toMatch(/\d+/)
     expect(requests[0].resource.id).toBeDefined()
   }
 })

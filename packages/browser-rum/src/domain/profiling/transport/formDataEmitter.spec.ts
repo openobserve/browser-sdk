@@ -29,7 +29,7 @@ describe('createFormDataEmitter', () => {
         format: 'json',
         version: 4,
         tags_profiler: 'sdk_version:1.0.0',
-        _oo: { clock_drift: 0 },
+        _o2: { clock_drift: 0 },
       },
       trace: {
         ...mockedTrace,

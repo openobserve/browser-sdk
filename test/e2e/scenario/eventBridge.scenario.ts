@@ -111,10 +111,10 @@ test.describe('bridge present', () => {
       await flushEvents()
 
       const tracedResources = intakeRegistry.rumResourceEvents.filter(
-        (event) => event.resource.type === 'xhr' && event._oo?.trace_id
+        (event) => event.resource.type === 'xhr' && event._o2?.trace_id
       )
       expect(tracedResources).toHaveLength(1)
-      expect(tracedResources[0]._oo.trace_id).toMatch(/\d+/)
+      expect(tracedResources[0]._o2.trace_id).toMatch(/\d+/)
     })
 
   createTest('override trace sample rate when bridge provides isTraceSampled false')
@@ -126,7 +126,7 @@ test.describe('bridge present', () => {
 
       const xhrResources = intakeRegistry.rumResourceEvents.filter((event) => event.resource.type === 'xhr')
       expect(xhrResources).toHaveLength(1)
-      expect(xhrResources[0]._oo?.trace_id).toBeUndefined()
+      expect(xhrResources[0]._o2?.trace_id).toBeUndefined()
     })
 
   createTest('do not send records when the recording is stopped')

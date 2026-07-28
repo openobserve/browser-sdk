@@ -58,7 +58,7 @@ function processEntry(
   const baseEvent = {
     date: startClocks.timeStamp,
     type: RumEventType.LONG_TASK,
-    _oo: { discarded: false },
+    _o2: { discarded: false },
   }
 
   if (entry.entryType === RumPerformanceEntryType.LONG_TASK) {

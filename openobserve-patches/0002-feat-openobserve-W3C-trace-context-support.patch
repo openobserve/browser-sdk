@@ -55,7 +55,7 @@ index c9c9ab4ad..33b999e55 100644
 @@ -216,8 +216,8 @@ function computeRequestTracingInfo(request: RequestCompleteEvent, configuration:
    }
    return {
-     _oo: {
+     _o2: {
 -      span_id: request.spanId!.toString(),
 -      trace_id: request.traceId!.toString(),
 +      span_id: request.spanId!.toString(16),
@@ -65,7 +65,7 @@ index c9c9ab4ad..33b999e55 100644
    }
 @@ -234,7 +234,7 @@ function computeResourceEntryTracingInfo(entry: ResourceLikeEntry, configuration
    return {
-     _oo: {
+     _o2: {
        trace_id: traceId,
 -      span_id: createSpanIdentifier().toString(),
 +      span_id: createSpanIdentifier().toString(16),

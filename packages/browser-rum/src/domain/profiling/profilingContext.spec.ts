@@ -20,7 +20,7 @@ describe('Profiling Context', () => {
 
       expect(eventAttributes).toEqual(
         jasmine.objectContaining({
-          _oo: {
+          _o2: {
             profiling: { status: 'running' },
           },
         })

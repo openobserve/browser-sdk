@@ -51,7 +51,7 @@ const mockPartialEvents: AllowedRawRumEvent[] = [
       entry_type: 'long-task',
       duration: 100 as ServerDuration,
     },
-    _oo: {
+    _o2: {
       discarded: false,
     },
   },
@@ -67,7 +67,7 @@ const mockPartialEvents: AllowedRawRumEvent[] = [
       duration: 100 as ServerDuration,
       size: 100,
     },
-    _oo: {
+    _o2: {
       discarded: false,
     },
   },

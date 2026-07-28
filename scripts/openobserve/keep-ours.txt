@@ -35,9 +35,9 @@ packages/browser-logs/README.md
 packages/browser-rum-slim/README.md
 
 # Note: the schema package is the OpenObserve fork @openobserve/rum-events-format
-# (openobserve/rum-events-format), whose schemas describe `_oo` directly. The commit is
+# (openobserve/rum-events-format), whose schemas describe `_o2` directly. The commit is
 # pinned in scripts/openobserve/rum-events-format-pin.txt and reapplied to package.json by
-# rebrand.mjs on every sync. Events validate against the fork schemas with no _oo->_dd shim.
+# rebrand.mjs on every sync. Events validate against the fork schemas with no _o2->_dd shim.
 
 # OpenObserve-authored files
 packages/prd

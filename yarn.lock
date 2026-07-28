@@ -1544,7 +1544,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openobserve/browser-core@npm:0.4., @openobserve/browser-core@workspace:*, @openobserve/browser-core@workspace:packages/browser-core":
+"@openobserve/browser-core@npm:0.4.1, @openobserve/browser-core@workspace:*, @openobserve/browser-core@workspace:packages/browser-core":
   version: 0.0.0-use.local
   resolution: "@openobserve/browser-core@workspace:packages/browser-core"
   dependencies:
