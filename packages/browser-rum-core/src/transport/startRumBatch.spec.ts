@@ -28,7 +28,7 @@ function makeViewEvent(overrides: Record<string, unknown> = {}): RumViewEvent {
     },
     service: 'my-service',
     version: '1.0.0',
-    ootags: 'env:prod',
+    o2tags: 'env:prod',
     source: 'browser',
     context: {},
     ...overrides,

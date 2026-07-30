@@ -239,7 +239,7 @@ describe('telemetry', () => {
     expect((await getTelemetryEvents()).length).toBe(1)
   })
 
-  it('should collect ootags', async () => {
+  it('should collect o2tags', async () => {
     const { getTelemetryEvents } = startAndSpyTelemetry({
       service: 'foo',
       env: 'bar',
@@ -248,7 +248,7 @@ describe('telemetry', () => {
 
     addTelemetryUsage({ feature: 'set-tracking-consent', tracking_consent: 'granted' })
 
-    expect((await getTelemetryEvents())[0].ootags).toEqual('sdk_version:test,env:bar,service:foo,version:123')
+    expect((await getTelemetryEvents())[0].o2tags).toEqual('sdk_version:test,env:bar,service:foo,version:123')
   })
 
   describe('assemble telemetry hook', () => {

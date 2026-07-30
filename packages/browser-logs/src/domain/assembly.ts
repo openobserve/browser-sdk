@@ -27,7 +27,7 @@ export function startLogsAssembly(
 
   lifeCycle.subscribe(
     LifeCycleEventType.RAW_LOG_COLLECTED,
-    ({ rawLogsEvent, messageContext = undefined, savedCommonContext = undefined, domainContext, ootags = [] }) => {
+    ({ rawLogsEvent, messageContext = undefined, savedCommonContext = undefined, domainContext, o2tags = [] }) => {
       const startTime = toRelativeTime(rawLogsEvent.date)
       const commonContext = savedCommonContext || getCommonContext()
       const defaultLogsEventAttributes = hook.trigger({
@@ -48,7 +48,7 @@ export function startLogsAssembly(
         rawLogsEvent,
         messageContext,
         {
-          ootags: defaultDdtags.concat(ootags).join(','),
+          o2tags: defaultDdtags.concat(o2tags).join(','),
         }
       ) as LogsEvent & Context
 

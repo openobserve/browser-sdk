@@ -26,7 +26,7 @@ export interface LogsEvent {
   /**
    * Tags of the log
    */
-  ootags?: string
+  o2tags?: string
   /**
    * UUID of the session (deprecated in favor of session.id)
    */

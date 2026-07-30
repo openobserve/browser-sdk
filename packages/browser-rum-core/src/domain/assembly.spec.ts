@@ -454,7 +454,7 @@ describe('rum assembly', () => {
         })
       })
 
-    it('should be added to the event as ootags', () => {
+    it('should be added to the event as o2tags', () => {
       const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
         partialConfiguration: extraConfigurationOptions,
       })
@@ -462,7 +462,7 @@ describe('rum assembly', () => {
         rawRumEvent: createRawRumEvent(RumEventType.VIEW),
       })
 
-      expect(serverRumEvents[0].ootags).toEqual('sdk_version:test,service:default-service,version:default-version')
+      expect(serverRumEvents[0].o2tags).toEqual('sdk_version:test,service:default-service,version:default-version')
     })
   })
 

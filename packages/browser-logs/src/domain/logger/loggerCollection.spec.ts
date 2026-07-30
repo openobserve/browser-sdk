@@ -125,7 +125,7 @@ describe('logger collection', () => {
         domainContext: {
           handlingStack: HANDLING_STACK,
         },
-        ootags: [],
+        o2tags: [],
       })
     })
 
@@ -149,34 +149,34 @@ describe('logger collection', () => {
     })
   })
 
-  describe('ootags', () => {
+  describe('o2tags', () => {
     beforeEach(() => {
       logger.setHandler(HandlerType.http)
     })
 
-    it('should contain the ootags of the logger', () => {
+    it('should contain the o2tags of the logger', () => {
       logger.addTag('tag1', 'value1')
       handleLog({ message: 'message', status: StatusType.error }, logger, HANDLING_STACK, COMMON_CONTEXT)
 
-      expect(rawLogsEvents[0].ootags).toEqual(['tag1:value1'])
+      expect(rawLogsEvents[0].o2tags).toEqual(['tag1:value1'])
     })
 
     it('should ignore the tags of the message context', () => {
       handleLog(
-        { message: 'message', status: StatusType.error, context: { ootags: ['tag3:value3'] } },
+        { message: 'message', status: StatusType.error, context: { o2tags: ['tag3:value3'] } },
         logger,
         HANDLING_STACK,
         COMMON_CONTEXT
       )
 
-      expect(rawLogsEvents[0].ootags).toEqual([])
+      expect(rawLogsEvents[0].o2tags).toEqual([])
     })
 
     it('should ignore the tags of the logger context', () => {
-      logger.setContext({ ootags: ['tag1:value1'] })
+      logger.setContext({ o2tags: ['tag1:value1'] })
       handleLog({ message: 'message', status: StatusType.error }, logger, HANDLING_STACK, COMMON_CONTEXT)
 
-      expect(rawLogsEvents[0].ootags).toEqual([])
+      expect(rawLogsEvents[0].o2tags).toEqual([])
     })
   })
 })

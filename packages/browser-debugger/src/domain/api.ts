@@ -349,7 +349,7 @@ function queueDebuggerSnapshot(probe: InitializedProbe, result: ActiveEntry): vo
   const payload: Context = {
     message: result.message,
     service: debuggerConfig.service,
-    ootags: getDebuggerDDtags(version),
+    o2tags: getDebuggerDDtags(version),
     // TODO: Fill out logger with the right information
     logger: {
       name: probe.where.typeName,

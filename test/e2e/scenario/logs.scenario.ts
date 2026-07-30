@@ -310,7 +310,7 @@ test.describe('logs', () => {
       })
       await flushEvents()
       expect(intakeRegistry.logsEvents).toHaveLength(1)
-      expect(intakeRegistry.logsEvents[0].ootags).toMatch(/sdk_version:(.*),env:dev,service:foo,version:1.0.0$/)
+      expect(intakeRegistry.logsEvents[0].o2tags).toMatch(/sdk_version:(.*),env:dev,service:foo,version:1.0.0$/)
     })
 
   createTest('add tags to the logger')
@@ -323,20 +323,20 @@ test.describe('logs', () => {
 
       await flushEvents()
       expect(intakeRegistry.logsEvents).toHaveLength(1)
-      expect(intakeRegistry.logsEvents[0].ootags).toMatch(/sdk_version:(.*),planet:mars$/)
+      expect(intakeRegistry.logsEvents[0].o2tags).toMatch(/sdk_version:(.*),planet:mars$/)
     })
 
   createTest('ignore tags from message context and logger context')
     .withLogs()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_LOGS!.logger.setContextProperty('ootags', 'planet:mars')
-        window.OO_LOGS!.logger.log('hello world!', { ootags: 'planet:earth' })
+        window.OO_LOGS!.logger.setContextProperty('o2tags', 'planet:mars')
+        window.OO_LOGS!.logger.log('hello world!', { o2tags: 'planet:earth' })
       })
 
       await flushEvents()
       expect(intakeRegistry.logsEvents).toHaveLength(1)
-      expect(intakeRegistry.logsEvents[0].ootags).toMatch(/sdk_version:(.*)$/)
+      expect(intakeRegistry.logsEvents[0].o2tags).toMatch(/sdk_version:(.*)$/)
     })
 
   createTest('allow to modify events')

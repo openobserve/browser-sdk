@@ -234,18 +234,18 @@ describe('startLogsAssembly', () => {
     })
   })
 
-  describe('ootags', () => {
+  describe('o2tags', () => {
     it('should contain and format the default tags', () => {
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, { rawLogsEvent: DEFAULT_MESSAGE })
-      expect(serverLogs[0].ootags).toEqual('sdk_version:test,env:test,service:service,version:1.0.0')
+      expect(serverLogs[0].o2tags).toEqual('sdk_version:test,env:test,service:service,version:1.0.0')
     })
 
     it('should append custom tags', () => {
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: DEFAULT_MESSAGE,
-        ootags: ['foo:bar'],
+        o2tags: ['foo:bar'],
       })
-      expect(serverLogs[0].ootags).toEqual('sdk_version:test,env:test,service:service,version:1.0.0,foo:bar')
+      expect(serverLogs[0].o2tags).toEqual('sdk_version:test,env:test,service:service,version:1.0.0,foo:bar')
     })
   })
 

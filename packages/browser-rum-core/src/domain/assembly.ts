@@ -82,7 +82,7 @@ export function startRumAssembly(
       }
 
       const serverRumEvent = combine(defaultRumEventAttributes, rawRumEvent, {
-        ootags: buildTags(configuration).join(','),
+        o2tags: buildTags(configuration).join(','),
       }) as AssembledRumEvent
 
       if (shouldSend(serverRumEvent, configuration.beforeSend, domainContext, eventRateLimiters)) {

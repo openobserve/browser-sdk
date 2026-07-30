@@ -48,7 +48,7 @@
     { "literal": "_dd.api=", "to": "_o2.api=", "why": "intake query parameter" },
     { "literal": "_dd.retry_count=", "to": "_o2.retry_count=", "why": "intake query parameter" },
     { "literal": "_dd.retry_after=", "to": "_o2.retry_after=", "why": "intake query parameter" },
-    { "literal": "ddtags", "to": "ootags", "why": "tags event attribute" },
+    { "literal": "ddtags", "to": "o2tags", "why": "tags event attribute" },
 
     { "literal": "DATADOG_COMMENT", "to": "OPENOBSERVE_COMMENT", "why": "CI comment markers in scripts" },
     { "literal": "DATADOG_CLIENT_TOKEN", "to": "OPENOBSERVE_CLIENT_TOKEN", "why": "sample app env var" },
