@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-rum-nuxt",
-  "version": "0.4.2-beta.2",
+  "version": "0.4.2-beta.3",
   "license": "Apache-2.0",
   "main": "cjs/entries/main.js",
   "module": "esm/entries/main.mjs",
@@ -17,9 +17,9 @@
     "prepack": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.2-beta.2",
-    "@openobserve/browser-rum-core": "0.4.2-beta.2",
-    "@openobserve/js-core": "0.4.2-beta.2"
+    "@openobserve/browser-core": "0.4.2-beta.3",
+    "@openobserve/browser-rum-core": "0.4.2-beta.3",
+    "@openobserve/js-core": "0.4.2-beta.3"
   },
   "peerDependencies": {
     "nuxt": "3 || 4",
