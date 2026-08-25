@@ -7,7 +7,12 @@ import type { RumInitConfiguration } from '../configuration'
 import { validateAndBuildRumConfiguration } from '../configuration'
 import { startTracer } from './tracer'
 import type { SpanIdentifier, TraceIdentifier } from './identifier'
-import { createSpanIdentifier, createTraceIdentifier } from './identifier'
+import {
+  createSpanIdentifier,
+  createTraceIdentifier,
+  toPaddedSpanIdHex,
+  toPaddedTraceIdHex,
+} from './identifier'
 
 describe('tracer', () => {
   const ALLOWED_DOMAIN_CONTEXT: Partial<RumXhrStartContext | RumFetchStartContext> = {
@@ -190,7 +195,7 @@ describe('tracer', () => {
       )
 
       expect(xhr.headers['x-openobserve-origin']).toBeUndefined()
-      expect(xhr.headers['x-openobserve-parent-id']).toBeUndefined()
+      expect(xhr.headers['x-openobserve-span-id']).toBeUndefined()
       expect(xhr.headers['x-openobserve-trace-id']).toBeUndefined()
       expect(xhr.headers['x-openobserve-sampling-priority']).toBeUndefined()
     })
@@ -611,7 +616,7 @@ describe('tracer', () => {
       )
 
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-origin']))
-      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-parent-id']))
+      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-span-id']))
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-sampling-priority']))
     })
@@ -677,7 +682,7 @@ describe('tracer', () => {
       tracer.traceFetch(context)
 
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-origin']))
-      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-parent-id']))
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-span-id']))
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-sampling-priority']))
     })
@@ -694,7 +699,7 @@ describe('tracer', () => {
       tracer.traceFetch(context)
 
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-origin']))
-      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-parent-id']))
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-span-id']))
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-sampling-priority']))
     })
@@ -742,9 +747,9 @@ function toPlainObject(headers: Headers) {
 function tracingHeadersFor(traceId: TraceIdentifier, spanId: SpanIdentifier, samplingPriority: '1' | '0') {
   return {
     'x-openobserve-origin': 'rum',
-    'x-openobserve-parent-id': spanId.toString(),
+    'x-openobserve-span-id': toPaddedSpanIdHex(spanId),
     'x-openobserve-sampling-priority': samplingPriority,
-    'x-openobserve-trace-id': traceId.toString(),
+    'x-openobserve-trace-id': toPaddedTraceIdHex(traceId),
     baggage: `session.id=${MOCK_SESSION_ID},user.id=1234,account.id=5678`,
   }
 }

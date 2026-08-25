@@ -23,7 +23,12 @@ import type { RawRumEventCollectedData } from '../lifeCycle'
 import { LifeCycle, LifeCycleEventType } from '../lifeCycle'
 import type { RequestCompleteEvent } from '../requestCollection'
 import { getDocumentTraceId } from '../tracing/getDocumentTraceId'
-import { createSpanIdentifier, createTraceIdentifier } from '../tracing/identifier'
+import {
+  createSpanIdentifier,
+  createSpanIdentifierFromHex,
+  createTraceIdentifier,
+  createTraceIdentifierFromHex,
+} from '../tracing/identifier'
 import { REQUEST_MATCHING_DELAY, startResourceCollection } from './resourceCollection'
 
 function buildMatchHeadersForAllUrls(headerNames: MatchOption[]): MatchHeader[] {
@@ -1147,6 +1152,36 @@ describe('resourceCollection', () => {
       const privateFields = (rawRumEvents[0].rawRumEvent as RawRumResourceEvent)._o2
       expect(privateFields.trace_id).toBeDefined()
       expect(privateFields.span_id).toBeDefined()
+    })
+
+    it('serializes trace and span ids as fixed-width canonical hex', () => {
+      // UUIDv7 trace ids always start with a zero nibble, which BigInt toString(16)
+      // drops — the id then never matches the 32-char trace_id stored by the backend
+      // (regression in 0.4.0-beta.7..0.4.2-beta.2).
+      setupResourceCollection()
+      notifyRequest({
+        request: {
+          traceSampled: true,
+          spanId: createSpanIdentifierFromHex('0123456789abcdef'),
+          traceId: createTraceIdentifierFromHex('01a034c1aabc72f78880daf6c9755cff'),
+        },
+      })
+      const privateFields = (rawRumEvents[0].rawRumEvent as RawRumResourceEvent)._o2
+      expect(privateFields.trace_id).toBe('01a034c1aabc72f78880daf6c9755cff')
+      expect(privateFields.span_id).toBe('0123456789abcdef')
+    })
+
+    it('pads a 64-bit-style reused trace id (zero upper half) to 32 chars', () => {
+      setupResourceCollection()
+      notifyRequest({
+        request: {
+          traceSampled: true,
+          spanId: createSpanIdentifier(),
+          traceId: createTraceIdentifierFromHex('00000000000000001234567890abcdef'),
+        },
+      })
+      const privateFields = (rawRumEvents[0].rawRumEvent as RawRumResourceEvent)._o2
+      expect(privateFields.trace_id).toBe('00000000000000001234567890abcdef')
     })
 
     it('should not be processed from not sampled completed request', () => {

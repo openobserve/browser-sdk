@@ -24,6 +24,8 @@ import {
   createTraceIdentifier,
   createTraceIdentifierFromHex,
   toPaddedHexadecimalString,
+  toPaddedSpanIdHex,
+  toPaddedTraceIdHex,
 } from './identifier'
 
 export interface Tracer {
@@ -290,18 +292,22 @@ function makeTracingHeaders(
     switch (propagatorType) {
       case 'datadog':
       case 'openobserve': {
+        // The backend (get_or_create_trace_id) reads `x-openobserve-trace-id` and
+        // `x-openobserve-span-id` and validates 32/16 hex chars — decimal values or the
+        // upstream `-parent-id` name are silently ignored (masked by the traceparent
+        // fallback).
         Object.assign(tracingHeaders, {
           'x-openobserve-origin': 'rum',
-          'x-openobserve-parent-id': spanId.toString(),
+          'x-openobserve-span-id': toPaddedSpanIdHex(spanId),
           'x-openobserve-sampling-priority': traceSampled ? '1' : '0',
-          'x-openobserve-trace-id': traceId.toString(),
+          'x-openobserve-trace-id': toPaddedTraceIdHex(traceId),
         })
         break
       }
       // https://www.w3.org/TR/trace-context/
       case 'tracecontext': {
         Object.assign(tracingHeaders, {
-          traceparent: `00-${traceId.toString(16).padStart(32, '0')}-${toPaddedHexadecimalString(spanId)}-0${
+          traceparent: `00-${toPaddedTraceIdHex(traceId)}-${toPaddedSpanIdHex(spanId)}-0${
             traceSampled ? '1' : '0'
           }`,
           tracestate: `dd=s:${traceSampled ? '1' : '0'};o:rum`,
