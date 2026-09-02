@@ -29,13 +29,13 @@ You can include the SDK directly in your HTML using our CDN:
 
 ```html
 <!-- For logs collection -->
-<script src="https://browsersdk.openobserve.ai/0.4.1/openobserve-logs.js"></script>
+<script src="https://browsersdk.openobserve.ai/0.4.2/openobserve-logs.js"></script>
 
 <!-- For RUM -->
-<script src="https://browsersdk.openobserve.ai/0.4.1/openobserve-rum.js"></script>
+<script src="https://browsersdk.openobserve.ai/0.4.2/openobserve-rum.js"></script>
 
 <!-- For RUM Slim -->
-<script src="https://browsersdk.openobserve.ai/0.4.1/openobserve-rum-slim.js"></script>
+<script src="https://browsersdk.openobserve.ai/0.4.2/openobserve-rum-slim.js"></script>
 ```
 
 ## CDN Bundles
@@ -44,7 +44,7 @@ OpenObserve provides CDN bundles based on version:
 
 | Version | Logs                                                                               | RUM                                                                              | RUM Slim                                                                                   |
 | ------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| 0.4.1   | [openobserve-logs.js](https://browsersdk.openobserve.ai/0.4.1/openobserve-logs.js) | [openobserve-rum.js](https://browsersdk.openobserve.ai/0.4.1/openobserve-rum.js) | [openobserve-rum-slim.js](https://browsersdk.openobserve.ai/0.4.1/openobserve-rum-slim.js) |
+| 0.4.2   | [openobserve-logs.js](https://browsersdk.openobserve.ai/0.4.2/openobserve-logs.js) | [openobserve-rum.js](https://browsersdk.openobserve.ai/0.4.2/openobserve-rum.js) | [openobserve-rum-slim.js](https://browsersdk.openobserve.ai/0.4.2/openobserve-rum-slim.js) |
 
 ## Getting Started
 
@@ -71,13 +71,13 @@ This repository contains several packages available on npm:
 
 | Package                                                    | Version | Description                                           | npm Link                                                           |
 | ---------------------------------------------------------- | ------- | ----------------------------------------------------- | ------------------------------------------------------------------ |
-| [@openobserve/browser-logs](packages/browser-logs)         | 0.4.1   | Browser log collection                                | [npm](https://www.npmjs.com/package/@openobserve/browser-logs)     |
-| [@openobserve/browser-rum](packages/browser-rum)           | 0.4.1   | Real User Monitoring with session replay              | [npm](https://www.npmjs.com/package/@openobserve/browser-rum)      |
-| [@openobserve/browser-rum-slim](packages/browser-rum-slim) | 0.4.1   | Real User Monitoring (lightweight, no session replay) | [npm](https://www.npmjs.com/package/@openobserve/browser-rum-slim) |
-| [@openobserve/browser-rum-core](packages/browser-rum-core) | 0.4.1   | Core RUM functionality (internal package)             | [npm](https://www.npmjs.com/package/@openobserve/browser-rum-core) |
-| [@openobserve/browser-core](packages/browser-core)         | 0.4.1   | Core utilities (internal package)                     | [npm](https://www.npmjs.com/package/@openobserve/browser-core)     |
-| [@openobserve/js-core](packages/js-core)                   | 0.4.1   | Shared JS utilities (internal package)                | [npm](https://www.npmjs.com/package/@openobserve/js-core)          |
-| [@openobserve/browser-worker](packages/browser-worker)     | 0.4.1   | Session replay compression worker (internal package)  | [npm](https://www.npmjs.com/package/@openobserve/browser-worker)   |
+| [@openobserve/browser-logs](packages/browser-logs)         | 0.4.2   | Browser log collection                                | [npm](https://www.npmjs.com/package/@openobserve/browser-logs)     |
+| [@openobserve/browser-rum](packages/browser-rum)           | 0.4.2   | Real User Monitoring with session replay              | [npm](https://www.npmjs.com/package/@openobserve/browser-rum)      |
+| [@openobserve/browser-rum-slim](packages/browser-rum-slim) | 0.4.2   | Real User Monitoring (lightweight, no session replay) | [npm](https://www.npmjs.com/package/@openobserve/browser-rum-slim) |
+| [@openobserve/browser-rum-core](packages/browser-rum-core) | 0.4.2   | Core RUM functionality (internal package)             | [npm](https://www.npmjs.com/package/@openobserve/browser-rum-core) |
+| [@openobserve/browser-core](packages/browser-core)         | 0.4.2   | Core utilities (internal package)                     | [npm](https://www.npmjs.com/package/@openobserve/browser-core)     |
+| [@openobserve/js-core](packages/js-core)                   | 0.4.2   | Shared JS utilities (internal package)                | [npm](https://www.npmjs.com/package/@openobserve/js-core)          |
+| [@openobserve/browser-worker](packages/browser-worker)     | 0.4.2   | Session replay compression worker (internal package)  | [npm](https://www.npmjs.com/package/@openobserve/browser-worker)   |
 
 ## License
 
