@@ -37,7 +37,7 @@ const inputShadowDom = `<script>
      const privacyOverride = this.getAttribute("privacy");
      const parent = document.createElement("div");
      if (privacyOverride) {
-       parent.setAttribute("data-oo-privacy", privacyOverride);
+       parent.setAttribute("data-o2-privacy", privacyOverride);
      }
      const label = document.createElement("label");
      label.setAttribute("id", "label-" + componentId);
@@ -225,7 +225,7 @@ test.describe('recorder with shadow DOM', () => {
     .withRum({ defaultPrivacyLevel: 'allow' })
     .withBody(html`
       ${inputShadowDom}
-      <div data-oo-privacy="mask-user-input"><my-input-field id="privacy-set-outside" /></div>
+      <div data-o2-privacy="mask-user-input"><my-input-field id="privacy-set-outside" /></div>
       <my-input-field privacy="mask-user-input" id="privacy-set-inside" />
     `)
     .run(async ({ flushEvents, intakeRegistry }) => {
@@ -243,7 +243,7 @@ test.describe('recorder with shadow DOM', () => {
           [0, 'BODY'],
           [1, '#text', '\n      '],
           [0, '#text', '\n \n      '],
-          [0, 'DIV', ['data-oo-privacy', 'mask-user-input']],
+          [0, 'DIV', ['data-o2-privacy', 'mask-user-input']],
           [1, 'MY-INPUT-FIELD', ['id', 'privacy-set-outside']],
           [1, '#shadow-root'],
           [1, 'DIV'],
@@ -254,7 +254,7 @@ test.describe('recorder with shadow DOM', () => {
           [0, 'MY-INPUT-FIELD', ['privacy', 'mask-user-input'], ['id', 'privacy-set-inside']],
           [1, '#text', '\n    '],
           [0, '#shadow-root'],
-          [1, 'DIV', ['data-oo-privacy', 'mask-user-input']],
+          [1, 'DIV', ['data-o2-privacy', 'mask-user-input']],
           [1, 'LABEL', ['id', 'label-privacy-set-inside']],
           [1, '#text', 'field privacy-set-inside: '],
           [3, 'INPUT', ['id', 'input-privacy-set-inside'], ['value', '***']],

@@ -28,7 +28,7 @@ import type { LogsEventDomainContext } from '../domainContext.types'
  * ```
  * @example CDN
  * ```ts
- * OO_LOGS.init({
+ * O2_LOGS.init({
  *   clientToken: '<OPENOBSERVE_CLIENT_TOKEN>',
  *   site: '<OPENOBSERVE_SITE>',
  *   // ...

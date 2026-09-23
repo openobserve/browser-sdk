@@ -15,7 +15,7 @@ const logger = createLogger('infosTab')
 
 function buildLogExpression(descriptor: JsonValueDescriptor, sdkType: 'rum' | 'logs'): string {
   const evaluationPath = descriptor.evaluationPath
-  const sdkGlobal = sdkType === 'rum' ? 'OO_RUM' : 'OO_LOGS'
+  const sdkGlobal = sdkType === 'rum' ? 'O2_RUM' : 'O2_LOGS'
   const sdkName = sdkType === 'rum' ? 'RUM' : 'Logs'
 
   return `
@@ -105,7 +105,7 @@ export function InfosTab() {
               {infos.cookie.forcedReplay && <Entry name="Is Replay Forced" value={'True'} />}
               <Entry name="Created" value={infos.cookie.created && formatDate(Number(infos.cookie.created))} />
               <Entry name="Expire" value={infos.cookie.expire && formatDate(Number(infos.cookie.expire))} />
-              <Button color="violet" variant="light" onClick={endSession} className="oo-privacy-allow">
+              <Button color="violet" variant="light" onClick={endSession} className="o2-privacy-allow">
                 End current session
               </Button>
             </>
@@ -115,7 +115,7 @@ export function InfosTab() {
           {infos.rum && (
             <>
               {sessionId && (
-                <Group className="oo-privacy-allow">
+                <Group className="o2-privacy-allow">
                   <AppLink
                     config={infos.rum.config}
                     path="rum/explorer"
@@ -152,7 +152,7 @@ export function InfosTab() {
           {infos.logs && (
             <>
               {sessionId && (
-                <div className="oo-privacy-allow">
+                <div className="o2-privacy-allow">
                   <AppLink
                     config={infos.logs.config}
                     path="logs"
@@ -263,7 +263,7 @@ function Entry({
                   </>
                 ) : (
                   <>
-                    <Button variant="light" size="compact-xs" onClick={handleApplyClick} className="oo-privacy-allow">
+                    <Button variant="light" size="compact-xs" onClick={handleApplyClick} className="o2-privacy-allow">
                       Apply
                     </Button>
                     <Button
@@ -271,7 +271,7 @@ function Entry({
                       size="compact-xs"
                       color="gray"
                       onClick={() => setEdited(false)}
-                      className="oo-privacy-allow"
+                      className="o2-privacy-allow"
                     >
                       Cancel
                     </Button>

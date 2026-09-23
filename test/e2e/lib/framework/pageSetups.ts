@@ -87,9 +87,9 @@ n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
 
   if (options.logs) {
     footer += html`<script>
-      ${formatSnippet(logsScriptUrl, 'OO_LOGS')}
-      OO_LOGS.onReady(function () {
-        OO_LOGS.setGlobalContext(${JSON.stringify(options.context)})
+      ${formatSnippet(logsScriptUrl, 'O2_LOGS')}
+      O2_LOGS.onReady(function () {
+        O2_LOGS.setGlobalContext(${JSON.stringify(options.context)})
         ;(${options.logsInit.toString()})(${formatConfiguration(options.logs, servers)})
       })
     </script>`
@@ -97,9 +97,9 @@ n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
 
   if (options.rum) {
     footer += html`<script type="text/javascript">
-      ${formatSnippet(rumScriptUrl, 'OO_RUM')}
-      OO_RUM.onReady(function () {
-        OO_RUM.setGlobalContext(${JSON.stringify(options.context)})
+      ${formatSnippet(rumScriptUrl, 'O2_RUM')}
+      O2_RUM.onReady(function () {
+        O2_RUM.setGlobalContext(${JSON.stringify(options.context)})
         ;(${options.rumInit.toString()})(${formatConfiguration(options.rum, servers)})
       })
     </script>`
@@ -137,7 +137,7 @@ export function bundleSetup(options: SetupOptions, servers: Servers) {
   if (options.logs) {
     header += html`<script type="text/javascript" src="${logsScriptUrl}" crossorigin></script>`
     header += html`<script type="text/javascript">
-      OO_LOGS.setGlobalContext(${JSON.stringify(options.context)})
+      O2_LOGS.setGlobalContext(${JSON.stringify(options.context)})
       ;(${options.logsInit.toString()})(${formatConfiguration(options.logs, servers)})
     </script>`
   }
@@ -145,7 +145,7 @@ export function bundleSetup(options: SetupOptions, servers: Servers) {
   if (options.rum) {
     header += html`<script type="text/javascript" src="${rumScriptUrl}" crossorigin></script>`
     header += html`<script type="text/javascript">
-      OO_RUM.setGlobalContext(${JSON.stringify(options.context)})
+      O2_RUM.setGlobalContext(${JSON.stringify(options.context)})
       ;(${options.rumInit.toString()})(${formatConfiguration(options.rum, servers)})
     </script>`
   }
@@ -179,7 +179,7 @@ export function npmSetup(options: SetupOptions, servers: Servers) {
   if (options.logs) {
     header += html`<script type="text/javascript">
       window.LOGS_INIT = () => {
-        window.OO_LOGS.setGlobalContext(${JSON.stringify(options.context)})
+        window.O2_LOGS.setGlobalContext(${JSON.stringify(options.context)})
         ;(${options.logsInit.toString()})(${formatConfiguration(options.logs, servers)})
       }
     </script>`
@@ -188,7 +188,7 @@ export function npmSetup(options: SetupOptions, servers: Servers) {
   if (options.rum) {
     header += html`<script type="text/javascript">
       window.RUM_INIT = () => {
-        window.OO_RUM.setGlobalContext(${JSON.stringify(options.context)})
+        window.O2_RUM.setGlobalContext(${JSON.stringify(options.context)})
         ;(${options.rumInit.toString()})(${formatConfiguration(options.rum, servers)})
       }
     </script>`
@@ -244,16 +244,16 @@ export function workerSetup(setupOptions: SetupOptions, servers: Servers) {
   if (worker?.logsConfiguration) {
     setup += js`
       ${worker.importScripts ? js`importScripts('/openobserve-logs.js');` : js`import '/openobserve-logs.js';`}
-      OO_LOGS.init(${formatConfiguration(worker.logsConfiguration, servers)})
-      OO_LOGS.setGlobalContext(${JSON.stringify(context)})
+      O2_LOGS.init(${formatConfiguration(worker.logsConfiguration, servers)})
+      O2_LOGS.setGlobalContext(${JSON.stringify(context)})
     `
   }
 
   if (worker?.rumConfiguration) {
     setup += js`
       ${worker.importScripts ? js`importScripts('/openobserve-rum.js');` : js`import '/openobserve-rum.js';`}
-      OO_RUM.init(${formatConfiguration(worker.rumConfiguration, servers)})
-      OO_RUM.setGlobalContext(${JSON.stringify(context)})
+      O2_RUM.init(${formatConfiguration(worker.rumConfiguration, servers)})
+      O2_RUM.setGlobalContext(${JSON.stringify(context)})
     `
   }
 
@@ -284,7 +284,7 @@ export function microfrontendSetup(options: SetupOptions, servers: Servers) {
   if (options.rum) {
     header += html`<script type="text/javascript" src="${rumScriptUrl}" crossorigin></script>`
     header += html`<script type="text/javascript">
-      OO_RUM.setGlobalContext(${JSON.stringify(options.context)})
+      O2_RUM.setGlobalContext(${JSON.stringify(options.context)})
       ;(${options.rumInit.toString()})(${formatConfiguration(options.rum, servers)})
     </script>`
   }

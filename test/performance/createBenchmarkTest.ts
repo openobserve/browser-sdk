@@ -115,13 +115,13 @@ async function injectRumSDK(page: Page, scenarioConfiguration: ScenarioConfigura
           s.src = n
           s.crossOrigin = ''
           o.head.appendChild(s)
-        })(window, document, 'script', sdkBundleUrl, 'OO_RUM')
-        browserWindow.OO_RUM?.onReady(function () {
-          browserWindow.OO_RUM!.setGlobalContextProperty('scenario', {
+        })(window, document, 'script', sdkBundleUrl, 'O2_RUM')
+        browserWindow.O2_RUM?.onReady(function () {
+          browserWindow.O2_RUM!.setGlobalContextProperty('scenario', {
             configuration: scenarioConfiguration,
             name: scenarioName,
           })
-          browserWindow.OO_RUM!.init(configuration as RumInitConfiguration)
+          browserWindow.O2_RUM!.init(configuration as RumInitConfiguration)
         })
       }
 
@@ -228,7 +228,7 @@ async function warmup(browser: Browser, url: string) {
 
 async function getSDKVersion(page: Page) {
   return await page.evaluate(
-    () => (window as BrowserWindow).OO_RUM?.version || (window as BrowserWindow).DD_DEBUGGER?.version || ''
+    () => (window as BrowserWindow).O2_RUM?.version || (window as BrowserWindow).DD_DEBUGGER?.version || ''
   )
 }
 

@@ -6,10 +6,10 @@ test.describe('vital collection', () => {
     .withRum()
     .run(async ({ flushEvents, intakeRegistry, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startDurationVital('foo')
+        window.O2_RUM!.startDurationVital('foo')
         return new Promise<void>((resolve) => {
           setTimeout(() => {
-            window.OO_RUM!.stopDurationVital('foo')
+            window.O2_RUM!.stopDurationVital('foo')
             resolve()
           }, 5)
         })
@@ -27,12 +27,12 @@ test.describe('vital collection', () => {
       await page.evaluate(() => {
         const key1 = 'key-1'
         const key2 = 'key-2'
-        window.OO_RUM!.startDurationVital('foo', { vitalKey: key1 })
-        window.OO_RUM!.startDurationVital('foo', { vitalKey: key2 })
+        window.O2_RUM!.startDurationVital('foo', { vitalKey: key1 })
+        window.O2_RUM!.startDurationVital('foo', { vitalKey: key2 })
         return new Promise<void>((resolve) => {
           setTimeout(() => {
-            window.OO_RUM!.stopDurationVital('foo', { vitalKey: key1 })
-            window.OO_RUM!.stopDurationVital('foo', { vitalKey: key2 })
+            window.O2_RUM!.stopDurationVital('foo', { vitalKey: key1 })
+            window.O2_RUM!.stopDurationVital('foo', { vitalKey: key2 })
             resolve()
           }, 5)
         })
@@ -48,7 +48,7 @@ test.describe('vital collection', () => {
     .withRum()
     .run(async ({ flushEvents, intakeRegistry, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startOperation('foo')
+        window.O2_RUM!.startOperation('foo')
       })
       await flushEvents()
 

@@ -164,7 +164,7 @@ test.describe('profiling', () => {
       withBrowserLogs((browserLogs) => {
         const profilingWarnings = browserLogs.filter((log) =>
           log.message.includes(
-            'OpenObserve Browser SDK: [OO_RUM] Profiler startup failed. Ensure your server includes the `Document-Policy: js-profiling` response header when serving HTML pages'
+            'OpenObserve Browser SDK: [O2_RUM] Profiler startup failed. Ensure your server includes the `Document-Policy: js-profiling` response header when serving HTML pages'
           )
         )
         expect(profilingWarnings.length).toBeGreaterThan(0)
@@ -183,12 +183,12 @@ test.describe('profiling', () => {
 })
 
 async function generateAction(page: Page) {
-  await page.evaluate(() => window.OO_RUM!.addAction('testAction'))
+  await page.evaluate(() => window.O2_RUM!.addAction('testAction'))
 }
 
 async function generateVital(page: Page, durationMs = 50) {
   await page.evaluate(
-    (duration) => window.OO_RUM!.addDurationVital('testVitals', { startTime: Date.now() - duration, duration }),
+    (duration) => window.O2_RUM!.addDurationVital('testVitals', { startTime: Date.now() - duration, duration }),
     durationMs
   )
 }

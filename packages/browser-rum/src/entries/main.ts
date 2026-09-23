@@ -97,6 +97,6 @@ export const openobserveRum = makeRumPublicApi(recorderApi, profilerApi, {
 })
 
 interface BrowserWindow {
-  OO_RUM?: RumPublicApi
+  O2_RUM?: RumPublicApi
 }
-defineGlobal(globalObject as BrowserWindow, 'OO_RUM', openobserveRum)
+defineGlobal(globalObject as BrowserWindow, 'O2_RUM', openobserveRum)

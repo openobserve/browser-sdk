@@ -91,7 +91,7 @@ These are now **independent**. In v6, `forwardErrorsToLogs: true` silently forwa
 **If you use `forwardErrorsToLogs: true`**, add `"error"` to your `forwardConsoleLogs` array to preserve v6 behavior:
 
 ```js
-OO_LOGS.init({
+O2_LOGS.init({
   forwardErrorsToLogs: true,
   forwardConsoleLogs: ['error', 'warn'], // add 'error' explicitly
 })
@@ -105,12 +105,12 @@ The `DurationVitalReference` object is replaced by a `vitalKey` string:
 
 ```js
 // v6
-const ref = OO_RUM.startDurationVital('checkout')
-OO_RUM.stopDurationVital(ref)
+const ref = O2_RUM.startDurationVital('checkout')
+O2_RUM.stopDurationVital(ref)
 
 // v7
-OO_RUM.startDurationVital('checkout', { vitalKey: 'checkout-key' })
-OO_RUM.stopDurationVital('checkout', { vitalKey: 'checkout-key' })
+O2_RUM.startDurationVital('checkout', { vitalKey: 'checkout-key' })
+O2_RUM.stopDurationVital('checkout', { vitalKey: 'checkout-key' })
 ```
 
 Search: `grep -rn 'startDurationVital|stopDurationVital|DurationVitalReference' --include="*.js" --include="*.ts" --include="*.tsx"`

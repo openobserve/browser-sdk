@@ -78,10 +78,10 @@ test.describe('recorder', () => {
       .withRum()
       .withBody(
         html`<div id="not-obfuscated">displayed</div>
-          <p id="hidden-by-attribute" data-oo-privacy="hidden">hidden</p>
-          <span id="hidden-by-classname" class="oo-privacy-hidden">hidden</span>
+          <p id="hidden-by-attribute" data-o2-privacy="hidden">hidden</p>
+          <span id="hidden-by-classname" class="o2-privacy-hidden">hidden</span>
           <input id="input-not-obfuscated" value="displayed" />
-          <input id="input-masked" data-oo-privacy="mask" value="masked" />`
+          <input id="input-masked" data-o2-privacy="mask" value="masked" />`
       )
       .run(async ({ intakeRegistry, flushEvents }) => {
         await flushEvents()
@@ -99,13 +99,13 @@ test.describe('recorder', () => {
             [1, 'DIV', ['id', 'not-obfuscated']],
             [1, '#text', 'displayed'],
             [3, '#text', '\n          '],
-            [0, 'P', ['data-oo-privacy', 'hidden']],
+            [0, 'P', ['data-o2-privacy', 'hidden']],
             [0, '#text', '\n          '],
-            [0, 'SPAN', ['data-oo-privacy', 'hidden']],
+            [0, 'SPAN', ['data-o2-privacy', 'hidden']],
             [0, '#text', '\n          '],
             [0, 'INPUT', ['id', 'input-not-obfuscated'], ['value', 'displayed']],
             [0, '#text', '\n          '],
-            [0, 'INPUT', ['id', 'input-masked'], ['data-oo-privacy', 'mask'], ['value', '***']],
+            [0, 'INPUT', ['id', 'input-masked'], ['data-o2-privacy', 'mask'], ['value', '***']],
           ],
           [ChangeType.Size, [8, expect.any(Number), expect.any(Number)], [10, expect.any(Number), expect.any(Number)]],
           [ChangeType.ScrollPosition, [0, 0, 0]],
@@ -198,7 +198,7 @@ test.describe('recorder', () => {
     createTest("don't record hidden elements mutations")
       .withRum()
       .withBody(html`
-        <div data-oo-privacy="hidden">
+        <div data-o2-privacy="hidden">
           <ul>
             <li></li>
           </ul>
@@ -404,8 +404,8 @@ test.describe('recorder', () => {
       })
       .withBody(html`
         <input type="text" id="first" name="first" />
-        <input type="text" id="second" name="second" data-oo-privacy="input-ignored" />
-        <input type="text" id="third" name="third" class="oo-privacy-input-ignored" />
+        <input type="text" id="second" name="second" data-o2-privacy="input-ignored" />
+        <input type="text" id="third" name="third" class="o2-privacy-input-ignored" />
         <input type="password" id="fourth" name="fourth" />
       `)
       .run(async ({ intakeRegistry, flushEvents, page }) => {
@@ -435,8 +435,8 @@ test.describe('recorder', () => {
     createTest('replace masked values by asterisks')
       .withRum()
       .withBody(html`
-        <input type="text" id="by-data-attribute" data-oo-privacy="mask" />
-        <input type="text" id="by-classname" class="oo-privacy-mask" />
+        <input type="text" id="by-data-attribute" data-o2-privacy="mask" />
+        <input type="text" id="by-classname" class="o2-privacy-mask" />
       `)
       .run(async ({ intakeRegistry, flushEvents, page }) => {
         const firstInput = page.locator('#by-data-attribute')
@@ -595,7 +595,7 @@ test.describe('recorder', () => {
         await scroll({ windowY: 100, containerX: 10 })
 
         await page.evaluate(() => {
-          window.OO_RUM!.startSessionReplayRecording()
+          window.O2_RUM!.startSessionReplayRecording()
         })
 
         // wait for recorder to be properly started
@@ -606,7 +606,7 @@ test.describe('recorder', () => {
 
         // trigger new full snapshot
         await page.evaluate(() => {
-          window.OO_RUM!.startView()
+          window.O2_RUM!.startView()
         })
 
         await flushEvents()
@@ -655,7 +655,7 @@ test.describe('recorder', () => {
       .withRum({ sessionReplaySampleRate: 0 })
       .run(async ({ intakeRegistry, page, flushEvents }) => {
         await page.evaluate(() => {
-          window.OO_RUM!.startSessionReplayRecording()
+          window.O2_RUM!.startSessionReplayRecording()
         })
 
         await flushEvents()
@@ -667,7 +667,7 @@ test.describe('recorder', () => {
       .withRum({ sessionReplaySampleRate: 0 })
       .run(async ({ intakeRegistry, page, flushEvents, browserContext }) => {
         await page.evaluate(() => {
-          window.OO_RUM!.startSessionReplayRecording({ force: true })
+          window.O2_RUM!.startSessionReplayRecording({ force: true })
         })
         const cookies = await browserContext.cookies()
         const sessionCookie = cookies.find((c) => c.name === SESSION_STORE_KEY)
@@ -683,8 +683,8 @@ test.describe('recorder', () => {
     .withRum()
     .run(async ({ intakeRegistry, page, flushEvents }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.stopSessionReplayRecording()
-        window.OO_RUM!.startSessionReplayRecording()
+        window.O2_RUM!.stopSessionReplayRecording()
+        window.O2_RUM!.startSessionReplayRecording()
       })
 
       await flushEvents()

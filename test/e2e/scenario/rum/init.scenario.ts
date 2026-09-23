@@ -8,7 +8,7 @@ test.describe('API calls and events around init', () => {
   createTest('should display a console log when calling init without configuration')
     .withRum()
     .withRumInit(() => {
-      ;(window.OO_RUM! as unknown as { init(): void }).init()
+      ;(window.O2_RUM! as unknown as { init(): void }).init()
     })
     .run(({ withBrowserLogs }) => {
       withBrowserLogs((logs) => {
@@ -22,19 +22,19 @@ test.describe('API calls and events around init', () => {
     .withRum()
     .withRumSlim()
     .withRumInit((configuration) => {
-      window.OO_RUM!.addError('before manual view')
-      window.OO_RUM!.addAction('before manual view')
-      window.OO_RUM!.addTiming('before manual view')
+      window.O2_RUM!.addError('before manual view')
+      window.O2_RUM!.addAction('before manual view')
+      window.O2_RUM!.addTiming('before manual view')
 
-      setTimeout(() => window.OO_RUM!.startView('manual view'), 10)
+      setTimeout(() => window.O2_RUM!.startView('manual view'), 10)
 
       setTimeout(() => {
-        window.OO_RUM!.addError('after manual view')
-        window.OO_RUM!.addAction('after manual view')
-        window.OO_RUM!.addTiming('after manual view')
+        window.O2_RUM!.addError('after manual view')
+        window.O2_RUM!.addAction('after manual view')
+        window.O2_RUM!.addTiming('after manual view')
       }, 20)
 
-      setTimeout(() => window.OO_RUM!.init(configuration), 30)
+      setTimeout(() => window.O2_RUM!.init(configuration), 30)
     })
     .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()
@@ -71,24 +71,24 @@ test.describe('API calls and events around init', () => {
     .withRum({ trackViewsManually: true })
     .withRumSlim()
     .withRumInit((configuration) => {
-      window.OO_RUM!.addError('before init')
-      window.OO_RUM!.addAction('before init')
-      window.OO_RUM!.addTiming('before init')
+      window.O2_RUM!.addError('before init')
+      window.O2_RUM!.addAction('before init')
+      window.O2_RUM!.addTiming('before init')
 
-      setTimeout(() => window.OO_RUM!.init(configuration), 10)
+      setTimeout(() => window.O2_RUM!.init(configuration), 10)
       setTimeout(() => {
-        window.OO_RUM!.addError('before manual view')
-        window.OO_RUM!.addAction('before manual view')
-        window.OO_RUM!.addTiming('before manual view')
+        window.O2_RUM!.addError('before manual view')
+        window.O2_RUM!.addAction('before manual view')
+        window.O2_RUM!.addTiming('before manual view')
       }, 20)
 
-      setTimeout(() => window.OO_RUM!.startView('manual view'), 30)
+      setTimeout(() => window.O2_RUM!.startView('manual view'), 30)
 
       setTimeout(() => {
-        window.OO_RUM!.addError('after manual view')
-        window.OO_RUM!.addAction('after manual view')
-        window.OO_RUM!.addTiming('after manual view')
-        window.OO_RUM!.setViewName('after manual view')
+        window.O2_RUM!.addError('after manual view')
+        window.O2_RUM!.addAction('after manual view')
+        window.O2_RUM!.addTiming('after manual view')
+        window.O2_RUM!.setViewName('after manual view')
       }, 40)
     })
     .run(async ({ intakeRegistry, flushEvents }) => {
@@ -124,11 +124,11 @@ test.describe('API calls and events around init', () => {
     .withRum()
     .withRumSlim()
     .withRumInit((configuration) => {
-      window.OO_RUM!.init(configuration)
+      window.O2_RUM!.init(configuration)
 
       setTimeout(
         () =>
-          window.OO_RUM!.startView({
+          window.O2_RUM!.startView({
             name: 'manual view',
             url: 'https://example.com/overridden-path',
           }),
@@ -147,19 +147,19 @@ test.describe('API calls and events around init', () => {
     .withRum()
     .withRumSlim()
     .withRumInit((configuration) => {
-      window.OO_RUM!.init(configuration)
-      window.OO_RUM!.setViewContext({ foo: 'bar' })
-      window.OO_RUM!.setViewContextProperty('bar', 'foo')
+      window.O2_RUM!.init(configuration)
+      window.O2_RUM!.setViewContext({ foo: 'bar' })
+      window.O2_RUM!.setViewContextProperty('bar', 'foo')
 
       // context should populate the context of the children events
-      window.OO_RUM!.addAction('custom action')
-      window.OO_RUM!.addError('custom error')
+      window.O2_RUM!.addAction('custom action')
+      window.O2_RUM!.addError('custom error')
 
       // context should not populate the context of the next view
-      setTimeout(() => window.OO_RUM!.startView('manual view'), 10)
+      setTimeout(() => window.O2_RUM!.startView('manual view'), 10)
       setTimeout(() => {
-        window.OO_RUM!.addAction('after manual view')
-        window.OO_RUM!.addError('after manual view')
+        window.O2_RUM!.addAction('after manual view')
+        window.O2_RUM!.addError('after manual view')
       }, 20)
     })
     .run(async ({ intakeRegistry, flushEvents }) => {
@@ -200,11 +200,11 @@ test.describe('API calls and events around init', () => {
   createTest('get the view context')
     .withRum()
     .withRumInit((configuration) => {
-      window.OO_RUM!.init(configuration)
-      window.OO_RUM!.setViewContext({ foo: 'bar' })
+      window.O2_RUM!.init(configuration)
+      window.O2_RUM!.setViewContext({ foo: 'bar' })
     })
     .run(async ({ page }) => {
-      const viewContext = await page.evaluate(() => window.OO_RUM?.getViewContext())
+      const viewContext = await page.evaluate(() => window.O2_RUM?.getViewContext())
       expect(viewContext).toEqual({ foo: 'bar' })
     })
 })
@@ -236,9 +236,9 @@ test.describe('beforeSend', () => {
     })
     .withRumSlim()
     .withRumInit((configuration) => {
-      window.OO_RUM!.init(configuration)
-      window.OO_RUM!.setGlobalContextProperty('foo', 'baz')
-      window.OO_RUM!.setGlobalContextProperty('zig', 'zag')
+      window.O2_RUM!.init(configuration)
+      window.O2_RUM!.setGlobalContextProperty('foo', 'baz')
+      window.O2_RUM!.setGlobalContextProperty('zig', 'zag')
     })
     .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()
@@ -255,7 +255,7 @@ test.describe('allowedTrackingOrigins', () => {
     .withRum()
     .withRumInit((configuration) => {
       const currentOrigin = window.location.origin
-      window.OO_RUM!.init({
+      window.O2_RUM!.init({
         ...configuration,
         allowedTrackingOrigins: [currentOrigin],
       })
@@ -271,7 +271,7 @@ test.describe('allowedTrackingOrigins', () => {
     .withRumInit((configuration) => {
       const currentOrigin = window.location.origin
       const escapedOrigin = currentOrigin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      window.OO_RUM!.init({
+      window.O2_RUM!.init({
         ...configuration,
         allowedTrackingOrigins: [new RegExp(`^${escapedOrigin}$`)],
       })
@@ -286,7 +286,7 @@ test.describe('allowedTrackingOrigins', () => {
     .withRum()
     .withRumInit((configuration) => {
       const currentOrigin = window.location.origin
-      window.OO_RUM!.init({
+      window.O2_RUM!.init({
         ...configuration,
         allowedTrackingOrigins: [(origin: string) => origin === currentOrigin],
       })
@@ -308,7 +308,7 @@ test.describe('allowedTrackingOrigins', () => {
   createTest('should warn when allowedTrackingOrigins does not match current domain')
     .withRum()
     .withRumInit((configuration) => {
-      window.OO_RUM!.init({
+      window.O2_RUM!.init({
         ...configuration,
         allowedTrackingOrigins: ['https://different-domain.com'],
       })
@@ -331,8 +331,8 @@ test.describe('Synthetics Browser Test', () => {
   createTest('ignores init() call if Synthetics will inject its own instance of RUM')
     .withRum()
     .withRumInit((configuration) => {
-      ;(window as any)._OO_SYNTHETICS_INJECTS_RUM = true
-      window.OO_RUM!.init(configuration)
+      ;(window as any)._O2_SYNTHETICS_INJECTS_RUM = true
+      window.O2_RUM!.init(configuration)
     })
     .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()
@@ -342,12 +342,12 @@ test.describe('Synthetics Browser Test', () => {
   createTest('enriches events with the synthetics context from the global variable')
     .withRum()
     .withRumInit((configuration) => {
-      ;(window as any)._OO_SYNTHETICS_RUM_CONTEXT = {
+      ;(window as any)._O2_SYNTHETICS_RUM_CONTEXT = {
         test_id: 'test-abc',
         result_id: 'result-xyz',
         run_type: 'scheduled',
       }
-      window.OO_RUM!.init(configuration)
+      window.O2_RUM!.init(configuration)
     })
     .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()
@@ -369,7 +369,7 @@ test.describe('Synthetics Browser Test', () => {
     .withRumInit((configuration) => {
       const context = { test_id: 'test-abc', result_id: 'result-xyz', run_type: 'scheduled' }
       document.cookie = `openobserve-synthetics-rum-context=${encodeURIComponent(JSON.stringify(context))}`
-      window.OO_RUM!.init(configuration)
+      window.O2_RUM!.init(configuration)
     })
     .run(async ({ intakeRegistry, flushEvents }) => {
       await flushEvents()

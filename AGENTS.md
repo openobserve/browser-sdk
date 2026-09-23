@@ -123,7 +123,7 @@ Use gitmoji conventions — see `docs/DEVELOPMENT.md` for the full reference.
 
 ## Manual Testing with Chrome MCP
 
-`yarn dev` serves the sandbox at `http://localhost:8080` (increments port if busy). The sandbox page (`sandbox/index.html`) loads the SDK bundles and calls `OO_LOGS.init()` / `OO_RUM.init()`.
+`yarn dev` serves the sandbox at `http://localhost:8080` (increments port if busy). The sandbox page (`sandbox/index.html`) loads the SDK bundles and calls `O2_LOGS.init()` / `O2_RUM.init()`.
 
 To test with specific config options (e.g. `forwardErrorsToLogs: true`), just edit `sandbox/index.html` temporarily. The dev server reloads on change, so navigate to `http://localhost:8080` after saving and use `evaluate_script` to run test code.
 

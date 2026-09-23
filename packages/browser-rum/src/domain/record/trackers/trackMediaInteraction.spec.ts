@@ -54,7 +54,7 @@ describe('trackMediaInteraction', () => {
   })
 
   it('do no collect media interactions if the privacy is "hidden"', () => {
-    audio.setAttribute('data-oo-privacy', 'hidden')
+    audio.setAttribute('data-o2-privacy', 'hidden')
 
     audio.dispatchEvent(createNewEvent('play', { target: audio }))
     audio.dispatchEvent(createNewEvent('pause', { target: audio }))

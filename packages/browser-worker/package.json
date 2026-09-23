@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-worker",
-  "version": "0.4.2",
+  "version": "0.4.3-beta.0",
   "license": "Apache-2.0",
   "main": "bundle/worker.js",
   "files": [
@@ -15,7 +15,7 @@
     "prepack": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.2"
+    "@openobserve/browser-core": "0.4.3-beta.0"
   },
   "repository": {
     "type": "git",

@@ -189,7 +189,7 @@ createTest('should send logs')
   .withLogs()
   .run(async ({ intakeRegistry, flushEvents, page }) => {
     await page.evaluate(() => {
-      window.OO_LOGS!.logger.log('hello')
+      window.O2_LOGS!.logger.log('hello')
     })
 
     await flushEvents()
@@ -207,8 +207,8 @@ createTest('should display logs in console when using console handler')
   .withLogs()
   .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs }) => {
     await page.evaluate(() => {
-      window.OO_LOGS!.logger.setHandler('console')
-      window.OO_LOGS!.logger.warn('hello')
+      window.O2_LOGS!.logger.setHandler('console')
+      window.O2_LOGS!.logger.warn('hello')
     })
 
     await flushEvents()
@@ -247,7 +247,7 @@ createTest('worker with logs')
   .withWorker(createWorker().withLogs({ forwardConsoleLogs: 'all' }))
   .run(async ({ evaluateInWorker, flushEvents, intakeRegistry }) => {
     await evaluateInWorker(() => {
-      OO_LOGS!.logger.log('hello from worker')
+      O2_LOGS!.logger.log('hello from worker')
     })
     await flushEvents()
     expect(intakeRegistry.logsEvents[0].message).toBe('hello from worker')

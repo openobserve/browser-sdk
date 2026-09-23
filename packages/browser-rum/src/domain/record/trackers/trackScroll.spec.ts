@@ -41,7 +41,7 @@ describe('trackScroll', () => {
   })
 
   it('do no collects scrolls if the privacy is "hidden"', () => {
-    div.setAttribute('data-oo-privacy', 'hidden')
+    div.setAttribute('data-o2-privacy', 'hidden')
 
     div.dispatchEvent(createNewEvent('scroll', { target: div }))
 

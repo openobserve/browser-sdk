@@ -300,7 +300,7 @@ describe('serializeNode for DOM nodes', () => {
         </div>
       `)
       expect(record?.data).toEqual([
-        [ChangeType.AddNode, [null, 'DIV', ['data-oo-privacy', 'hidden']]],
+        [ChangeType.AddNode, [null, 'DIV', ['data-o2-privacy', 'hidden']]],
         [ChangeType.Size, [0, jasmine.any(Number), jasmine.any(Number)]],
       ])
     })

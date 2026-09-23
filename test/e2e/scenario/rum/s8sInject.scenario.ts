@@ -27,12 +27,12 @@ async function injectRumWithPuppeteer() {
     `
         if (location.href !== 'about:blank') {
           ${ddRUM}
-          window.OO_RUM._setDebug(true)
-          window.OO_RUM.init({
+          window.O2_RUM._setDebug(true)
+          window.O2_RUM.init({
             applicationId: ${APPLICATION_ID},
             clientToken: ${CLIENT_TOKEN},
           })
-          window.OO_RUM.startView()
+          window.O2_RUM.startView()
         }
       `
   )

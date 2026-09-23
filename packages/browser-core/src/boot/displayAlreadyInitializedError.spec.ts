@@ -5,14 +5,14 @@ import { displayAlreadyInitializedError } from './displayAlreadyInitializedError
 describe('displayAlreadyInitializedError', () => {
   it('should display an error', () => {
     const displayErrorSpy = spyOn(display, 'error')
-    displayAlreadyInitializedError('OO_RUM', {} as InitConfiguration)
+    displayAlreadyInitializedError('O2_RUM', {} as InitConfiguration)
     expect(displayErrorSpy).toHaveBeenCalledTimes(1)
-    expect(displayErrorSpy).toHaveBeenCalledWith('OO_RUM is already initialized.')
+    expect(displayErrorSpy).toHaveBeenCalledWith('O2_RUM is already initialized.')
   })
 
   it('should not display an error if the "silentMultipleInit" option is used', () => {
     const displayErrorSpy = spyOn(display, 'error')
-    displayAlreadyInitializedError('OO_RUM', { silentMultipleInit: true } as InitConfiguration)
+    displayAlreadyInitializedError('O2_RUM', { silentMultipleInit: true } as InitConfiguration)
     expect(displayErrorSpy).not.toHaveBeenCalled()
   })
 })

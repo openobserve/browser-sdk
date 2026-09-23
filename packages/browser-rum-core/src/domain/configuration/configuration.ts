@@ -23,7 +23,7 @@ export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext']
 /**
  * Default list of headers collected on resource events when {@link RumInitConfiguration.trackResourceHeaders | trackResourceHeaders}
  * is set to `true`. Re-exported by the `@openobserve/browser-rum` and `@openobserve/browser-rum-slim` packages, and exposed on the
- * `OO_RUM` global object when the SDK is loaded via the CDN, so it can be referenced when building a custom matcher list.
+ * `O2_RUM` global object when the SDK is loaded via the CDN, so it can be referenced when building a custom matcher list.
  *
  * @example NPM
  * ```ts
@@ -39,10 +39,10 @@ export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext']
  * ```
  * @example CDN
  * ```ts
- * OO_RUM.init({
+ * O2_RUM.init({
  *   // ...
  *   trackResourceHeaders: [
- *     ...OO_RUM.DEFAULT_TRACKED_RESOURCE_HEADERS.map((name) => ({ name })),
+ *     ...O2_RUM.DEFAULT_TRACKED_RESOURCE_HEADERS.map((name) => ({ name })),
  *     { name: 'x-request-id' },
  *   ],
  * })
@@ -78,7 +78,7 @@ export const DEFAULT_TRACKED_RESOURCE_HEADERS = [
  * ```
  * @example CDN
  * ```ts
- * OO_RUM.init({
+ * O2_RUM.init({
  *   applicationId: '<OPENOBSERVE_APPLICATION_ID>',
  *   clientToken: '<OPENOBSERVE_CLIENT_TOKEN>',
  *   site: '<OPENOBSERVE_SITE>',

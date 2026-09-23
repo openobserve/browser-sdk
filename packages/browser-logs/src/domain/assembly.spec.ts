@@ -50,13 +50,13 @@ describe('startLogsAssembly', () => {
     hooks = createHooks()
     startRUMInternalContext(hooks)
     startLogsAssembly(configuration, lifeCycle, hooks.assemble, () => COMMON_CONTEXT, noop)
-    window.OO_RUM = {
+    window.O2_RUM = {
       getInternalContext: noop,
     }
   })
 
   afterEach(() => {
-    delete window.OO_RUM
+    delete window.O2_RUM
     serverLogs = []
   })
 
@@ -86,7 +86,7 @@ describe('startLogsAssembly', () => {
 
   describe('contexts inclusion', () => {
     it('should include message context', () => {
-      spyOn(window.OO_RUM!, 'getInternalContext').and.returnValue({
+      spyOn(window.O2_RUM!, 'getInternalContext').and.returnValue({
         view: { url: 'http://from-rum-context.com', id: 'view-id' },
       })
 
@@ -135,7 +135,7 @@ describe('startLogsAssembly', () => {
     })
 
     it('should include rum internal context related to the error time', () => {
-      window.OO_RUM = {
+      window.O2_RUM = {
         getInternalContext(startTime) {
           return { foo: startTime === 1234 ? 'b' : 'a' }
         },
@@ -149,7 +149,7 @@ describe('startLogsAssembly', () => {
     })
 
     it('should include RUM context', () => {
-      window.OO_RUM = {
+      window.O2_RUM = {
         getInternalContext() {
           return { view: { url: 'http://from-rum-context.com', id: 'view-id' } }
         },

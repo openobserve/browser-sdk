@@ -75,7 +75,7 @@ test.describe('rum views', () => {
           () =>
             new Promise<void>((resolve) => {
               setTimeout(() => {
-                window.OO_RUM!.setViewLoadingTime()
+                window.O2_RUM!.setViewLoadingTime()
                 resolve()
               }, 200)
             })
@@ -95,11 +95,11 @@ test.describe('rum views', () => {
           () =>
             new Promise<void>((resolve) => {
               setTimeout(() => {
-                window.OO_RUM!.setViewLoadingTime()
+                window.O2_RUM!.setViewLoadingTime()
               }, 200)
 
               setTimeout(() => {
-                window.OO_RUM!.setViewLoadingTime()
+                window.O2_RUM!.setViewLoadingTime()
                 resolve()
               }, 500)
             })
@@ -115,8 +115,8 @@ test.describe('rum views', () => {
     createTest('reports manual loading time when called before init')
       .withRum()
       .withRumInit((configuration) => {
-        window.OO_RUM!.setViewLoadingTime()
-        window.OO_RUM!.init(configuration)
+        window.O2_RUM!.setViewLoadingTime()
+        window.O2_RUM!.init(configuration)
       })
       .withBody(SPINNER)
       .run(async ({ flushEvents, intakeRegistry }) => {

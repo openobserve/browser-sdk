@@ -315,11 +315,11 @@ class TestBuilder {
   }
 
   private rumInit: (configuration: RumInitConfiguration) => void = (configuration) => {
-    window.OO_RUM!.init(configuration)
+    window.O2_RUM!.init(configuration)
   }
 
   private logsInit: (configuration: LogsInitConfiguration) => void = (configuration) => {
-    window.OO_LOGS!.init(configuration)
+    window.O2_LOGS!.init(configuration)
   }
 }
 

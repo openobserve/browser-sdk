@@ -9,7 +9,7 @@ test.describe('partial view updates', () => {
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       // Trigger a user action to cause a view update with changed metrics
       await page.evaluate(() => {
-        window.OO_RUM!.addAction('test-action')
+        window.O2_RUM!.addAction('test-action')
       })
 
       await flushEvents()
@@ -37,7 +37,7 @@ test.describe('partial view updates', () => {
     })
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.addAction('test-action')
+        window.O2_RUM!.addAction('test-action')
       })
 
       await flushEvents()
@@ -58,7 +58,7 @@ test.describe('partial view updates', () => {
     .withRum()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.addAction('test-action')
+        window.O2_RUM!.addAction('test-action')
       })
 
       await flushEvents()
@@ -95,7 +95,7 @@ test.describe('partial view updates', () => {
     })
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.addAction('test-action')
+        window.O2_RUM!.addAction('test-action')
       })
 
       await flushEvents()
@@ -154,7 +154,7 @@ test.describe('partial view updates', () => {
       // All calls are batched in a single evaluate to avoid 102 round-trips to the browser.
       await page.evaluate((count) => {
         for (let i = 0; i < count; i++) {
-          window.OO_RUM!.setViewName(`step-${i}`)
+          window.O2_RUM!.setViewName(`step-${i}`)
         }
       }, 102)
 

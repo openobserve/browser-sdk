@@ -31,10 +31,10 @@ export function mockSyntheticsWorkerValues(
 ) {
   switch (method) {
     case 'globals':
-      ;(window as BrowserWindow)._OO_SYNTHETICS_INJECTS_RUM = injectsRum
-      ;(window as BrowserWindow)._OO_SYNTHETICS_RUM_CONTEXT = context
-      ;(window as BrowserWindow)._OO_SYNTHETICS_PUBLIC_ID = publicId
-      ;(window as BrowserWindow)._OO_SYNTHETICS_RESULT_ID = resultId
+      ;(window as BrowserWindow)._O2_SYNTHETICS_INJECTS_RUM = injectsRum
+      ;(window as BrowserWindow)._O2_SYNTHETICS_RUM_CONTEXT = context
+      ;(window as BrowserWindow)._O2_SYNTHETICS_PUBLIC_ID = publicId
+      ;(window as BrowserWindow)._O2_SYNTHETICS_RESULT_ID = resultId
       break
     case 'cookies':
       if (injectsRum !== undefined) {
@@ -54,10 +54,10 @@ export function mockSyntheticsWorkerValues(
   resetInitCookies()
 
   registerCleanupTask(() => {
-    delete (window as BrowserWindow)._OO_SYNTHETICS_INJECTS_RUM
-    delete (window as BrowserWindow)._OO_SYNTHETICS_RUM_CONTEXT
-    delete (window as BrowserWindow)._OO_SYNTHETICS_PUBLIC_ID
-    delete (window as BrowserWindow)._OO_SYNTHETICS_RESULT_ID
+    delete (window as BrowserWindow)._O2_SYNTHETICS_INJECTS_RUM
+    delete (window as BrowserWindow)._O2_SYNTHETICS_RUM_CONTEXT
+    delete (window as BrowserWindow)._O2_SYNTHETICS_PUBLIC_ID
+    delete (window as BrowserWindow)._O2_SYNTHETICS_RESULT_ID
     deleteCookie(SYNTHETICS_INJECTS_RUM_COOKIE_NAME)
     deleteCookie(SYNTHETICS_CONTEXT_COOKIE_NAME)
     deleteCookie(SYNTHETICS_TEST_ID_COOKIE_NAME)

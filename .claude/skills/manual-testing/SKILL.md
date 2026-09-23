@@ -28,7 +28,7 @@ cat > sandbox/test-<topic>.html << 'EOF'
     <title>Test <topic></title>
     <script src="/openobserve-rum.js"></script>
     <script>
-      OO_RUM.init({ clientToken: 'xxx', applicationId: 'xxx', proxy: '/proxy', trackUserInteractions: true })
+      O2_RUM.init({ clientToken: 'xxx', applicationId: 'xxx', proxy: '/proxy', trackUserInteractions: true })
     </script>
   </head>
   <body>

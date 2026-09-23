@@ -293,7 +293,7 @@ describe('trackClickActions', () => {
 
   describe('with enablePrivacyForActionName true', () => {
     it('does not track click actions when html override set hidden', () => {
-      button.setAttribute('data-oo-privacy', 'hidden')
+      button.setAttribute('data-o2-privacy', 'hidden')
       startClickActionsTracking({
         enablePrivacyForActionName: true,
       })
@@ -516,7 +516,7 @@ describe('trackClickActions', () => {
     })
 
     it('should use allowlist masking when defaultPrivacyLevel is allow and node privacy level is mask-unless-allowlisted', () => {
-      button.setAttribute('data-oo-privacy', 'mask-unless-allowlisted')
+      button.setAttribute('data-o2-privacy', 'mask-unless-allowlisted')
       startClickActionsTracking({
         defaultPrivacyLevel: DefaultPrivacyLevel.ALLOW,
         enablePrivacyForActionName: true,
@@ -532,7 +532,7 @@ describe('trackClickActions', () => {
     })
 
     it('should preserve mask levels when defaultPrivacyLevel is mask-unless-allowlisted', () => {
-      button.setAttribute('data-oo-privacy', 'mask')
+      button.setAttribute('data-o2-privacy', 'mask')
       startClickActionsTracking({
         defaultPrivacyLevel: DefaultPrivacyLevel.MASK_UNLESS_ALLOWLISTED,
         enablePrivacyForActionName: true,
@@ -548,7 +548,7 @@ describe('trackClickActions', () => {
     })
 
     it('should not use allowlist masking when defaultPrivacyLevel is mask-unless-allowlisted but dd-privacy is allow', () => {
-      button.setAttribute('data-oo-privacy', 'allow')
+      button.setAttribute('data-o2-privacy', 'allow')
       startClickActionsTracking({
         defaultPrivacyLevel: DefaultPrivacyLevel.MASK_UNLESS_ALLOWLISTED,
         enablePrivacyForActionName: true,

@@ -22,8 +22,8 @@ test.describe('Session Stores', () => {
       .withRum()
       .run(async ({ browserContext, page }) => {
         const cookieSessionId = await getSessionIdFromCookie(browserContext)
-        const logsContext = await page.evaluate(() => window.OO_LOGS?.getInternalContext())
-        const rumContext = await page.evaluate(() => window.OO_RUM?.getInternalContext())
+        const logsContext = await page.evaluate(() => window.O2_LOGS?.getInternalContext())
+        const rumContext = await page.evaluate(() => window.O2_RUM?.getInternalContext())
 
         expect(logsContext?.session_id).toBe(cookieSessionId)
         expect(rumContext?.session_id).toBe(cookieSessionId)
@@ -34,8 +34,8 @@ test.describe('Session Stores', () => {
       .withRum()
       .withHead(DISABLE_COOKIES)
       .run(async ({ page, withBrowserLogs }) => {
-        const logsContext = await page.evaluate(() => window.OO_LOGS?.getInternalContext())
-        const rumContext = await page.evaluate(() => window.OO_RUM?.getInternalContext())
+        const logsContext = await page.evaluate(() => window.O2_LOGS?.getInternalContext())
+        const rumContext = await page.evaluate(() => window.O2_RUM?.getInternalContext())
 
         expect(logsContext).toBeUndefined()
         expect(rumContext).toBeUndefined()
@@ -132,8 +132,8 @@ test.describe('Session Stores', () => {
           await page.waitForTimeout(1000)
 
           const [rumInternalContext, logsInternalContext] = await page.evaluate(() => [
-            window.OO_RUM?.getInternalContext(),
-            window.OO_LOGS?.getInternalContext(),
+            window.O2_RUM?.getInternalContext(),
+            window.O2_LOGS?.getInternalContext(),
           ])
 
           expect(rumInternalContext).toBeDefined()
@@ -152,8 +152,8 @@ test.describe('Session Stores', () => {
           await page.waitForTimeout(1000)
 
           const [rumInternalContext, logsInternalContext] = await page.evaluate(() => [
-            window.OO_RUM?.getInternalContext(),
-            window.OO_LOGS?.getInternalContext(),
+            window.O2_RUM?.getInternalContext(),
+            window.O2_LOGS?.getInternalContext(),
           ])
 
           expect.soft(rumInternalContext).toBeDefined()
@@ -170,12 +170,12 @@ test.describe('Session Stores', () => {
             const iframeWindow = iframe.contentWindow!
 
             function onReady() {
-              iframeWindow.OO_RUM!.init(window.OO_RUM!.getInitConfiguration()!)
+              iframeWindow.O2_RUM!.init(window.O2_RUM!.getInitConfiguration()!)
               resolve()
             }
 
             // This is similar to async setup, but simpler
-            ;(iframeWindow as any).OO_RUM = { q: [onReady] }
+            ;(iframeWindow as any).O2_RUM = { q: [onReady] }
             const script = iframeWindow.document.createElement('script')
             script.async = true
             script.src = browserSdkUrl
@@ -194,8 +194,8 @@ test.describe('Session Stores', () => {
       .run(async ({ page }) => {
         const sessionId = await getSessionIdFromLocalStorage(page)
 
-        const logsContext = await page.evaluate(() => window.OO_LOGS?.getInternalContext())
-        const rumContext = await page.evaluate(() => window.OO_RUM?.getInternalContext())
+        const logsContext = await page.evaluate(() => window.O2_LOGS?.getInternalContext())
+        const rumContext = await page.evaluate(() => window.O2_RUM?.getInternalContext())
 
         expect(logsContext?.session_id).toBe(sessionId)
         expect(rumContext?.session_id).toBe(sessionId)
@@ -206,8 +206,8 @@ test.describe('Session Stores', () => {
       .withRum({ sessionPersistence: 'local-storage' })
       .withHead(DISABLE_LOCAL_STORAGE)
       .run(async ({ page, withBrowserLogs }) => {
-        const logsContext = await page.evaluate(() => window.OO_LOGS?.getInternalContext())
-        const rumContext = await page.evaluate(() => window.OO_RUM?.getInternalContext())
+        const logsContext = await page.evaluate(() => window.O2_LOGS?.getInternalContext())
+        const rumContext = await page.evaluate(() => window.O2_RUM?.getInternalContext())
 
         expect(logsContext).toBeUndefined()
         expect(rumContext).toBeUndefined()
@@ -225,8 +225,8 @@ test.describe('Session Stores', () => {
       .run(async ({ page }) => {
         const sessionId = await getSessionIdFromMemory(page)
 
-        const logsContext = await page.evaluate(() => window.OO_LOGS?.getInternalContext())
-        const rumContext = await page.evaluate(() => window.OO_RUM?.getInternalContext())
+        const logsContext = await page.evaluate(() => window.O2_LOGS?.getInternalContext())
+        const rumContext = await page.evaluate(() => window.O2_RUM?.getInternalContext())
 
         expect(logsContext?.session_id).toBe(sessionId)
         expect(rumContext?.session_id).toBe(sessionId)
@@ -240,8 +240,8 @@ test.describe('Session Stores', () => {
     .run(async ({ page }) => {
       const sessionId = await getSessionIdFromMemory(page)
 
-      const logsContext = await page.evaluate(() => window.OO_LOGS?.getInternalContext())
-      const rumContext = await page.evaluate(() => window.OO_RUM?.getInternalContext())
+      const logsContext = await page.evaluate(() => window.O2_LOGS?.getInternalContext())
+      const rumContext = await page.evaluate(() => window.O2_RUM?.getInternalContext())
 
       expect(logsContext?.session_id).toBe(sessionId)
       expect(rumContext?.session_id).toBe(sessionId)

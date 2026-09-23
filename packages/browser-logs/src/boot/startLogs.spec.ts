@@ -28,8 +28,8 @@ interface Rum {
 }
 declare global {
   interface Window {
-    OO_RUM?: Rum
-    OO_RUM_SYNTHETICS?: Rum
+    O2_RUM?: Rum
+    O2_RUM_SYNTHETICS?: Rum
   }
 }
 
@@ -70,7 +70,7 @@ describe('logs', () => {
   })
 
   afterEach(() => {
-    delete window.OO_RUM
+    delete window.O2_RUM
   })
 
   describe('request', () => {
@@ -229,7 +229,7 @@ describe('logs', () => {
 
     it('RUM context should take precedence over global context', () => {
       const { handleLog, logger, globalContext } = startLogsWithDefaults()
-      window.OO_RUM = {
+      window.O2_RUM = {
         getInternalContext: () => ({ view: { url: 'from-rum-context' } }),
       }
       globalContext.setContext({ view: { url: 'from-global-context' } })

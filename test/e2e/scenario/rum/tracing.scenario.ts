@@ -77,8 +77,8 @@ test.describe('tracing', () => {
     })
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.setUser({ id: 'p1745' })
-        window.OO_RUM!.setAccount({ id: 'c9wpq8xrvd9t' })
+        window.O2_RUM!.setUser({ id: 'p1745' })
+        window.O2_RUM!.setAccount({ id: 'c9wpq8xrvd9t' })
       })
       const rawHeaders = await page.evaluate(() =>
         window

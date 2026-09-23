@@ -610,8 +610,8 @@ test.describe('custom actions with startAction/stopAction', () => {
     .withRum()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startAction('checkout')
-        window.OO_RUM!.stopAction('checkout')
+        window.O2_RUM!.startAction('checkout')
+        window.O2_RUM!.stopAction('checkout')
       })
       await flushEvents()
 
@@ -626,9 +626,9 @@ test.describe('custom actions with startAction/stopAction', () => {
     .withRum()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startAction('checkout')
-        window.OO_RUM!.addError(new Error('Payment failed'))
-        window.OO_RUM!.stopAction('checkout')
+        window.O2_RUM!.startAction('checkout')
+        window.O2_RUM!.addError(new Error('Payment failed'))
+        window.O2_RUM!.stopAction('checkout')
       })
       await flushEvents()
 
@@ -649,12 +649,12 @@ test.describe('custom actions with startAction/stopAction', () => {
     .withRum()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startAction('load-data')
+        window.O2_RUM!.startAction('load-data')
         void fetch('/ok')
       })
       await waitForRequests(page)
       await page.evaluate(() => {
-        window.OO_RUM!.stopAction('load-data')
+        window.O2_RUM!.stopAction('load-data')
       })
       await flushEvents()
 
@@ -674,10 +674,10 @@ test.describe('custom actions with startAction/stopAction', () => {
     .withRum()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startAction('click', { actionKey: 'button1' })
-        window.OO_RUM!.startAction('click', { actionKey: 'button2' })
-        window.OO_RUM!.stopAction('click', { actionKey: 'button2' })
-        window.OO_RUM!.stopAction('click', { actionKey: 'button1' })
+        window.O2_RUM!.startAction('click', { actionKey: 'button1' })
+        window.O2_RUM!.startAction('click', { actionKey: 'button2' })
+        window.O2_RUM!.stopAction('click', { actionKey: 'button2' })
+        window.O2_RUM!.stopAction('click', { actionKey: 'button1' })
       })
       await flushEvents()
 
@@ -690,8 +690,8 @@ test.describe('custom actions with startAction/stopAction', () => {
     .withRum()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startAction('purchase', { context: { cart_id: 'abc123' } })
-        window.OO_RUM!.stopAction('purchase', { context: { total: 99.99 } })
+        window.O2_RUM!.startAction('purchase', { context: { cart_id: 'abc123' } })
+        window.O2_RUM!.stopAction('purchase', { context: { total: 99.99 } })
       })
       await flushEvents()
 
@@ -708,11 +708,11 @@ test.describe('custom actions with startAction/stopAction', () => {
   createTest('preserve timing when startAction is called before init')
     .withRum()
     .withRumInit((configuration) => {
-      window.OO_RUM!.startAction('pre_init_action')
+      window.O2_RUM!.startAction('pre_init_action')
 
       setTimeout(() => {
-        window.OO_RUM!.init(configuration)
-        window.OO_RUM!.stopAction('pre_init_action')
+        window.O2_RUM!.init(configuration)
+        window.O2_RUM!.stopAction('pre_init_action')
       }, 50)
     })
     .run(async ({ intakeRegistry, flushEvents }) => {
@@ -727,12 +727,12 @@ test.describe('custom actions with startAction/stopAction', () => {
   createTest('attribute errors and resources to action started before init')
     .withRum()
     .withRumInit((configuration) => {
-      window.OO_RUM!.startAction('pre_init_action')
+      window.O2_RUM!.startAction('pre_init_action')
 
       setTimeout(() => {
-        window.OO_RUM!.init(configuration)
+        window.O2_RUM!.init(configuration)
 
-        window.OO_RUM!.addError(new Error('Test error'))
+        window.O2_RUM!.addError(new Error('Test error'))
         void fetch('/ok')
       }, 10)
     })
@@ -740,7 +740,7 @@ test.describe('custom actions with startAction/stopAction', () => {
       await waitForRequests(page)
 
       await page.evaluate(() => {
-        window.OO_RUM!.stopAction('pre_init_action')
+        window.O2_RUM!.stopAction('pre_init_action')
       })
 
       await flushEvents()

@@ -4,8 +4,8 @@ import type { DatadogRum } from '@openobserve/browser-rum'
 
 declare global {
   interface Window {
-    OO_LOGS?: DatadogLogs
-    OO_RUM?: DatadogRum
+    O2_LOGS?: DatadogLogs
+    O2_RUM?: DatadogRum
     DD_DEBUGGER?: DatadogDebugger
     DD_SOURCE_CODE_CONTEXT?: { [stack: string]: { service: string; version?: string } }
   }

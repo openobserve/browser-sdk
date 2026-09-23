@@ -34,7 +34,7 @@ export function createApp(id: string, title: string, borderColor: string) {
   })
 
   createButton(container, 'error', () => {
-    window.OO_RUM.addError(new Error(`${id}-error`))
+    window.O2_RUM.addError(new Error(`${id}-error`))
   })
 
   createButton(container, 'console-error', () => {
@@ -53,19 +53,19 @@ export function createApp(id: string, title: string, borderColor: string) {
   })
 
   createButton(container, 'custom-action', () => {
-    window.OO_RUM.addAction(`${id}-action`)
+    window.O2_RUM.addAction(`${id}-action`)
   })
 
   createButton(container, 'vital', () => {
-    window.OO_RUM.startDurationVital(`${id}-vital`)
-    window.OO_RUM.stopDurationVital(`${id}-vital`)
+    window.O2_RUM.startDurationVital(`${id}-vital`)
+    window.O2_RUM.stopDurationVital(`${id}-vital`)
   })
 
   createButton(container, 'feature-operation', () => {
-    window.OO_RUM.startOperation(`${id}-feature-operation`)
+    window.O2_RUM.startOperation(`${id}-feature-operation`)
   })
 
   createButton(container, 'view', () => {
-    window.OO_RUM.startView({ name: `${id}-view` })
+    window.O2_RUM.startView({ name: `${id}-view` })
   })
 }
