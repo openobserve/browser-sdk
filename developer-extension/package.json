@@ -1,6 +1,6 @@
 {
   "name": "@openobserve/browser-sdk-developer-extension",
-  "version": "0.4.3-beta.0",
+  "version": "0.4.3",
   "private": true,
   "scripts": {
     "build": "wxt build",
