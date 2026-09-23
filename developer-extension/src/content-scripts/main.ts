@@ -6,8 +6,8 @@ import { DEV_LOGS_URL, DEV_RUM_SLIM_URL, DEV_RUM_URL } from '../common/packagesU
 import { SESSION_STORAGE_SETTINGS_KEY } from '../common/sessionKeyConstant'
 
 const windowWithSdkGlobals = window as Window & {
-  OO_RUM?: SdkPublicApi
-  OO_LOGS?: SdkPublicApi
+  O2_RUM?: SdkPublicApi
+  O2_LOGS?: SdkPublicApi
   __ooBrowserSdkExtensionCallback?: (message: unknown) => void
 }
 
@@ -31,8 +31,8 @@ export function main() {
     // This happens when the page is loaded and then the devtools are opened.
     noBrowserSdkLoaded()
   ) {
-    const ddRumGlobal = instrumentGlobal('OO_RUM')
-    const ddLogsGlobal = instrumentGlobal('OO_LOGS')
+    const ddRumGlobal = instrumentGlobal('O2_RUM')
+    const ddLogsGlobal = instrumentGlobal('O2_LOGS')
 
     if (settings.debugMode) {
       setDebug(ddRumGlobal)
@@ -80,7 +80,7 @@ function getSettings() {
 }
 
 function noBrowserSdkLoaded() {
-  return !windowWithSdkGlobals.OO_RUM && !windowWithSdkGlobals.OO_LOGS
+  return !windowWithSdkGlobals.O2_RUM && !windowWithSdkGlobals.O2_LOGS
 }
 
 function injectDevBundle(url: string, global: GlobalInstrumentation) {
@@ -187,7 +187,7 @@ function loadSdkScriptFromURL(url: string) {
 }
 
 type GlobalInstrumentation = ReturnType<typeof instrumentGlobal>
-function instrumentGlobal(global: 'OO_RUM' | 'OO_LOGS') {
+function instrumentGlobal(global: 'O2_RUM' | 'O2_LOGS') {
   const eventListeners = new EventListeners<SdkPublicApi>()
   let returnedInstance: SdkPublicApi | undefined
   let lastInstance: SdkPublicApi | undefined

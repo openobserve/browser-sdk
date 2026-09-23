@@ -95,7 +95,7 @@ export function createPreStartStrategy(
       cachedInitConfiguration = initConfiguration
 
       if (cachedConfiguration) {
-        displayAlreadyInitializedError('OO_LOGS', initConfiguration)
+        displayAlreadyInitializedError('O2_LOGS', initConfiguration)
         return
       }
 

@@ -480,10 +480,10 @@ test.describe('resource headers with trackResourceHeaders', () => {
     .withRum()
     .withRumInit((configuration) => {
       configuration.trackResourceHeaders = [
-        ...window.OO_RUM!.DEFAULT_TRACKED_RESOURCE_HEADERS.map((name) => ({ name })),
+        ...window.O2_RUM!.DEFAULT_TRACKED_RESOURCE_HEADERS.map((name) => ({ name })),
         { name: 'x-request-id' },
       ]
-      window.OO_RUM!.init(configuration)
+      window.O2_RUM!.init(configuration)
     })
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       const url = okUrl({
@@ -509,8 +509,8 @@ test.describe('manual resources with startResource/stopResource', () => {
     .withRum()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startResource('https://api.example.com/data')
-        window.OO_RUM!.stopResource('https://api.example.com/data')
+        window.O2_RUM!.startResource('https://api.example.com/data')
+        window.O2_RUM!.stopResource('https://api.example.com/data')
       })
       await flushEvents()
 
@@ -527,11 +527,11 @@ test.describe('manual resources with startResource/stopResource', () => {
     .withRum()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startResource('https://api.example.com/users', {
+        window.O2_RUM!.startResource('https://api.example.com/users', {
           type: 'fetch',
           method: 'POST',
         })
-        window.OO_RUM!.stopResource('https://api.example.com/users', {
+        window.O2_RUM!.stopResource('https://api.example.com/users', {
           statusCode: 201,
         })
       })
@@ -550,10 +550,10 @@ test.describe('manual resources with startResource/stopResource', () => {
     .withRum()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startResource('https://api.example.com/data', { resourceKey: 'request1' })
-        window.OO_RUM!.startResource('https://api.example.com/data', { resourceKey: 'request2' })
-        window.OO_RUM!.stopResource('https://api.example.com/data', { resourceKey: 'request2' })
-        window.OO_RUM!.stopResource('https://api.example.com/data', { resourceKey: 'request1' })
+        window.O2_RUM!.startResource('https://api.example.com/data', { resourceKey: 'request1' })
+        window.O2_RUM!.startResource('https://api.example.com/data', { resourceKey: 'request2' })
+        window.O2_RUM!.stopResource('https://api.example.com/data', { resourceKey: 'request2' })
+        window.O2_RUM!.stopResource('https://api.example.com/data', { resourceKey: 'request1' })
       })
       await flushEvents()
 
@@ -568,10 +568,10 @@ test.describe('manual resources with startResource/stopResource', () => {
     .withRum()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.startResource('https://api.example.com/data', {
+        window.O2_RUM!.startResource('https://api.example.com/data', {
           context: { request_id: 'abc123' },
         })
-        window.OO_RUM!.stopResource('https://api.example.com/data', {
+        window.O2_RUM!.stopResource('https://api.example.com/data', {
           context: { response_size: 1024 },
         })
       })
@@ -592,11 +592,11 @@ test.describe('manual resources with startResource/stopResource', () => {
   createTest('preserve timing when startResource is called before init')
     .withRum()
     .withRumInit((configuration) => {
-      window.OO_RUM!.startResource('https://api.example.com/early')
+      window.O2_RUM!.startResource('https://api.example.com/early')
 
       setTimeout(() => {
-        window.OO_RUM!.init(configuration)
-        window.OO_RUM!.stopResource('https://api.example.com/early')
+        window.O2_RUM!.init(configuration)
+        window.O2_RUM!.stopResource('https://api.example.com/early')
       }, 50)
     })
     .run(async ({ intakeRegistry, flushEvents }) => {

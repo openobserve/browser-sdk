@@ -1039,7 +1039,7 @@ function createPostStartStrategy(preStartStrategy: Strategy, startRumResult: Sta
   return {
     ...preStartStrategy,
     init: (initConfiguration: RumInitConfiguration) => {
-      displayAlreadyInitializedError('OO_RUM', initConfiguration)
+      displayAlreadyInitializedError('O2_RUM', initConfiguration)
     },
     getInternalContext: startRumResult.getInternalContext,
     stopSession: startRumResult.stopSession,

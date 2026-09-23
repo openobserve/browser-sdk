@@ -9,8 +9,8 @@ interface Rum {
 }
 
 interface BrowserWindow {
-  OO_RUM?: Rum
-  OO_RUM_SYNTHETICS?: Rum
+  O2_RUM?: Rum
+  O2_RUM_SYNTHETICS?: Rum
 }
 
 export function startRUMInternalContext(hooks: Hooks) {
@@ -41,7 +41,7 @@ export function startRUMInternalContext(hooks: Hooks) {
 
   function getRUMInternalContext(startTime?: RelativeTime) {
     const willSyntheticsInjectRumResult = willSyntheticsInjectRum()
-    const rumSource = willSyntheticsInjectRumResult ? browserWindow.OO_RUM_SYNTHETICS : browserWindow.OO_RUM
+    const rumSource = willSyntheticsInjectRumResult ? browserWindow.O2_RUM_SYNTHETICS : browserWindow.O2_RUM
     const rumContext = getInternalContextFromRumGlobal(startTime, rumSource)
 
     if (rumContext) {

@@ -81,18 +81,18 @@ async function getInfos(): Promise<SdkInfos> {
         const cookie = cookieRawValue && Object.fromEntries(
           cookieRawValue.split('&').map(value => value.split('='))
         )
-        const rum = window.OO_RUM && {
-          version: window.OO_RUM?.version,
-          config: serializeWithFunctions(window.OO_RUM?.getInitConfiguration?.()),
-          internalContext: window.OO_RUM?.getInternalContext?.(),
-          globalContext: window.OO_RUM?.getGlobalContext?.(),
-          user: window.OO_RUM?.getUser?.(),
+        const rum = window.O2_RUM && {
+          version: window.O2_RUM?.version,
+          config: serializeWithFunctions(window.O2_RUM?.getInitConfiguration?.()),
+          internalContext: window.O2_RUM?.getInternalContext?.(),
+          globalContext: window.O2_RUM?.getGlobalContext?.(),
+          user: window.O2_RUM?.getUser?.(),
         }
-        const logs = window.OO_LOGS && {
-          version: window.OO_LOGS?.version,
-          config: serializeWithFunctions(window.OO_LOGS?.getInitConfiguration?.()),
-          globalContext: window.OO_LOGS?.getGlobalContext?.(),
-          user: window.OO_LOGS?.getUser?.(),
+        const logs = window.O2_LOGS && {
+          version: window.O2_LOGS?.version,
+          config: serializeWithFunctions(window.O2_LOGS?.getInitConfiguration?.()),
+          globalContext: window.O2_LOGS?.getGlobalContext?.(),
+          user: window.O2_LOGS?.getUser?.(),
         }
         return { rum, logs, cookie }
       `

@@ -35,7 +35,7 @@ export function Panel() {
 
   return (
     <Tabs color="violet" value={activeTab} className={classes.tabs} onChange={updateActiveTab}>
-      <Tabs.List className={classes.topBox} data-oo-privacy="allow">
+      <Tabs.List className={classes.topBox} data-o2-privacy="allow">
         <div className={classes.tabBox}>
           <Tabs.Tab value={PanelTabs.Events}>Events</Tabs.Tab>
           <Tabs.Tab

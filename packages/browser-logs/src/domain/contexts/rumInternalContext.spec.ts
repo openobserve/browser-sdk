@@ -13,8 +13,8 @@ describe('startRUMInternalContext', () => {
   })
 
   afterEach(() => {
-    delete window.OO_RUM
-    delete window.OO_RUM_SYNTHETICS
+    delete window.O2_RUM
+    delete window.O2_RUM_SYNTHETICS
   })
 
   describe('assemble hook', () => {
@@ -27,7 +27,7 @@ describe('startRUMInternalContext', () => {
     })
 
     it('returns undefined if the global variable does not have a `getInternalContext` method', () => {
-      window.OO_RUM = {} as any
+      window.O2_RUM = {} as any
       const defaultLogsEventAttributes = hooks.assemble.trigger({
         startTime: 0 as RelativeTime,
       })
@@ -35,7 +35,7 @@ describe('startRUMInternalContext', () => {
     })
 
     it('returns the internal context from the `getInternalContext` method', () => {
-      window.OO_RUM = {
+      window.O2_RUM = {
         getInternalContext: () => ({ foo: 'bar' }),
       }
       const defaultLogsEventAttributes = hooks.assemble.trigger({
@@ -50,7 +50,7 @@ describe('startRUMInternalContext', () => {
       })
 
       it('uses the global variable created when the synthetics worker is injecting RUM', () => {
-        window.OO_RUM_SYNTHETICS = {
+        window.O2_RUM_SYNTHETICS = {
           getInternalContext: () => ({ foo: 'bar' }),
         }
         const defaultLogsEventAttributes = hooks.assemble.trigger({
@@ -63,7 +63,7 @@ describe('startRUMInternalContext', () => {
 
   describe('assemble telemetry hook', () => {
     it('should set internal context', () => {
-      window.OO_RUM = {
+      window.O2_RUM = {
         getInternalContext: () => ({ application_id: '123', view: { id: '456' }, user_action: { id: '789' } }),
       }
       const defaultRumEventAttributes = hooks.assembleTelemetry.trigger({
@@ -78,7 +78,7 @@ describe('startRUMInternalContext', () => {
     })
 
     it('should not set internal context if the RUM instance is not present', () => {
-      window.OO_RUM = {
+      window.O2_RUM = {
         getInternalContext: () => undefined,
       }
       const defaultRumEventAttributes = hooks.assembleTelemetry.trigger({

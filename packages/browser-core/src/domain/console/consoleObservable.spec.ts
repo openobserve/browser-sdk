@@ -110,10 +110,10 @@ describe('console error observable', () => {
 
   it('should retrieve fingerprint from error', () => {
     interface DatadogError extends Error {
-      oo_fingerprint?: string
+      o2_fingerprint?: string
     }
     const error = new Error('foo')
-    ;(error as DatadogError).oo_fingerprint = 'my-fingerprint'
+    ;(error as DatadogError).o2_fingerprint = 'my-fingerprint'
 
     console.error(error)
 
@@ -123,7 +123,7 @@ describe('console error observable', () => {
 
   it('should sanitize error fingerprint', () => {
     const error = new Error('foo')
-    ;(error as any).oo_fingerprint = 2
+    ;(error as any).o2_fingerprint = 2
 
     console.error(error)
 

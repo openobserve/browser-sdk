@@ -1385,8 +1385,8 @@ describe('api', () => {
   })
 
   describe('error handling', () => {
-    it('should handle missing OO_RUM gracefully', () => {
-      delete (window as any).OO_RUM
+    it('should handle missing O2_RUM gracefully', () => {
+      delete (window as any).O2_RUM
 
       addProbe(createProbe())
 

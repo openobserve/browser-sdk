@@ -11,7 +11,7 @@ test.describe('telemetry', () => {
             throw new window.Error('expected error')
           },
         }
-        window.OO_LOGS!.logger.log('hop', context)
+        window.O2_LOGS!.logger.log('hop', context)
       })
       await flushEvents()
       expect(intakeRegistry.telemetryErrorEvents).toHaveLength(1)
@@ -32,7 +32,7 @@ test.describe('telemetry', () => {
             throw new window.Error('expected error')
           },
         }
-        window.OO_RUM!.addAction('hop', context)
+        window.O2_RUM!.addAction('hop', context)
       })
       await flushEvents()
       expect(intakeRegistry.telemetryErrorEvents).toHaveLength(1)
@@ -75,7 +75,7 @@ test.describe('telemetry', () => {
     .withRum()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_RUM!.addAction('foo')
+        window.O2_RUM!.addAction('foo')
       })
 
       await flushEvents()
@@ -89,7 +89,7 @@ test.describe('telemetry', () => {
     .withLogs()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_LOGS!.setTrackingConsent('granted')
+        window.O2_LOGS!.setTrackingConsent('granted')
       })
 
       await flushEvents()
@@ -104,10 +104,10 @@ test.describe('telemetry', () => {
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       // Generate initial telemetry, revoke consent, then try to generate more
       await page.evaluate(() => {
-        window.OO_RUM!.addAction('initial-action')
-        window.OO_RUM!.setTrackingConsent('not-granted')
-        window.OO_RUM!.addAction('post-revocation-action')
-        window.OO_RUM!.getAccount()
+        window.O2_RUM!.addAction('initial-action')
+        window.O2_RUM!.setTrackingConsent('not-granted')
+        window.O2_RUM!.addAction('post-revocation-action')
+        window.O2_RUM!.getAccount()
       })
 
       await flushEvents()

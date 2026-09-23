@@ -35,7 +35,7 @@ test.describe('microfrontend', () => {
       createTest('expose handling stack for fetch requests')
         .withRum(RUM_CONFIG)
         .withRumInit((configuration) => {
-          window.OO_RUM!.init(configuration)
+          window.O2_RUM!.init(configuration)
 
           // eslint-disable-next-line @typescript-eslint/no-empty-function
           const noop = () => {}
@@ -57,7 +57,7 @@ test.describe('microfrontend', () => {
       createTest('expose handling stack for xhr requests')
         .withRum(RUM_CONFIG)
         .withRumInit((configuration) => {
-          window.OO_RUM!.init(configuration)
+          window.O2_RUM!.init(configuration)
 
           function testHandlingStack() {
             const xhr = new XMLHttpRequest()
@@ -76,13 +76,13 @@ test.describe('microfrontend', () => {
           expect(event?.context?.handlingStack).toMatch(HANDLING_STACK_REGEX)
         })
 
-      createTest('expose handling stack for OO_RUM.addAction')
+      createTest('expose handling stack for O2_RUM.addAction')
         .withRum(RUM_CONFIG)
         .withRumInit((configuration) => {
-          window.OO_RUM!.init(configuration)
+          window.O2_RUM!.init(configuration)
 
           function testHandlingStack() {
-            window.OO_RUM!.addAction('foo')
+            window.O2_RUM!.addAction('foo')
           }
 
           testHandlingStack()
@@ -96,13 +96,13 @@ test.describe('microfrontend', () => {
           expect(event?.context?.handlingStack).toMatch(HANDLING_STACK_REGEX)
         })
 
-      createTest('expose handling stack for OO_RUM.addError')
+      createTest('expose handling stack for O2_RUM.addError')
         .withRum(RUM_CONFIG)
         .withRumInit((configuration) => {
-          window.OO_RUM!.init(configuration)
+          window.O2_RUM!.init(configuration)
 
           function testHandlingStack() {
-            window.OO_RUM!.addError(new Error('foo'))
+            window.O2_RUM!.addError(new Error('foo'))
           }
 
           testHandlingStack()
@@ -119,7 +119,7 @@ test.describe('microfrontend', () => {
       createTest('expose handling stack for console errors')
         .withRum(RUM_CONFIG)
         .withRumInit((configuration) => {
-          window.OO_RUM!.init(configuration)
+          window.O2_RUM!.init(configuration)
 
           function testHandlingStack() {
             console.error('foo')
@@ -141,13 +141,13 @@ test.describe('microfrontend', () => {
           expect(event?.context?.handlingStack).toMatch(HANDLING_STACK_REGEX)
         })
 
-      createTest('expose handling stack for OO_RUM.startView')
+      createTest('expose handling stack for O2_RUM.startView')
         .withRum(RUM_CONFIG)
         .withRumInit((configuration) => {
-          window.OO_RUM!.init(configuration)
+          window.O2_RUM!.init(configuration)
 
           function testHandlingStack() {
-            window.OO_RUM!.startView({ name: 'test-view' })
+            window.O2_RUM!.startView({ name: 'test-view' })
           }
 
           testHandlingStack()
@@ -161,14 +161,14 @@ test.describe('microfrontend', () => {
           expect(event?.context?.handlingStack).toMatch(HANDLING_STACK_REGEX)
         })
 
-      createTest('expose handling stack for OO_RUM.startDurationVital')
+      createTest('expose handling stack for O2_RUM.startDurationVital')
         .withRum(RUM_CONFIG)
         .withRumInit((configuration) => {
-          window.OO_RUM!.init(configuration)
+          window.O2_RUM!.init(configuration)
 
           function testHandlingStack() {
-            window.OO_RUM!.startDurationVital('test-vital')
-            window.OO_RUM!.stopDurationVital('test-vital')
+            window.O2_RUM!.startDurationVital('test-vital')
+            window.O2_RUM!.stopDurationVital('test-vital')
           }
 
           testHandlingStack()
@@ -182,13 +182,13 @@ test.describe('microfrontend', () => {
           expect(event?.context?.handlingStack).toMatch(HANDLING_STACK_REGEX)
         })
 
-      createTest('expose handling stack for OO_RUM.startOperation')
+      createTest('expose handling stack for O2_RUM.startOperation')
         .withRum({ ...RUM_CONFIG })
         .withRumInit((configuration) => {
-          window.OO_RUM!.init(configuration)
+          window.O2_RUM!.init(configuration)
 
           function testHandlingStack() {
-            window.OO_RUM!.startOperation('test-operation')
+            window.O2_RUM!.startOperation('test-operation')
           }
 
           testHandlingStack()
@@ -205,7 +205,7 @@ test.describe('microfrontend', () => {
       createTest('resource: allow to modify service and version')
         .withRum(RUM_CONFIG)
         .withRumInit((configuration) => {
-          window.OO_RUM!.init({
+          window.O2_RUM!.init({
             ...configuration,
             beforeSend: (event: RumEvent) => {
               if (event.type === 'resource') {
@@ -235,7 +235,7 @@ test.describe('microfrontend', () => {
       createTest('view: allowed to modify service and version')
         .withRum(RUM_CONFIG)
         .withRumInit((configuration) => {
-          window.OO_RUM!.init({
+          window.O2_RUM!.init({
             ...configuration,
             beforeSend: (event: RumEvent) => {
               if (event.type === 'view') {
@@ -434,7 +434,7 @@ test.describe('microfrontend', () => {
     createTest('expose handling stack for console.log')
       .withLogs(LOGS_CONFIG)
       .withLogsInit((configuration) => {
-        window.OO_LOGS!.init(configuration)
+        window.O2_LOGS!.init(configuration)
 
         function testHandlingStack() {
           console.log('foo')
@@ -455,13 +455,13 @@ test.describe('microfrontend', () => {
         })
       })
 
-    createTest('expose handling stack for OO_LOGS.logger.log')
+    createTest('expose handling stack for O2_LOGS.logger.log')
       .withLogs(LOGS_CONFIG)
       .withLogsInit((configuration) => {
-        window.OO_LOGS!.init(configuration)
+        window.O2_LOGS!.init(configuration)
 
         function testHandlingStack() {
-          window.OO_LOGS!.logger.log('foo')
+          window.O2_LOGS!.logger.log('foo')
         }
 
         testHandlingStack()

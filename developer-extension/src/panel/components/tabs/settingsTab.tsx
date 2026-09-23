@@ -27,7 +27,7 @@ export function SettingsTab() {
 
   return (
     <TabBase>
-      <div className="oo-privacy-allow">
+      <div className="o2-privacy-allow">
         <Columns>
           <Columns.Column title="Overrides">
             <Accordion defaultValue="browser-sdk">

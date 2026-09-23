@@ -219,7 +219,7 @@ export interface LogsPublicApi extends PublicApi {
   clearAccount: () => void
 
   /**
-   * The Datadog browser logs SDK contains a default logger `OO_LOGS.logger`, but this API allows to create different ones.
+   * The Datadog browser logs SDK contains a default logger `O2_LOGS.logger`, but this API allows to create different ones.
    *
    * See [Define multiple loggers](https://docs.datadoghq.com/logs/log_collection/javascript/#define-multiple-loggers) for further information.
    *
@@ -400,7 +400,7 @@ function createPostStartStrategy(preStartStrategy: Strategy, startLogsResult: St
   return {
     ...preStartStrategy,
     init: (initConfiguration: LogsInitConfiguration) => {
-      displayAlreadyInitializedError('OO_LOGS', initConfiguration)
+      displayAlreadyInitializedError('O2_LOGS', initConfiguration)
     },
     getInternalContext: startLogsResult.getInternalContext,
     globalContext: startLogsResult.globalContext,

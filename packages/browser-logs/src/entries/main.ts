@@ -59,6 +59,6 @@ export type { ConsoleApiName } from '@openobserve/js-core/util'
 export const openobserveLogs = makeLogsPublicApi()
 
 interface BrowserWindow {
-  OO_LOGS?: LogsPublicApi
+  O2_LOGS?: LogsPublicApi
 }
-defineGlobal(globalObject as BrowserWindow, 'OO_LOGS', openobserveLogs)
+defineGlobal(globalObject as BrowserWindow, 'O2_LOGS', openobserveLogs)

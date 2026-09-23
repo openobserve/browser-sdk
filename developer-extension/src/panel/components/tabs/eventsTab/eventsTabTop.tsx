@@ -14,13 +14,13 @@ export function EventsTabTop({
   clear: () => void
 }) {
   return (
-    <Group className="oo-privacy-allow">
+    <Group className="o2-privacy-allow">
       <TextInput
         placeholder="Filter your events, syntax: 'type:view application.id:40d8ca4b'"
         value={filters.query}
         className={classes.textInput}
         onChange={(event) => onFiltersChange({ ...filters, query: event.currentTarget.value })}
-        data-oo-privacy="mask"
+        data-o2-privacy="mask"
       />
 
       <Button color="violet" variant="light" onClick={flushEvents}>

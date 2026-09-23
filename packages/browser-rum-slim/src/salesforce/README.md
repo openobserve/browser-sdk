@@ -78,7 +78,7 @@ export default class DatadogInit extends NavigationMixin(LightningElement) {
 
     this.initialize()
 
-    if (window.OO_RUM) {
+    if (window.O2_RUM) {
       this.startViewForPageReference(pageReference)
     }
   }
@@ -91,7 +91,7 @@ export default class DatadogInit extends NavigationMixin(LightningElement) {
       }
       lastStartedUrl = url
       const absoluteUrl = new URL(url, window.location.origin).href
-      window.OO_RUM.startView({ name: url, url: absoluteUrl })
+      window.O2_RUM.startView({ name: url, url: absoluteUrl })
     })
   }
 
@@ -115,9 +115,9 @@ export default class DatadogInit extends NavigationMixin(LightningElement) {
         trackResources: true,
         trackUserInteractions: true,
       }
-      window.OO_RUM.init(initConfig)
+      window.O2_RUM.init(initConfig)
       lastStartedUrl = window.location.pathname + window.location.search + window.location.hash
-      window.OO_RUM.startView({
+      window.O2_RUM.startView({
         name: lastStartedUrl,
         url: window.location.href,
       })

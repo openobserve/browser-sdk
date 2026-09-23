@@ -3,7 +3,7 @@ import type { RumPublicApi } from '@openobserve/browser-rum-core'
 import type { DatadogDebugger } from '@openobserve/browser-debugger'
 
 export interface BrowserWindow extends Window {
-  OO_RUM?: RumPublicApi
+  O2_RUM?: RumPublicApi
   DD_DEBUGGER?: DatadogDebugger
   __webVitalsMetrics__?: WebVitalsMetrics
   // Set by the benchmark harness once any async setup (e.g. debugger SDK + probe load)

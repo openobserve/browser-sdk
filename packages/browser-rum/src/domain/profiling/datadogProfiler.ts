@@ -231,7 +231,7 @@ export function createRumProfiler(
         // Missing Response Header (`js-profiling`) that is required to enable the profiler.
         // We should suggest the user to enable the Response Header in their server configuration.
         display.warn(
-          '[OO_RUM] Profiler startup failed. Ensure your server includes the `Document-Policy: js-profiling` response header when serving HTML pages.',
+          '[O2_RUM] Profiler startup failed. Ensure your server includes the `Document-Policy: js-profiling` response header when serving HTML pages.',
           e
         )
         profilingContextManager.set({ status: 'error', error_reason: 'missing-document-policy-header' })

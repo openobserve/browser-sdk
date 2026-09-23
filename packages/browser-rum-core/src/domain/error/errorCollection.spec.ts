@@ -153,10 +153,10 @@ describe('error collection', () => {
       setupErrorCollection()
 
       interface DatadogError extends Error {
-        oo_fingerprint?: string
+        o2_fingerprint?: string
       }
       const error = new Error('foo')
-      ;(error as DatadogError).oo_fingerprint = 'my-fingerprint'
+      ;(error as DatadogError).o2_fingerprint = 'my-fingerprint'
 
       addError({
         error,
@@ -171,7 +171,7 @@ describe('error collection', () => {
       setupErrorCollection()
 
       const error = new Error('foo')
-      ;(error as any).oo_fingerprint = 2
+      ;(error as any).o2_fingerprint = 2
 
       addError({
         error,

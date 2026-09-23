@@ -19,7 +19,7 @@ test.describe('logs', () => {
         test.skip(browserName !== 'chromium', 'Non-Chromium browsers do not support ES modules in Service Workers')
 
         await evaluateInWorker(() => {
-          self.OO_LOGS!.logger.log('Some message')
+          self.O2_LOGS!.logger.log('Some message')
         })
 
         await flushEvents()
@@ -38,7 +38,7 @@ test.describe('logs', () => {
         )
 
         await evaluateInWorker(() => {
-          self.OO_LOGS!.logger.log('Other message')
+          self.O2_LOGS!.logger.log('Other message')
         })
 
         await flushEvents()
@@ -73,7 +73,7 @@ test.describe('logs', () => {
     .withLogs()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_LOGS!.logger.log('hello')
+        window.O2_LOGS!.logger.log('hello')
       })
       await flushEvents()
       expect(intakeRegistry.logsEvents).toHaveLength(1)
@@ -84,8 +84,8 @@ test.describe('logs', () => {
     .withLogs()
     .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs }) => {
       await page.evaluate(() => {
-        window.OO_LOGS!.logger.setHandler('console')
-        window.OO_LOGS!.logger.warn('hello')
+        window.O2_LOGS!.logger.setHandler('console')
+        window.O2_LOGS!.logger.warn('hello')
       })
       await flushEvents()
       expect(intakeRegistry.logsEvents).toHaveLength(0)
@@ -274,7 +274,7 @@ test.describe('logs', () => {
         throw new Error('oh snap')
       })
       // Simulate a late initialization of the RUM SDK
-      setTimeout(() => window.OO_LOGS!.init(configuration))
+      setTimeout(() => window.O2_LOGS!.init(configuration))
     })
     .run(async ({ intakeRegistry, flushEvents, withBrowserLogs }) => {
       await flushEvents()
@@ -290,7 +290,7 @@ test.describe('logs', () => {
     .withLogs()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_LOGS!.logger.log('hello')
+        window.O2_LOGS!.logger.log('hello')
       })
       await flushEvents()
       expect(intakeRegistry.logsEvents).toHaveLength(1)
@@ -306,7 +306,7 @@ test.describe('logs', () => {
     })
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_LOGS!.logger.log('hello world!')
+        window.O2_LOGS!.logger.log('hello world!')
       })
       await flushEvents()
       expect(intakeRegistry.logsEvents).toHaveLength(1)
@@ -317,8 +317,8 @@ test.describe('logs', () => {
     .withLogs()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_LOGS!.logger.addTag('planet', 'mars')
-        window.OO_LOGS!.logger.log('hello world!')
+        window.O2_LOGS!.logger.addTag('planet', 'mars')
+        window.O2_LOGS!.logger.log('hello world!')
       })
 
       await flushEvents()
@@ -330,8 +330,8 @@ test.describe('logs', () => {
     .withLogs()
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_LOGS!.logger.setContextProperty('o2tags', 'planet:mars')
-        window.OO_LOGS!.logger.log('hello world!', { o2tags: 'planet:earth' })
+        window.O2_LOGS!.logger.setContextProperty('o2tags', 'planet:mars')
+        window.O2_LOGS!.logger.log('hello world!', { o2tags: 'planet:earth' })
       })
 
       await flushEvents()
@@ -348,7 +348,7 @@ test.describe('logs', () => {
     })
     .run(async ({ intakeRegistry, flushEvents, page }) => {
       await page.evaluate(() => {
-        window.OO_LOGS!.logger.log('hello', {})
+        window.O2_LOGS!.logger.log('hello', {})
       })
       await flushEvents()
       expect(intakeRegistry.logsEvents).toHaveLength(1)

@@ -28,8 +28,8 @@ beforeEach(() => {
 
 afterEach(() => {
   // reset globals
-  delete (window as any).OO_LOGS
-  delete (window as any).OO_RUM
+  delete (window as any).O2_LOGS
+  delete (window as any).O2_RUM
   resetValueHistoryGlobals()
   resetFetchObservable()
   resetConsoleObservable()
