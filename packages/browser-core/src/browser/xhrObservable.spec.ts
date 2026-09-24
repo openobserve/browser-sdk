@@ -430,7 +430,7 @@ describe('xhr observable', () => {
         setup(xhr) {
           xhr.open('GET', '/ok')
           xhr.send()
-          // Untrusted Event (constructor-built, no __ooIsTrusted marker)
+          // Untrusted Event (constructor-built, no __o2IsTrusted marker)
           xhr.dispatchEvent(new Event('loadend'))
         },
         onComplete() {

@@ -89,7 +89,7 @@ export function getCurrentSite(
     if (defaultHostName) {
       // Use a unique cookie name to avoid issues when the SDK is initialized multiple times during
       // the test cookie lifetime
-      const testCookieName = `oo_site_test_${generateUUID()}`
+      const testCookieName = `o2_site_test_${generateUUID()}`
       const testCookieValue = 'test'
 
       const domainLevels = defaultHostName.split('.')

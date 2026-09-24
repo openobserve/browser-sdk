@@ -83,7 +83,7 @@ describe('account context across pages', () => {
     accountContext.setContext({ id: '123' })
 
     expect(accountContext.getContext()).toEqual({ id: '123' })
-    expect(localStorage.getItem('_oo_c_rum_4')).toBeNull()
+    expect(localStorage.getItem('_o2_c_rum_4')).toBeNull()
   })
 
   it('when enabled, should maintain the account in local storage', () => {
@@ -95,6 +95,6 @@ describe('account context across pages', () => {
 
     accountContext.setContext({ id: 'foo', qux: 'qix' })
     expect(accountContext.getContext()).toEqual({ id: 'foo', qux: 'qix' })
-    expect(localStorage.getItem('_oo_c_some_product_key_4')).toBe('{"id":"foo","qux":"qix"}')
+    expect(localStorage.getItem('_o2_c_some_product_key_4')).toBe('{"id":"foo","qux":"qix"}')
   })
 })

@@ -5,7 +5,7 @@ import { isEmptyObject, tryJsonParse } from '../../tools/utils/objectUtils'
 import type { ContextManager } from './contextManager'
 import type { CustomerDataType } from './contextConstants'
 
-const CONTEXT_STORE_KEY_PREFIX = '_oo_c'
+const CONTEXT_STORE_KEY_PREFIX = '_o2_c'
 
 const storageListeners: Array<{ stop: () => void }> = []
 
