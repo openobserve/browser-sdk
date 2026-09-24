@@ -124,7 +124,7 @@ function uploadToS3(awsConfig: AwsConfig, bundlePath: string, uploadPath: string
 
   printLog(`Upload ${bundlePath} to s3://${awsConfig.bucketName}/${uploadPath}`)
   command`
-  aws s3 cp --cache-control ${cacheControl} ${bundlePath} s3://${awsConfig.bucketName}/${uploadPath}`
+  aws s3 cp --cache-control ${cacheControl} --content-type text/javascript ${bundlePath} s3://${awsConfig.bucketName}/${uploadPath}`
     .withEnvironment(accessToS3)
     .run()
 }

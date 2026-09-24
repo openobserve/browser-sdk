@@ -52,34 +52,34 @@ describe('deploy', () => {
       {
         // Logs bundle
         command:
-          'aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-prod/openobserve-logs-v6.js',
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-prod/openobserve-logs-v6.js',
         env,
       },
       {
         // Profiler chunk
-        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
         // RUM chunks: We don't suffix chunk names as they are referenced by the main bundle. Renaming them would require updates via Webpack, adding unnecessary complexity for minimal value.
-        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       // RUM bundle
       {
         command:
-          'aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-prod/openobserve-rum-v6.js',
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-prod/openobserve-rum-v6.js',
         env,
       },
       // RUM slim bundle
       {
         command:
-          'aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-prod/openobserve-rum-slim-v6.js',
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-prod/openobserve-rum-slim-v6.js',
         env,
       },
       {
         command:
-          'aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/datadog-debugger-v6.js',
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/datadog-debugger-v6.js',
         env,
       },
     ])
@@ -98,31 +98,31 @@ describe('deploy', () => {
     assert.deepEqual(getS3Commands(), [
       {
         command:
-          'aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-prod/us1/v6/openobserve-logs.js',
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-prod/us1/v6/openobserve-logs.js',
         env,
       },
       // RUM Profiler Chunk
       {
-        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/us1/v6/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/us1/v6/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
-        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/us1/v6/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
-        env,
-      },
-      {
-        command:
-          'aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-prod/us1/v6/openobserve-rum.js',
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/us1/v6/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
         command:
-          'aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-prod/us1/v6/openobserve-rum-slim.js',
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-prod/us1/v6/openobserve-rum.js',
         env,
       },
       {
         command:
-          'aws s3 cp --cache-control max-age=14400, s-maxage=60 packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/us1/v6/datadog-debugger.js',
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-prod/us1/v6/openobserve-rum-slim.js',
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/us1/v6/datadog-debugger.js',
         env,
       },
     ])
@@ -140,31 +140,31 @@ describe('deploy', () => {
     assert.deepEqual(getS3Commands(), [
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-staging/openobserve-logs-staging.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-staging/openobserve-logs-staging.js',
         env,
       },
       // RUM Profiler Chunk
       {
-        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
-        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
-        env,
-      },
-      {
-        command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-staging/openobserve-rum-staging.js',
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-staging/openobserve-rum-slim-staging.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-staging/openobserve-rum-staging.js',
         env,
       },
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-staging/datadog-debugger-staging.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-staging/openobserve-rum-slim-staging.js',
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-staging/datadog-debugger-staging.js',
         env,
       },
     ])
@@ -183,30 +183,30 @@ describe('deploy', () => {
     assert.deepEqual(getS3Commands(), [
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-prod/openobserve-logs-canary.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-prod/openobserve-logs-canary.js',
         env,
       },
       {
-        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
-        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
-        env,
-      },
-      {
-        command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-prod/openobserve-rum-canary.js',
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-prod/openobserve-rum-slim-canary.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-prod/openobserve-rum-canary.js',
         env,
       },
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/datadog-debugger-canary.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-prod/openobserve-rum-slim-canary.js',
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/datadog-debugger-canary.js',
         env,
       },
     ])
@@ -225,30 +225,30 @@ describe('deploy', () => {
     assert.deepEqual(getS3Commands(), [
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-prod/openobserve-logs-v7-canary.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-prod/openobserve-logs-v7-canary.js',
         env,
       },
       {
-        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
-        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
-        env,
-      },
-      {
-        command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-prod/openobserve-rum-v7-canary.js',
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-prod/openobserve-rum-slim-v7-canary.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-prod/openobserve-rum-v7-canary.js',
         env,
       },
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/datadog-debugger-v7-canary.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-prod/openobserve-rum-slim-v7-canary.js',
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/datadog-debugger-v7-canary.js',
         env,
       },
     ])
@@ -270,31 +270,31 @@ describe('deploy', () => {
     assert.deepEqual(getS3Commands(), [
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-staging/pull-request/123/openobserve-logs.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-logs/bundle/openobserve-logs.js s3://browser-agent-artifacts-staging/pull-request/123/openobserve-logs.js',
         env,
       },
       // RUM Profiler Chunk
       {
-        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/pull-request/123/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/pull-request/123/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
-        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/pull-request/123/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
-        env,
-      },
-      {
-        command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-staging/pull-request/123/openobserve-rum.js',
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/pull-request/123/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-staging/pull-request/123/openobserve-rum-slim.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-staging/pull-request/123/openobserve-rum.js',
         env,
       },
       {
         command:
-          'aws s3 cp --cache-control max-age=900, s-maxage=60 packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-staging/pull-request/123/datadog-debugger.js',
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-slim/bundle/openobserve-rum-slim.js s3://browser-agent-artifacts-staging/pull-request/123/openobserve-rum-slim.js',
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-staging/pull-request/123/datadog-debugger.js',
         env,
       },
     ])
