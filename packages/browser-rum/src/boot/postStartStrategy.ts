@@ -47,17 +47,19 @@ export function createPostStartStrategy(
 ): Strategy {
   let status = RecorderStatus.Stopped
   let stopRecording: () => void
+  // The renewed session does not inherit forcedReplay, so a forced start is replayed from memory.
+  let lastStartOptions: StartRecordingOptions | undefined
 
   lifeCycle.subscribe(LifeCycleEventType.SESSION_EXPIRED, () => {
     if (status === RecorderStatus.Starting || status === RecorderStatus.Started) {
-      stop()
+      stopCurrentRecording()
       status = RecorderStatus.IntentToStart
     }
   })
 
   lifeCycle.subscribe(LifeCycleEventType.SESSION_RENEWED, () => {
     if (status === RecorderStatus.IntentToStart) {
-      start()
+      start(lastStartOptions)
     }
   })
 
@@ -104,6 +106,10 @@ export function createPostStartStrategy(
   }
 
   function start(options?: StartRecordingOptions) {
+    // A later start() without force must not disarm a forced start; only stop() does.
+    if (options?.force) {
+      lastStartOptions = options
+    }
     const session = sessionManager.findTrackedSession()
     const replayState = session ? computeSessionReplayState(session, configuration) : undefined
 
@@ -129,6 +135,11 @@ export function createPostStartStrategy(
   }
 
   function stop() {
+    lastStartOptions = undefined
+    stopCurrentRecording()
+  }
+
+  function stopCurrentRecording() {
     if (status === RecorderStatus.Started) {
       stopRecording?.()
     }
