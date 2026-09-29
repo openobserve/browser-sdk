@@ -569,6 +569,166 @@ describe('makeRecorderApi', () => {
     })
   })
 
+  describe('forced start across session renewal', () => {
+    let sessionManager: SessionManagerMock
+    let updateSessionStateSpy: jasmine.Spy
+    let isSessionForced: boolean
+
+    beforeEach(() => {
+      isSessionForced = false
+      updateSessionStateSpy = jasmine.createSpy('updateSessionState').and.callFake((state: { forcedReplay?: '1' }) => {
+        isSessionForced ||= state.forcedReplay === '1'
+      })
+      sessionManager = createSessionManagerMock()
+      sessionManager.updateSessionState = updateSessionStateSpy
+      const findTrackedSession = sessionManager.findTrackedSession
+      sessionManager.findTrackedSession = (startTime, options) => {
+        const session = findTrackedSession(startTime, options)
+        return session && { ...session, isReplayForced: isSessionForced }
+      }
+    })
+
+    function renewSession() {
+      isSessionForced = false
+      sessionManager.setId(HIGH_HASH_UUID)
+      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      lifeCycle.notify(LifeCycleEventType.SESSION_RENEWED)
+    }
+
+    describe('with replay not sampled', () => {
+      beforeEach(() => {
+        setupRecorderApi({ sessionManager, startSessionReplayRecordingManually: true, sessionReplaySampleRate: 0 })
+      })
+
+      it('keeps recording once the session is renewed', async () => {
+        rumInit()
+        recorderApi.start({ force: true })
+        await collectAsyncCalls(startRecordingSpy, 1)
+
+        renewSession()
+        await collectAsyncCalls(startRecordingSpy, 2)
+
+        expect(stopRecordingSpy).toHaveBeenCalledTimes(1)
+        expect(startRecordingSpy).toHaveBeenCalledTimes(2)
+      })
+
+      it('marks the renewed session as forced', async () => {
+        rumInit()
+        recorderApi.start({ force: true })
+        await collectAsyncCalls(startRecordingSpy, 1)
+        updateSessionStateSpy.calls.reset()
+
+        renewSession()
+        await collectAsyncCalls(startRecordingSpy, 2)
+
+        expect(updateSessionStateSpy).toHaveBeenCalledOnceWith({ forcedReplay: '1' })
+      })
+
+      it('does not restart recording on renewal after stop', async () => {
+        rumInit()
+        recorderApi.start({ force: true })
+        await collectAsyncCalls(startRecordingSpy, 1)
+        recorderApi.stop()
+
+        renewSession()
+
+        expect(importRecorderSpy).toHaveBeenCalledTimes(1)
+        expect(startRecordingSpy).toHaveBeenCalledTimes(1)
+        expect(stopRecordingSpy).toHaveBeenCalledTimes(1)
+      })
+
+      it('does not force the renewed session after a later start without force', async () => {
+        rumInit()
+        recorderApi.start({ force: true })
+        await collectAsyncCalls(startRecordingSpy, 1)
+        recorderApi.stop()
+        recorderApi.start()
+        await collectAsyncCalls(startRecordingSpy, 2)
+        updateSessionStateSpy.calls.reset()
+
+        renewSession()
+
+        expect(importRecorderSpy).toHaveBeenCalledTimes(2)
+        expect(startRecordingSpy).toHaveBeenCalledTimes(2)
+        expect(updateSessionStateSpy).not.toHaveBeenCalled()
+      })
+
+      it('keeps the force when start() without force is called while recording', async () => {
+        rumInit()
+        recorderApi.start({ force: true })
+        await collectAsyncCalls(startRecordingSpy, 1)
+        recorderApi.start()
+        updateSessionStateSpy.calls.reset()
+
+        renewSession()
+        await collectAsyncCalls(startRecordingSpy, 2)
+
+        expect(stopRecordingSpy).toHaveBeenCalledTimes(1)
+        expect(startRecordingSpy).toHaveBeenCalledTimes(2)
+        expect(updateSessionStateSpy).toHaveBeenCalledOnceWith({ forcedReplay: '1' })
+      })
+
+      it('forces the recording when start({ force: true }) is called before init()', async () => {
+        recorderApi.start({ force: true })
+        rumInit()
+        await collectAsyncCalls(startRecordingSpy, 1)
+
+        expect(startRecordingSpy).toHaveBeenCalledTimes(1)
+        expect(updateSessionStateSpy).toHaveBeenCalledOnceWith({ forcedReplay: '1' })
+        expect(await telemetry.getEvents()).toEqual([expectedRecorderInitTelemetry({ forced: true })])
+      })
+
+      it('keeps the force when start() without force follows start({ force: true }) before init()', async () => {
+        recorderApi.start({ force: true })
+        recorderApi.start()
+        rumInit()
+        await collectAsyncCalls(startRecordingSpy, 1)
+
+        expect(startRecordingSpy).toHaveBeenCalledTimes(1)
+        expect(updateSessionStateSpy).toHaveBeenCalledOnceWith({ forcedReplay: '1' })
+      })
+
+      it('keeps a force passed before init() across session renewal', async () => {
+        recorderApi.start({ force: true })
+        rumInit()
+        await collectAsyncCalls(startRecordingSpy, 1)
+
+        renewSession()
+        await collectAsyncCalls(startRecordingSpy, 2)
+
+        expect(startRecordingSpy).toHaveBeenCalledTimes(2)
+      })
+
+      it('does not force the recording when stop() follows start({ force: true }) before init()', () => {
+        recorderApi.start({ force: true })
+        recorderApi.stop()
+        rumInit()
+
+        expect(importRecorderSpy).not.toHaveBeenCalled()
+        expect(updateSessionStateSpy).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('with replay sampled', () => {
+      beforeEach(() => {
+        sessionManager.setId(LOW_HASH_UUID)
+        setupRecorderApi({ sessionManager, sessionReplaySampleRate: 50 })
+      })
+
+      it('does not force the renewed session when the start was not forced', async () => {
+        rumInit()
+        await collectAsyncCalls(startRecordingSpy, 1)
+
+        renewSession()
+
+        expect(stopRecordingSpy).toHaveBeenCalledTimes(1)
+        expect(importRecorderSpy).toHaveBeenCalledTimes(1)
+        expect(startRecordingSpy).toHaveBeenCalledTimes(1)
+        expect(updateSessionStateSpy).not.toHaveBeenCalled()
+      })
+    })
+  })
+
   describe('isRecording', () => {
     it('is false when recording has not been started', () => {
       setupRecorderApi({ startSessionReplayRecordingManually: true })

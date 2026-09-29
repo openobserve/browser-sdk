@@ -36,7 +36,7 @@ export function makeRecorderApi(): RecorderApi {
   }
 
   // eslint-disable-next-line prefer-const
-  let { strategy, shouldStartImmediately } = createPreStartStrategy()
+  let { strategy, shouldStartImmediately, getStartOptions } = createPreStartStrategy()
 
   return {
     start: (options?: StartRecordingOptions) => strategy.start(options),
@@ -103,7 +103,7 @@ export function makeRecorderApi(): RecorderApi {
     )
 
     if (shouldStartImmediately(configuration)) {
-      strategy.start()
+      strategy.start(getStartOptions())
     }
   }
 }

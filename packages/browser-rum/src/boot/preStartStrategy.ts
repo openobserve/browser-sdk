@@ -1,5 +1,5 @@
 import { noop } from '@openobserve/browser-core'
-import type { RumConfiguration } from '@openobserve/browser-rum-core'
+import type { RumConfiguration, StartRecordingOptions } from '@openobserve/browser-rum-core'
 import type { Strategy } from './postStartStrategy'
 
 const enum PreStartRecorderStatus {
@@ -11,15 +11,21 @@ const enum PreStartRecorderStatus {
 export function createPreStartStrategy(): {
   strategy: Strategy
   shouldStartImmediately: (configuration: RumConfiguration) => boolean
+  getStartOptions: () => StartRecordingOptions | undefined
 } {
   let status = PreStartRecorderStatus.None
+  let startOptions: StartRecordingOptions | undefined
   return {
     strategy: {
-      start() {
+      start(options?: StartRecordingOptions) {
         status = PreStartRecorderStatus.HadManualStart
+        if (options?.force) {
+          startOptions = options
+        }
       },
       stop() {
         status = PreStartRecorderStatus.HadManualStop
+        startOptions = undefined
       },
       isRecording: () => false,
       getSessionReplayLink: noop as () => string | undefined,
@@ -30,5 +36,6 @@ export function createPreStartStrategy(): {
         (status === PreStartRecorderStatus.None && !configuration.startSessionReplayRecordingManually)
       )
     },
+    getStartOptions: () => (status === PreStartRecorderStatus.HadManualStart ? startOptions : undefined),
   }
 }
