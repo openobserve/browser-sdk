@@ -3939,7 +3939,7 @@ __metadata:
     typedoc: "npm:0.28.19"
     typescript: "npm:6.0.3"
     typescript-eslint: "npm:8.61.0"
-    undici: "npm:8.5.0"
+    undici: "npm:8.10.2"
     webpack: "npm:5.107.2"
     webpack-cli: "npm:7.0.3"
     webpack-dev-middleware: "npm:8.0.3"
@@ -10767,10 +10767,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici@npm:8.5.0":
-  version: 8.5.0
-  resolution: "undici@npm:8.5.0"
-  checksum: 10c0/7c25fd96a4dcc607b905995f6feec948f74a6759cadbea4c6eb9402517aab4887987c8001c80d482297d04f975f44a383325b89577ac21e587983ed088408065
+"undici@npm:8.10.2":
+  version: 8.10.2
+  resolution: "undici@npm:8.10.2"
+  checksum: 10c0/66d7fc69149207cab570d6abbc9e965b6afe1ae889a7d46945b431165c973d6a56f3dd8b70a856e7ae1e550b6366a1cde6f06e68640587f0dadca38de72995ee
   languageName: node
   linkType: hard
 
