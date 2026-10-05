@@ -102,7 +102,8 @@
     "ws": "8.21.0"
   },
   "resolutions": {
-    "rolldown": "1.1.1"
+    "rolldown": "1.1.1",
+    "shell-quote": "1.9.0"
   },
   "volta": {
     "node": "26.3.0",
