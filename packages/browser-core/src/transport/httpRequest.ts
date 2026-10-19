@@ -70,6 +70,11 @@ export interface RetryInfo {
   lastFailureStatus: number
 }
 
+// The intake authenticates requests with the client token carried in the URL: cookies are never
+// needed. Omit credentials so that, for example, a same-origin proxy does not receive the cookies
+// of the host application.
+const FETCH_OPTIONS: RequestInit = { method: 'POST', mode: 'cors', credentials: 'omit' }
+
 export function createHttpRequest<Body extends Payload = Payload>(
   endpointBuilders: EndpointBuilder[],
   reportError: (error: RawError) => void,
@@ -95,22 +100,47 @@ export function createHttpRequest<Body extends Payload = Payload>(
       }
     },
     /**
-     * Since fetch keepalive behaves like regular fetch on Firefox,
-     * keep using sendBeaconStrategy on exit
+     * On page exit, prefer a keepalive fetch (which lets us omit credentials) and fall back to
+     * sendBeacon when keepalive is not supported (sendBeacon always sends cookies).
      */
     sendOnExit: (payload: Body) => {
       for (const endpointBuilder of endpointBuilders) {
-        sendBeaconStrategy(endpointBuilder, bytesLimit, payload)
+        sendOnExitStrategy(endpointBuilder, bytesLimit, payload)
       }
     },
   }
 }
 
-function sendBeaconStrategy(endpointBuilder: EndpointBuilder, bytesLimit: number, payload: Payload) {
-  const canUseBeacon = payload.bytesCount < bytesLimit
-  if (canUseBeacon) {
+/**
+ * Whether `fetch` supports the `keepalive` option, which lets a request outlive the page. Some
+ * browsers ignore unknown `RequestInit` members, so check for the property on a Request instance.
+ */
+function isFetchKeepAliveSupported() {
+  try {
+    return typeof Request === 'function' && 'keepalive' in new Request('http://a')
+  } catch {
+    return false
+  }
+}
+
+function sendOnExitStrategy(endpointBuilder: EndpointBuilder, bytesLimit: number, payload: Payload) {
+  const canSendOnExit = payload.bytesCount < bytesLimit
+  if (canSendOnExit) {
     try {
+      // The `beacon` api type is kept for both transports so the intake keeps reporting on-exit
+      // requests the same way.
       const beaconUrl = endpointBuilder.build('beacon', payload)
+
+      if (isFetchKeepAliveSupported()) {
+        // Unlike sendBeacon, which always sends cookies, a keepalive fetch can omit credentials.
+        // The 64 KiB keepalive quota is shared by all in-flight keepalive requests, hence the
+        // bytes limit above. A request that is not queued rejects: fall back to a regular fetch.
+        fetch(beaconUrl, { ...FETCH_OPTIONS, body: payload.data, keepalive: true }).catch(
+          monitor(() => fetchStrategy(endpointBuilder, payload))
+        )
+        return
+      }
+
       const isQueued = navigator.sendBeacon(beaconUrl, payload.data)
 
       if (isQueued) {
@@ -140,7 +170,7 @@ export function fetchStrategy(
 ) {
   const fetchUrl = endpointBuilder.build('fetch', payload)
 
-  fetch(fetchUrl, { method: 'POST', body: payload.data, mode: 'cors' })
+  fetch(fetchUrl, { ...FETCH_OPTIONS, body: payload.data })
     .then(monitor((response: Response) => onResponse?.({ status: response.status, type: response.type })))
     .catch(monitor(() => onResponse?.({ status: 0 })))
 }

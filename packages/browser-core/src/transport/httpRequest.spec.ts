@@ -40,6 +40,14 @@ describe('httpRequest', () => {
       expect(requests[0].body).toEqual(payloadData)
     })
 
+    it('should not send credentials', async () => {
+      request.send({ data: '{"foo":"bar1"}\n{"foo":"bar2"}', bytesCount: 10 })
+      await interceptor.waitForAllFetchCalls()
+
+      expect(requests[0].init).toEqual(jasmine.objectContaining({ method: 'POST', mode: 'cors', credentials: 'omit' }))
+      expect(requests[0].init?.keepalive).toBeUndefined()
+    })
+
     it('should use fetch for payloads exceeding the bytes limit', async () => {
       request.send({ data: '{"foo":"bar1"}\n{"foo":"bar2"}', bytesCount: RECOMMENDED_REQUEST_BYTES_LIMIT })
       await interceptor.waitForAllFetchCalls()
@@ -97,60 +105,143 @@ describe('httpRequest', () => {
   })
 
   describe('sendOnExit', () => {
-    it('should use fetch when sendBeacon is not defined', async () => {
-      interceptor.withSendBeacon(false)
+    const PAYLOAD_DATA = '{"foo":"bar1"}\n{"foo":"bar2"}'
 
-      request.sendOnExit({ data: '{"foo":"bar1"}\n{"foo":"bar2"}', bytesCount: 10 })
-
-      await interceptor.waitForAllFetchCalls()
-
-      expect(requests.length).toEqual(1)
-      expect(requests[0].type).toBe('fetch')
-      expect(requests[0].url).toContain(ENDPOINT_URL)
-      expect(requests[0].body).toEqual('{"foo":"bar1"}\n{"foo":"bar2"}')
-    })
-
-    it('should use sendBeacon when the bytes count is correct', () => {
-      request.sendOnExit({ data: '{"foo":"bar1"}\n{"foo":"bar2"}', bytesCount: 10 })
-
-      expect(requests.length).toEqual(1)
-      expect(requests[0].type).toBe('sendBeacon')
-    })
-
-    it('should use fetch over sendBeacon when the bytes count is too high', async () => {
-      request.sendOnExit({ data: '{"foo":"bar1"}\n{"foo":"bar2"}', bytesCount: RECOMMENDED_REQUEST_BYTES_LIMIT })
-
-      await interceptor.waitForAllFetchCalls()
-
-      expect(requests.length).toEqual(1)
-      expect(requests[0].type).toBe('fetch')
-    })
-
-    it('should fallback to fetch when sendBeacon is not queued', async () => {
-      interceptor.withSendBeacon(() => false)
-
-      request.sendOnExit({ data: '{"foo":"bar1"}\n{"foo":"bar2"}', bytesCount: 10 })
-
-      await interceptor.waitForAllFetchCalls()
-
-      expect(requests.length).toEqual(1)
-      expect(requests[0].type).toBe('fetch')
-    })
-
-    it('should fallback to fetch when sendBeacon throws', async () => {
-      let sendBeaconCalled = false
-      interceptor.withSendBeacon(() => {
-        sendBeaconCalled = true
-        throw new Error('mock sendBeacon error')
+    describe('when fetch keepalive is supported', () => {
+      beforeEach(() => {
+        if (!interceptor.isFetchKeepAliveSupported()) {
+          pending('no fetch keepalive support')
+        }
       })
 
-      request.sendOnExit({ data: '{"foo":"bar1"}\n{"foo":"bar2"}', bytesCount: 10 })
+      it('should use a keepalive fetch without credentials when the bytes count is correct', async () => {
+        request.sendOnExit({ data: PAYLOAD_DATA, bytesCount: 10 })
 
-      await interceptor.waitForAllFetchCalls()
+        await interceptor.waitForAllFetchCalls()
 
-      expect(sendBeaconCalled).toBe(true)
-      expect(requests.length).toEqual(1)
-      expect(requests[0].type).toBe('fetch')
+        expect(requests.length).toEqual(1)
+        expect(requests[0].type).toBe('fetch')
+        expect(requests[0].url).toContain(ENDPOINT_URL)
+        expect(requests[0].body).toEqual(PAYLOAD_DATA)
+        expect(requests[0].init).toEqual(
+          jasmine.objectContaining({ method: 'POST', mode: 'cors', credentials: 'omit', keepalive: true })
+        )
+      })
+
+      it('should not use sendBeacon', async () => {
+        const sendBeaconSpy = jasmine.createSpy('sendBeacon').and.returnValue(true)
+        interceptor.withSendBeacon(sendBeaconSpy)
+
+        request.sendOnExit({ data: PAYLOAD_DATA, bytesCount: 10 })
+        await interceptor.waitForAllFetchCalls()
+
+        expect(sendBeaconSpy).not.toHaveBeenCalled()
+      })
+
+      it('should send the request to every endpoint', async () => {
+        interceptor.withFetch(DEFAULT_FETCH_MOCK, DEFAULT_FETCH_MOCK)
+        request = createHttpRequest([endpointBuilder, mockEndpointBuilder('http://my.website2')], noop)
+
+        request.sendOnExit({ data: PAYLOAD_DATA, bytesCount: 10 })
+        await interceptor.waitForAllFetchCalls()
+
+        expect(requests.map((r) => r.url)).toEqual(['http://my.website', 'http://my.website2'])
+        expect(requests.every((r) => r.init?.keepalive === true && r.init.credentials === 'omit')).toBe(true)
+      })
+
+      it('should fallback to a regular fetch when the keepalive fetch is not queued', async () => {
+        const fetchSpy = interceptor.withFetch(NETWORK_ERROR_FETCH_MOCK, DEFAULT_FETCH_MOCK)
+
+        request.sendOnExit({ data: PAYLOAD_DATA, bytesCount: 10 })
+
+        await interceptor.waitForAllFetchCalls()
+        await collectAsyncCalls(fetchSpy, 2)
+
+        expect(requests.length).toEqual(2)
+        expect(requests[0].init?.keepalive).toBe(true)
+        expect(requests[1].type).toBe('fetch')
+        expect(requests[1].init?.keepalive).toBeUndefined()
+        expect(requests[1].init?.credentials).toBe('omit')
+        expect(requests[1].body).toEqual(PAYLOAD_DATA)
+      })
+
+      it('should use a regular fetch without credentials when the bytes count is too high', async () => {
+        request.sendOnExit({ data: PAYLOAD_DATA, bytesCount: RECOMMENDED_REQUEST_BYTES_LIMIT })
+
+        await interceptor.waitForAllFetchCalls()
+
+        expect(requests.length).toEqual(1)
+        expect(requests[0].type).toBe('fetch')
+        expect(requests[0].init?.keepalive).toBeUndefined()
+        expect(requests[0].init?.credentials).toBe('omit')
+      })
+    })
+
+    describe('when fetch keepalive is not supported', () => {
+      beforeEach(() => {
+        interceptor.withRequest(false)
+      })
+
+      it('should use sendBeacon when the bytes count is correct', () => {
+        if (!interceptor.isSendBeaconSupported()) {
+          pending('no sendBeacon support')
+        }
+
+        request.sendOnExit({ data: PAYLOAD_DATA, bytesCount: 10 })
+
+        expect(requests.length).toEqual(1)
+        expect(requests[0].type).toBe('sendBeacon')
+      })
+
+      it('should use fetch when sendBeacon is not defined', async () => {
+        interceptor.withSendBeacon(false)
+
+        request.sendOnExit({ data: PAYLOAD_DATA, bytesCount: 10 })
+
+        await interceptor.waitForAllFetchCalls()
+
+        expect(requests.length).toEqual(1)
+        expect(requests[0].type).toBe('fetch')
+        expect(requests[0].url).toContain(ENDPOINT_URL)
+        expect(requests[0].body).toEqual(PAYLOAD_DATA)
+        expect(requests[0].init?.credentials).toBe('omit')
+      })
+
+      it('should use fetch over sendBeacon when the bytes count is too high', async () => {
+        request.sendOnExit({ data: PAYLOAD_DATA, bytesCount: RECOMMENDED_REQUEST_BYTES_LIMIT })
+
+        await interceptor.waitForAllFetchCalls()
+
+        expect(requests.length).toEqual(1)
+        expect(requests[0].type).toBe('fetch')
+      })
+
+      it('should fallback to fetch when sendBeacon is not queued', async () => {
+        interceptor.withSendBeacon(() => false)
+
+        request.sendOnExit({ data: PAYLOAD_DATA, bytesCount: 10 })
+
+        await interceptor.waitForAllFetchCalls()
+
+        expect(requests.length).toEqual(1)
+        expect(requests[0].type).toBe('fetch')
+      })
+
+      it('should fallback to fetch when sendBeacon throws', async () => {
+        let sendBeaconCalled = false
+        interceptor.withSendBeacon(() => {
+          sendBeaconCalled = true
+          throw new Error('mock sendBeacon error')
+        })
+
+        request.sendOnExit({ data: PAYLOAD_DATA, bytesCount: 10 })
+
+        await interceptor.waitForAllFetchCalls()
+
+        expect(sendBeaconCalled).toBe(true)
+        expect(requests.length).toEqual(1)
+        expect(requests[0].type).toBe('fetch')
+      })
     })
   })
 
