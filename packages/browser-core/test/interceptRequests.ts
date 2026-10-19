@@ -16,6 +16,8 @@ export interface Request {
   type: 'sendBeacon' | 'fetch'
   url: string
   body: string
+  // Options passed to `fetch`, undefined for sendBeacon requests
+  init?: RequestInit
 }
 
 export function interceptRequests() {
@@ -49,6 +51,7 @@ export function interceptRequests() {
       type: 'fetch',
       url: url as string,
       body: config?.body as string,
+      init: config,
     })
     return fetchPromise()
       .then((response) => response as Response)
@@ -61,6 +64,10 @@ export function interceptRequests() {
 
   function isSendBeaconSupported() {
     return !!navigator.sendBeacon
+  }
+
+  function isFetchKeepAliveSupported() {
+    return !!originalRequest && 'keepalive' in new originalRequest('http://a')
   }
 
   registerCleanupTask(() => {
@@ -79,6 +86,7 @@ export function interceptRequests() {
   return {
     requests,
     isSendBeaconSupported,
+    isFetchKeepAliveSupported,
     waitForAllFetchCalls: () => endAllPromises,
     withSendBeacon(newSendBeacon: any) {
       navigator.sendBeacon = newSendBeacon
