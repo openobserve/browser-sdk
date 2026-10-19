@@ -71,6 +71,28 @@ export interface LogsInitConfiguration extends InitConfiguration {
    * @category Data Collection
    */
   forwardReports?: RawReportType[] | 'all' | undefined
+
+  /**
+   * Compress the requests sent to the OpenObserve intake to reduce bandwidth usage. The compression
+   * is done in a Worker thread, shared with the RUM SDK.
+   *
+   * The Worker is provided by the RUM SDK (`@openobserve/browser-rum`), which must be loaded (not necessarily
+   * initialized) in the same page and share the same `@openobserve/browser-core` instance. Otherwise,
+   * a warning is displayed and requests are sent uncompressed.
+   * See [Content Security Policy guidelines](https://docs.datadoghq.com/integrations/content_security_policy_logs/?tab=firefox#use-csp-with-real-user-monitoring-and-session-replay) for further information.
+   *
+   * @category Transport
+   */
+  compressIntakeRequests?: boolean | undefined
+
+  /**
+   * URL pointing to the Browser SDK Worker JavaScript file, used when `compressIntakeRequests` is enabled. The URL can
+   * be relative or absolute, but is required to have the same origin as the web application.
+   * Same option as the RUM SDK `workerUrl`: the Worker is shared.
+   *
+   * @category Transport
+   */
+  workerUrl?: string | undefined
 }
 
 /**
@@ -89,6 +111,8 @@ export interface LogsConfiguration extends Configuration {
   forwardConsoleLogs: ConsoleApiName[]
   forwardReports: RawReportType[]
   requestErrorResponseLengthLimit: number
+  compressIntakeRequests: boolean
+  workerUrl: string | undefined
 }
 
 /**
@@ -123,6 +147,8 @@ export function validateAndBuildLogsConfiguration(
     forwardConsoleLogs,
     forwardReports,
     requestErrorResponseLengthLimit: DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT,
+    compressIntakeRequests: !!initConfiguration.compressIntakeRequests,
+    workerUrl: initConfiguration.workerUrl,
     ...baseConfiguration,
   }
 }
@@ -151,6 +177,8 @@ export function serializeLogsConfiguration(configuration: LogsInitConfiguration)
     forward_errors_to_logs: configuration.forwardErrorsToLogs,
     forward_console_logs: configuration.forwardConsoleLogs,
     forward_reports: configuration.forwardReports,
+    use_worker_url: !!configuration.workerUrl,
+    compress_intake_requests: configuration.compressIntakeRequests,
     ...baseSerializedInitConfiguration,
   } satisfies RawTelemetryConfiguration
 }

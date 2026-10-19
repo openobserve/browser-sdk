@@ -48,6 +48,12 @@ describe('startDeflateWorker', () => {
     expect(onInitializationFailureSpy).not.toHaveBeenCalled()
   })
 
+  it('only needs the worker URL of the configuration, so other SDKs can share the worker', () => {
+    startDeflateWorker({ workerUrl: '/worker.js' }, 'Logs', onInitializationFailureSpy)
+
+    expect(createDeflateWorkerSpy).toHaveBeenCalledOnceWith({ workerUrl: '/worker.js' })
+  })
+
   it('uses the previously created worker during loading', () => {
     const worker1 = startDeflateWorkerWithDefaults()
     const worker2 = startDeflateWorkerWithDefaults()

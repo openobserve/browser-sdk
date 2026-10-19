@@ -81,6 +81,24 @@ describe('validateAndBuildLogsConfiguration', () => {
   })
 })
 
+describe('intake requests compression options', () => {
+  it('should not compress intake requests by default', () => {
+    const configuration = validateAndBuildLogsConfiguration(DEFAULT_INIT_CONFIGURATION)!
+    expect(configuration.compressIntakeRequests).toBe(false)
+    expect(configuration.workerUrl).toBeUndefined()
+  })
+
+  it('should accept compressIntakeRequests and workerUrl', () => {
+    const configuration = validateAndBuildLogsConfiguration({
+      ...DEFAULT_INIT_CONFIGURATION,
+      compressIntakeRequests: true,
+      workerUrl: '/worker.js',
+    })!
+    expect(configuration.compressIntakeRequests).toBe(true)
+    expect(configuration.workerUrl).toBe('/worker.js')
+  })
+})
+
 describe('validateAndBuildForwardOption', () => {
   let displaySpy: jasmine.Spy<typeof display.error>
   const allowedValues = ['foo', 'bar']
@@ -124,11 +142,15 @@ describe('serializeLogsConfiguration', () => {
       forwardErrorsToLogs: true,
       forwardConsoleLogs: 'all',
       forwardReports: 'all',
+      compressIntakeRequests: true,
+      workerUrl: './worker.js',
     }
 
     type MapLogsInitConfigurationKey<Key extends string> = Key extends keyof InitConfiguration
       ? MapInitConfigurationKey<Key>
-      : CamelToSnakeCase<Key>
+      : Key extends 'workerUrl'
+        ? 'use_worker_url'
+        : CamelToSnakeCase<Key>
 
     // By specifying the type here, we can ensure that serializeConfiguration is returning an
     // object containing all expected properties.
@@ -141,6 +163,8 @@ describe('serializeLogsConfiguration', () => {
       forward_errors_to_logs: true,
       forward_console_logs: 'all',
       forward_reports: 'all',
+      compress_intake_requests: true,
+      use_worker_url: true,
     })
   })
 })
