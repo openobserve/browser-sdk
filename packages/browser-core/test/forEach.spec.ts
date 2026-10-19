@@ -5,6 +5,7 @@ import { resetFetchObservable } from '../src/browser/fetchObservable'
 import { resetConsoleObservable } from '../src/domain/console/consoleObservable'
 import { resetXhrObservable } from '../src/browser/xhrObservable'
 import { resetGetCurrentSite } from '../src/browser/cookie'
+import { resetProxiedIntakeUrls } from '../src/domain/intakeSites'
 import { resetReplayStats } from '../../browser-rum/src/domain/replayStats'
 import { resetInteractionCountPolyfill } from '../../browser-rum-core/src/domain/view/viewMetrics/interactionCountPolyfill'
 import { resetMonitor } from '../src/tools/monitor'
@@ -43,6 +44,7 @@ afterEach(() => {
   resetExperimentalFeatures()
   resetManageResourceTimingBufferFull()
   resetAllowUntrustedEvents()
+  resetProxiedIntakeUrls()
 })
 
 function clearAllCookies() {

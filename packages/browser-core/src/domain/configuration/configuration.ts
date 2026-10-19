@@ -294,6 +294,10 @@ type GenericBeforeSendCallback = (event: any, context?: any) => unknown
 /**
  * path: /api/vX/product
  * parameters: xxx=yyy&zzz=aaa
+ *
+ * The returned string is used as is as the request URL. It can freely rewrite the path and the
+ * parameters: the SDK remembers the URLs it returns (ignoring their query string and fragment) to
+ * exclude its own requests from the data it collects (RUM resources, logs network errors).
  */
 export type ProxyFn = (options: { path: string; parameters: string; subdomain?: string }) => string
 

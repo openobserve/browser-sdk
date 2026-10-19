@@ -1,4 +1,4 @@
-import { isIntakeUrl } from './intakeSites'
+import { isIntakeUrl, MAX_PROXIED_INTAKE_URLS, registerProxiedIntakeUrl } from './intakeSites'
 
 describe('intakeSites', () => {
   const clientToken = 'some_client_token'
@@ -53,6 +53,47 @@ describe('intakeSites', () => {
 
       it('should not detect request done on the same host as the proxy', () => {
         expect(isIntakeUrl('https://www.proxy.com/foo')).toBe(false)
+      })
+    })
+
+    describe('registered proxy function URLs', () => {
+      it('should detect a registered URL whatever its query string', () => {
+        registerProxiedIntakeUrl('https://www.proxy.com/intake/1?token=xxxx')
+
+        expect(isIntakeUrl('https://www.proxy.com/intake/1')).toBe(true)
+        expect(isIntakeUrl('https://www.proxy.com/intake/1?token=yyyy&other=1')).toBe(true)
+        expect(isIntakeUrl('https://www.proxy.com/intake/1#fragment')).toBe(true)
+      })
+
+      it('should detect a registered relative URL once resolved by the browser', () => {
+        registerProxiedIntakeUrl('/intake/2?token=xxxx')
+
+        expect(isIntakeUrl(`${location.origin}/intake/2?token=xxxx`)).toBe(true)
+      })
+
+      it('should not detect other paths, hosts or paths that only share a prefix', () => {
+        registerProxiedIntakeUrl('https://www.proxy.com/intake/1?token=xxxx')
+
+        expect(isIntakeUrl('https://www.proxy.com/intake/10')).toBe(false)
+        expect(isIntakeUrl('https://www.proxy.com/intake')).toBe(false)
+        expect(isIntakeUrl('https://www.proxy.com/intake/1/more')).toBe(false)
+        expect(isIntakeUrl('https://other.proxy.com/intake/1')).toBe(false)
+        expect(isIntakeUrl('https://www.proxy.com/foo?url=https://www.proxy.com/intake/1')).toBe(false)
+      })
+
+      it('should ignore invalid URLs', () => {
+        expect(() => registerProxiedIntakeUrl('http://')).not.toThrow()
+        expect(() => registerProxiedIntakeUrl(undefined as unknown as string)).not.toThrow()
+      })
+
+      it('should not register more than the maximum number of URLs', () => {
+        for (let i = 0; i < MAX_PROXIED_INTAKE_URLS; i += 1) {
+          registerProxiedIntakeUrl(`https://www.proxy.com/intake/${i}`)
+        }
+        registerProxiedIntakeUrl('https://www.proxy.com/intake/over-the-limit')
+
+        expect(isIntakeUrl('https://www.proxy.com/intake/0')).toBe(true)
+        expect(isIntakeUrl('https://www.proxy.com/intake/over-the-limit')).toBe(false)
       })
     })
     ;[

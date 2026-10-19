@@ -3,7 +3,7 @@ import type { Payload } from '../../transport'
 import { normalizeUrl } from '../../tools/utils/urlPolyfill'
 import { generateUUID } from '../../tools/utils/stringUtils'
 import type { Site } from '../intakeSites'
-import { INTAKE_SITE_US1 } from '../intakeSites'
+import { INTAKE_SITE_US1, registerProxiedIntakeUrl } from '../intakeSites'
 import type { Configuration, ProxyFn } from './configuration'
 
 // replaced at build time
@@ -110,7 +110,11 @@ export function buildEndpointUrl({
   }
 
   if (typeof proxy === 'function') {
-    return proxy({ path, parameters, subdomain })
+    const proxyUrl = proxy({ path, parameters, subdomain })
+    // The proxy function controls the whole URL and may drop or rename the intake parameters, so
+    // remember it to be able to recognize (and not track) the requests the SDK sends to it.
+    registerProxiedIntakeUrl(proxyUrl)
+    return proxyUrl
   }
 
   // OpenObserve: the configured `site` is used verbatim as the intake host, without the

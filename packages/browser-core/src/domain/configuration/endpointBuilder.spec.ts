@@ -1,4 +1,5 @@
 import type { Payload } from '../../transport'
+import { isIntakeUrl } from '../intakeSites'
 import type { InitConfiguration } from './configuration'
 import { validateAndBuildConfiguration } from './configuration'
 import { buildEndpointUrl, createEndpointBuilder, createReplicaEndpointBuilder } from './endpointBuilder'
@@ -78,6 +79,62 @@ describe('endpointBuilder', () => {
       ).toMatch(
         `https://proxy.io/prefix/api/v2/rum/suffix\\?o2source=(.*)&o2-api-key=${clientToken}&o2-evp-origin-version=(.*)&o2-evp-origin=browser&o2-request-id=(.*)&batch_time=(.*)`
       )
+    })
+
+    describe('intake url detection with a proxy function', () => {
+      it('should recognize urls even if the proxy function drops the intake parameters', () => {
+        const proxyFn = (options: { path: string }) => `https://proxy.io/proxy${options.path}`
+        const url = createEndpointBuilder({ ...initConfiguration, proxy: proxyFn }, 'rum').build(
+          'fetch',
+          DEFAULT_PAYLOAD
+        )
+
+        expect(url).toBe('https://proxy.io/proxy/rum/v1/default/rum')
+        expect(isIntakeUrl(url)).toBe(true)
+      })
+
+      it('should recognize urls even if the proxy function renames the intake parameters', () => {
+        const proxyFn = (options: { parameters: string }) => `/proxy/1?${options.parameters.replace(/o2/g, 'x')}`
+        const url = createEndpointBuilder({ ...initConfiguration, proxy: proxyFn }, 'logs').build(
+          'fetch',
+          DEFAULT_PAYLOAD
+        )
+
+        expect(isIntakeUrl(url)).toBe(false)
+        expect(isIntakeUrl(`${location.origin}${url}`)).toBe(true)
+      })
+
+      it('should recognize urls built for every track and the replica', () => {
+        const proxyFn = (options: { path: string }) => `https://proxy.io/proxy${options.path}`
+        const configuration = validateAndBuildConfiguration({
+          ...initConfiguration,
+          proxy: proxyFn,
+          replica: { clientToken: 'replica', applicationId: 'app' },
+        })!
+
+        const urls = [
+          createEndpointBuilder(configuration, 'logs'),
+          createEndpointBuilder(configuration, 'replay'),
+          createReplicaEndpointBuilder(configuration, 'rum')!,
+        ].map((builder) => builder.build('fetch', DEFAULT_PAYLOAD))
+
+        urls.forEach((url) => expect(isIntakeUrl(url)).toBe(true))
+      })
+
+      it('should not recognize other urls of the proxy host', () => {
+        const proxyFn = (options: { path: string }) => `https://proxy.io/proxy${options.path}`
+        createEndpointBuilder({ ...initConfiguration, proxy: proxyFn }, 'rum').build('fetch', DEFAULT_PAYLOAD)
+
+        expect(isIntakeUrl('https://proxy.io/proxy/other')).toBe(false)
+        expect(isIntakeUrl('https://proxy.io/')).toBe(false)
+      })
+
+      it('should not break when the proxy function returns an invalid value', () => {
+        const proxyFn = () => undefined as unknown as string
+        expect(() =>
+          createEndpointBuilder({ ...initConfiguration, proxy: proxyFn }, 'rum').build('fetch', DEFAULT_PAYLOAD)
+        ).not.toThrow()
+      })
     })
   })
 

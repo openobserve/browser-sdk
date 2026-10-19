@@ -1,5 +1,5 @@
 import type { Duration, ServerDuration, RelativeTime } from '@openobserve/js-core/time'
-import { addExperimentalFeatures, ExperimentalFeature } from '@openobserve/browser-core'
+import { addExperimentalFeatures, createEndpointBuilder, ExperimentalFeature } from '@openobserve/browser-core'
 import { RumPerformanceEntryType } from '../../browser/performanceObservable'
 import { createPerformanceEntry } from '../../../test'
 import {
@@ -323,6 +323,31 @@ describe('shouldTrackResource', () => {
 
   it('should allow requests on non intake domains', () => {
     expect(isAllowedRequestUrl('https://my-domain.com/hello?a=b')).toBe(true)
+  })
+
+  describe('with a proxy function that drops the intake parameters', () => {
+    let proxyUrl: string
+
+    beforeEach(() => {
+      proxyUrl = createEndpointBuilder(
+        { clientToken: 'xxxx', proxy: ({ path }) => `https://my-proxy.com/telemetry${path}` },
+        'rum'
+      ).build('fetch', { data: '', bytesCount: 0 })
+    })
+
+    it('should exclude requests sent by the SDK to the proxy', () => {
+      expect(proxyUrl).not.toContain('o2source')
+      expect(isAllowedRequestUrl(proxyUrl)).toBe(false)
+    })
+
+    it('should allow requests on the same host that were not sent by the SDK', () => {
+      expect(isAllowedRequestUrl('https://my-proxy.com/hello?a=b')).toBe(true)
+    })
+
+    it('should allow requests to the proxy when TRACK_INTAKE_REQUESTS is enabled', () => {
+      addExperimentalFeatures([ExperimentalFeature.TRACK_INTAKE_REQUESTS])
+      expect(isAllowedRequestUrl(proxyUrl)).toBe(true)
+    })
   })
 })
 

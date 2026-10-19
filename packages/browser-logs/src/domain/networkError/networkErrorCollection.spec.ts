@@ -1,6 +1,6 @@
 import type { BufferedData, FetchResolveContext } from '@openobserve/browser-core'
 import { clocksNow } from '@openobserve/js-core/time'
-import { BufferedDataType, ErrorSource, Observable } from '@openobserve/browser-core'
+import { BufferedDataType, createEndpointBuilder, ErrorSource, Observable } from '@openobserve/browser-core'
 import { registerCleanupTask } from '@openobserve/browser-core/test'
 import type { RawNetworkLogsEvent } from '../../rawLogsEvent.types'
 import type { LogsConfiguration } from '../configuration'
@@ -94,6 +94,17 @@ describe('network error collection', () => {
     notifyFetch({
       url: 'https://logs-intake.com/v1/input/send?o2source=browser&o2-api-key=xxxx&o2-request-id=1234567890',
     })
+
+    expect(rawLogsEvents.length).toEqual(0)
+  })
+
+  it('should not track intake error when the proxy function drops the intake parameters', () => {
+    const url = createEndpointBuilder(
+      { clientToken: 'xxxx', proxy: ({ path }) => `https://proxy.example.com/telemetry${path}` },
+      'logs'
+    ).build('fetch', { data: '', bytesCount: 0 })
+    startCollection()
+    notifyFetch({ url })
 
     expect(rawLogsEvents.length).toEqual(0)
   })
