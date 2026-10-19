@@ -7,7 +7,7 @@
  */
 
 // Keep the following in sync with packages/browser-rum-slim/src/entries/main.ts
-import { defineGlobal, globalObject } from '@openobserve/browser-core'
+import { defineGlobal, globalObject, registerDeflateProvider } from '@openobserve/browser-core'
 import type { RumPublicApi } from '@openobserve/browser-rum-core'
 import { makeRumPublicApi } from '@openobserve/browser-rum-core'
 import { makeRecorderApi } from '../boot/recorderApi'
@@ -78,6 +78,10 @@ export type {
 } from '@openobserve/browser-rum-core'
 
 export { DEFAULT_TRACKED_RESOURCE_HEADERS } from '@openobserve/browser-rum-core'
+
+// Let other SDKs (ex: Logs) start or reuse the Worker bundled in this package to compress their
+// requests.
+registerDeflateProvider({ startDeflateWorker, createDeflateEncoder })
 
 const recorderApi = makeRecorderApi()
 

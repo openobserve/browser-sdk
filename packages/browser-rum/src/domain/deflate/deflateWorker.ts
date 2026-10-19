@@ -40,16 +40,22 @@ type DeflateWorkerState =
       version: string
     }
 
+/**
+ * The Worker is shared by the SDKs that compress their requests (RUM, Logs): only the URL option is
+ * needed to start it.
+ */
+export type DeflateWorkerConfiguration = Pick<RumConfiguration, 'workerUrl'>
+
 export type CreateDeflateWorker = typeof createDeflateWorker
 
-export function createDeflateWorker(configuration: RumConfiguration): DeflateWorker {
+export function createDeflateWorker(configuration: DeflateWorkerConfiguration): DeflateWorker {
   return new Worker(configuration.workerUrl || URL.createObjectURL(new Blob([__BUILD_ENV__WORKER_STRING__])))
 }
 
 let state: DeflateWorkerState = { status: DeflateWorkerStatus.Nil }
 
 export function startDeflateWorker(
-  configuration: RumConfiguration,
+  configuration: DeflateWorkerConfiguration,
   source: string,
   onInitializationFailure: () => void
 ) {
@@ -87,7 +93,7 @@ export function getDeflateWorkerStatus() {
  *
  * more details: https://bugzilla.mozilla.org/show_bug.cgi?id=1736865#c2
  */
-export function doStartDeflateWorker(configuration: RumConfiguration, source: string) {
+export function doStartDeflateWorker(configuration: DeflateWorkerConfiguration, source: string) {
   try {
     const worker = mockable(createDeflateWorker)(configuration)
     const { stop: removeErrorListener } = addEventListener(worker, 'error', (error) => {
@@ -131,7 +137,7 @@ function onInitialized(version: string) {
   }
 }
 
-function onError(configuration: RumConfiguration, source: string, error: unknown, streamId?: number) {
+function onError(configuration: DeflateWorkerConfiguration, source: string, error: unknown, streamId?: number) {
   if (state.status === DeflateWorkerStatus.Loading || state.status === DeflateWorkerStatus.Nil) {
     reportScriptLoadingError({
       configuredUrl: configuration.workerUrl,
