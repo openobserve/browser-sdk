@@ -39,28 +39,38 @@ interface TracingHeaders {
 }
 
 /**
- * Clear tracing information to avoid incomplete traces. Ideally, we should do it when the
- * request did not reach the server, but the browser does not expose this. So, we clear tracing
- * information if the request ended with status 0 without being aborted by the application.
+ * Clears the tracing ids of requests that ended with status 0 without being aborted, unless trace
+ * headers were actually injected: the backend may have received the request and recorded a span
+ * with the real status, so the ids stay the link to it. Without injected headers nothing links
+ * them to a backend span, so they are cleared.
  *
- * Reasoning:
- *
- * * Applications are usually aborting requests after a bit of time, for example when the user is
- * typing (autocompletion) or navigating away (in a SPA). With a performant device and good
- * network conditions, the request is likely to reach the server before being canceled.
- *
- * * Requests aborted otherwise (ex: lack of internet, CORS issue, blocked by a privacy extension)
- * are likely to finish quickly and without reaching the server.
- *
- * Of course, it might not be the case every time, but it should limit having incomplete traces a
- * bit.
+ * "Injected" means a trace header was written to the request and not dropped by the browser:
+ * headers written to a fetch in `no-cors` mode do not count, since browsers silently drop
+ * non-safelisted headers (traceparent, x-*) for such requests. It does not prove the request
+ * reached the server: a failed CORS preflight also ends in status 0, so a kept id may point at a
+ * trace with no server span, and consumers must handle that.
  * */
 export function clearTracingIfNeeded(context: RumFetchResolveContext | RumXhrCompleteContext) {
-  if (context.status === 0 && !context.isAborted) {
+  if (context.status === 0 && !context.isAborted && !context.traceHeadersInjected) {
     context.traceId = undefined
     context.spanId = undefined
     context.traceSampled = undefined
   }
+}
+
+// A baggage header alone does not link the request to a trace, so it does not count.
+function isTraceHeaderName(name: string) {
+  return name.toLowerCase() !== 'baggage'
+}
+
+function hasTraceHeaders(tracingHeaders: TracingHeaders) {
+  return Object.keys(tracingHeaders).some(isTraceHeaderName)
+}
+
+// Browsers drop non-safelisted headers of `no-cors` requests, so none of ours reaches the wire.
+function isNoCorsFetch(context: Partial<RumFetchStartContext>) {
+  const mode = context.init?.mode ?? (context.input instanceof Request ? context.input.mode : undefined)
+  return mode === 'no-cors'
 }
 
 export function startTracer(
@@ -80,11 +90,16 @@ export function startTracer(
         accountContext,
         (tracingHeaders: TracingHeaders) => {
           if (context.input instanceof Request && !context.init?.headers) {
-            context.input = new Request(context.input)
+            const request = new Request(context.input)
+            context.input = request
             Object.keys(tracingHeaders).forEach((key) => {
               // OpenObserve: use set instead of append to replace existing tracing headers
-              ;(context.input as Request).headers.set(key, tracingHeaders[key])
+              request.headers.set(key, tracingHeaders[key])
             })
+            // The headers of a no-cors Request are guarded: set() is silently ignored. Check what stuck.
+            context.traceHeadersInjected =
+              !isNoCorsFetch(context) &&
+              Object.keys(tracingHeaders).some((key) => isTraceHeaderName(key) && request.headers.has(key))
           } else {
             context.init = shallowClone(context.init)
             const headers: Array<[string, string]> = []
@@ -110,6 +125,7 @@ export function startTracer(
               })
             }
             context.init.headers = headers.concat(objectEntries(tracingHeaders))
+            context.traceHeadersInjected = !isNoCorsFetch(context) && hasTraceHeaders(tracingHeaders)
           }
         }
       ),
@@ -125,6 +141,7 @@ export function startTracer(
             Object.keys(tracingHeaders).forEach((name) => {
               xhr.setRequestHeader(name, tracingHeaders[name])
             })
+            context.traceHeadersInjected = hasTraceHeaders(tracingHeaders)
           } catch {
             // XHR may have already been sent (buffered replay via microtask)
           }
@@ -191,6 +208,12 @@ function injectHeadersIfTracingAllowed(
       configuration
     )
   )
+
+  // The ids come from a traceparent the application put on the request: that header is on the
+  // wire whatever the propagators are (unless the browser drops it, in a no-cors fetch).
+  if (existingTraceparent?.onWire && !isNoCorsFetch(context)) {
+    context.traceHeadersInjected = true
+  }
 }
 
 /**
@@ -237,8 +260,10 @@ function parseTraceparent(
  */
 function extractExistingTraceparent(
   context: Partial<RumFetchStartContext | RumXhrStartContext>
-): { traceId: TraceIdentifier; spanId: SpanIdentifier; sampled: boolean } | null {
+): { traceId: TraceIdentifier; spanId: SpanIdentifier; sampled: boolean; onWire: boolean } | null {
   let traceparentValue: string | null = null
+  // False when the value comes from a Request whose headers fetch ignores because init.headers is set.
+  let onWire = true
 
   const fetchContext = context as Partial<RumFetchStartContext>
   if (fetchContext.init?.headers) {
@@ -257,6 +282,7 @@ function extractExistingTraceparent(
 
   if (!traceparentValue && fetchContext.input instanceof Request) {
     traceparentValue = fetchContext.input.headers.get('traceparent')
+    onWire = !fetchContext.init?.headers
   }
 
   if (!traceparentValue) {
@@ -266,7 +292,7 @@ function extractExistingTraceparent(
   for (const value of traceparentValue.split(',')) {
     const parsed = parseTraceparent(value)
     if (parsed) {
-      return parsed
+      return { ...parsed, onWire }
     }
   }
   return null

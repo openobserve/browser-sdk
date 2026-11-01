@@ -7,12 +7,7 @@ import type { RumInitConfiguration } from '../configuration'
 import { validateAndBuildRumConfiguration } from '../configuration'
 import { startTracer } from './tracer'
 import type { SpanIdentifier, TraceIdentifier } from './identifier'
-import {
-  createSpanIdentifier,
-  createTraceIdentifier,
-  toPaddedSpanIdHex,
-  toPaddedTraceIdHex,
-} from './identifier'
+import { createSpanIdentifier, createTraceIdentifier, toPaddedSpanIdHex, toPaddedTraceIdHex } from './identifier'
 
 describe('tracer', () => {
   const ALLOWED_DOMAIN_CONTEXT: Partial<RumXhrStartContext | RumFetchStartContext> = {
@@ -68,6 +63,7 @@ describe('tracer', () => {
       expect(context.traceId).toBeDefined()
       expect(context.spanId).toBeDefined()
       expect(xhr.headers).toEqual(tracingHeadersFor(context.traceId!, context.spanId!, '1'))
+      expect(context.traceHeadersInjected).toBe(true)
     })
 
     it('should not throw if setRequestHeader fails because the XHR has already been sent', () => {
@@ -425,6 +421,7 @@ describe('tracer', () => {
       expect(toPlainObject(headers)).toEqual({
         foo: 'bar',
       })
+      expect(context.traceHeadersInjected).toBe(true)
     })
 
     it('should preserve original headers plain object', () => {
@@ -474,6 +471,7 @@ describe('tracer', () => {
         ['foo', 'bar'],
         ['foo', 'baz'],
       ])
+      expect(context.traceHeadersInjected).toBe(true)
     })
 
     it('should preserve original headers contained in a Request instance', () => {
@@ -498,6 +496,7 @@ describe('tracer', () => {
         ...tracingHeadersFor(context.traceId!, context.spanId!, '1'),
       })
       expect(headersAsArray(request.headers)).toEqual([['foo', 'bar']])
+      expect(context.traceHeadersInjected).toBe(true)
     })
 
     it('should ignore headers from a Request instance if other headers are set', () => {
@@ -705,33 +704,370 @@ describe('tracer', () => {
     })
   })
 
-  describe('clearTracingIfCancelled', () => {
-    it('should clear tracing if status is 0', () => {
-      const tracer = startTracerWithDefaults()
-      const context: RumFetchResolveContext = {
-        status: 0,
-
+  describe('clearTracingIfNeeded', () => {
+    function makeContext(partial: Partial<RumFetchResolveContext>): RumFetchResolveContext {
+      return {
         spanId: createSpanIdentifier(),
         traceId: createTraceIdentifier(),
-      } satisfies Partial<RumFetchResolveContext> as any
+        traceSampled: true,
+        ...partial,
+      } as RumFetchResolveContext
+    }
+
+    it('should keep tracing if status is 0, not aborted, and trace headers were injected', () => {
+      const tracer = startTracerWithDefaults()
+      const context = makeContext({ status: 0, isAborted: false, traceHeadersInjected: true })
+      const { spanId, traceId } = context
+      tracer.clearTracingIfNeeded(context)
+
+      expect(context.traceId).toBe(traceId)
+      expect(context.spanId).toBe(spanId)
+      expect(context.traceSampled).toBe(true)
+    })
+
+    it('should clear tracing if status is 0, not aborted, and trace headers were not injected', () => {
+      const tracer = startTracerWithDefaults()
+      const context = makeContext({ status: 0, isAborted: false, traceHeadersInjected: false })
       tracer.clearTracingIfNeeded(context)
 
       expect(context.traceId).toBeUndefined()
       expect(context.spanId).toBeUndefined()
+      expect(context.traceSampled).toBeUndefined()
     })
 
-    it('should not clear tracing if status is not 0', () => {
+    it('should clear tracing if status is 0, not aborted, and the injection flag is absent', () => {
       const tracer = startTracerWithDefaults()
-      const context: RumFetchResolveContext = {
-        status: 200,
+      const context = makeContext({ status: 0, isAborted: false })
+      tracer.clearTracingIfNeeded(context)
 
-        spanId: createSpanIdentifier(),
-        traceId: createTraceIdentifier(),
-      } satisfies Partial<RumFetchResolveContext> as any
+      expect(context.traceId).toBeUndefined()
+      expect(context.spanId).toBeUndefined()
+      expect(context.traceSampled).toBeUndefined()
+    })
+
+    it('should keep tracing if status is 0 and the request was aborted', () => {
+      const tracer = startTracerWithDefaults()
+      const context = makeContext({ status: 0, isAborted: true })
       tracer.clearTracingIfNeeded(context)
 
       expect(context.traceId).toBeDefined()
       expect(context.spanId).toBeDefined()
+    })
+
+    it('should not clear tracing if status is not 0', () => {
+      const tracer = startTracerWithDefaults()
+      const context = makeContext({ status: 200, isAborted: false })
+      tracer.clearTracingIfNeeded(context)
+
+      expect(context.traceId).toBeDefined()
+      expect(context.spanId).toBeDefined()
+    })
+  })
+
+  describe('status 0 with the real tracer', () => {
+    const NO_PROPAGATORS = [{ match: window.location.origin, propagatorTypes: [] as never[] }]
+
+    function endWithStatus0(context: Partial<RumXhrStartContext>) {
+      return { ...context, status: 0, isAborted: false } as unknown as RumFetchResolveContext
+    }
+
+    interface RecordingXhr {
+      headers: { [name: string]: string }
+      xhr: XMLHttpRequest
+    }
+
+    function makeXhr(setRequestHeader?: (name: string, value: string) => void): RecordingXhr {
+      const headers: { [name: string]: string } = {}
+      const xhr = {
+        setRequestHeader: setRequestHeader ?? ((name: string, value: string) => (headers[name] = value)),
+      } as unknown as XMLHttpRequest
+      return { headers, xhr }
+    }
+
+    function expectIdsClearedOnStatus0(
+      tracer: ReturnType<typeof startTracerWithDefaults>,
+      context: Partial<RumXhrStartContext>
+    ) {
+      expect(context.traceId).toBeDefined()
+      expect(context.spanId).toBeDefined()
+      const ended = endWithStatus0(context)
+      tracer.clearTracingIfNeeded(ended)
+      expect(ended.traceId).toBeUndefined()
+      expect(ended.spanId).toBeUndefined()
+    }
+
+    function expectIdsKeptOnStatus0(
+      tracer: ReturnType<typeof startTracerWithDefaults>,
+      context: Partial<RumXhrStartContext>
+    ) {
+      const ended = endWithStatus0(context)
+      tracer.clearTracingIfNeeded(ended)
+      expect(ended.traceId).toBeDefined()
+      expect(ended.spanId).toBeDefined()
+    }
+
+    describe('XHR', () => {
+      it('should clear the ids when propagatorTypes is empty', () => {
+        const tracer = startTracerWithDefaults({ initConfiguration: { allowedTracingUrls: NO_PROPAGATORS } })
+        const context = { ...ALLOWED_DOMAIN_CONTEXT }
+        tracer.traceXhr(context, makeXhr().xhr)
+
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expectIdsClearedOnStatus0(tracer, context)
+      })
+
+      it('should clear the ids when only a baggage header was injected', () => {
+        const tracer = startTracerWithDefaults({
+          initConfiguration: { allowedTracingUrls: NO_PROPAGATORS, propagateTraceBaggage: true },
+        })
+        const context = { ...ALLOWED_DOMAIN_CONTEXT }
+        const { xhr, headers } = makeXhr()
+        tracer.traceXhr(context, xhr)
+
+        expect(headers.baggage).toBeDefined()
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expectIdsClearedOnStatus0(tracer, context)
+      })
+
+      it('should never set ids on a URL that is not allowed', () => {
+        const tracer = startTracerWithDefaults()
+        const context = { ...DISALLOWED_DOMAIN_CONTEXT }
+        tracer.traceXhr(context, makeXhr().xhr)
+
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expect(context.traceId).toBeUndefined()
+        const ended = endWithStatus0(context)
+        tracer.clearTracingIfNeeded(ended)
+        expect(ended.traceId).toBeUndefined()
+      })
+
+      it('should never set ids when sampled injection is configured and the request is not sampled', () => {
+        const tracer = startTracerWithDefaults({
+          initConfiguration: { traceSampleRate: 0, traceContextInjection: TraceContextInjection.SAMPLED },
+        })
+        const context = { ...ALLOWED_DOMAIN_CONTEXT }
+        tracer.traceXhr(context, makeXhr().xhr)
+
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expect(context.traceId).toBeUndefined()
+        const ended = endWithStatus0(context)
+        tracer.clearTracingIfNeeded(ended)
+        expect(ended.traceId).toBeUndefined()
+      })
+
+      it('should keep the ids when tracecontext headers were injected', () => {
+        const tracer = startTracerWithDefaults({
+          initConfiguration: {
+            allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['tracecontext'] }],
+          },
+        })
+        const context = { ...ALLOWED_DOMAIN_CONTEXT }
+        const { xhr, headers } = makeXhr()
+        tracer.traceXhr(context, xhr)
+
+        expect(headers.traceparent).toBe(
+          `00-${toPaddedTraceIdHex(context.traceId!)}-${toPaddedSpanIdHex(context.spanId!)}-01`
+        )
+        expect(context.traceHeadersInjected).toBe(true)
+        expectIdsKeptOnStatus0(tracer, context)
+      })
+
+      it('should not flag the injection and should clear the ids when setRequestHeader throws', () => {
+        const tracer = startTracerWithDefaults()
+        const context = { ...ALLOWED_DOMAIN_CONTEXT }
+        tracer.traceXhr(
+          context,
+          makeXhr(() => {
+            throw new DOMException("Failed to execute 'setRequestHeader' on 'XMLHttpRequest'", 'InvalidStateError')
+          }).xhr
+        )
+
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expectIdsClearedOnStatus0(tracer, context)
+      })
+    })
+
+    describe('fetch', () => {
+      const VALID_TRACEPARENT = '00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01'
+
+      it('should keep the ids when fetch headers were injected', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT, init: {} }
+        tracer.traceFetch(context)
+
+        expect(context.traceHeadersInjected).toBe(true)
+        expectIdsKeptOnStatus0(tracer, context)
+      })
+
+      it('should flag the injection when the headers are a Headers instance', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT, init: { headers: new Headers() } }
+        tracer.traceFetch(context)
+
+        expect(context.traceHeadersInjected).toBe(true)
+      })
+
+      it('should flag the injection when the headers are an array', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = {
+          ...ALLOWED_DOMAIN_CONTEXT,
+          init: { headers: [['foo', 'bar']] },
+        }
+        tracer.traceFetch(context)
+
+        expect(context.traceHeadersInjected).toBe(true)
+      })
+
+      it('should flag the injection for a cors Request input', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = {
+          ...ALLOWED_DOMAIN_CONTEXT,
+          input: new Request(document.location.origin),
+        }
+        tracer.traceFetch(context)
+
+        expect((context.input as Request).headers.has('x-openobserve-trace-id')).toBe(true)
+        expect(context.traceHeadersInjected).toBe(true)
+      })
+
+      it('should clear the ids when propagatorTypes is empty', () => {
+        const tracer = startTracerWithDefaults({ initConfiguration: { allowedTracingUrls: NO_PROPAGATORS } })
+        const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT, init: {} }
+        tracer.traceFetch(context)
+
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expectIdsClearedOnStatus0(tracer, context)
+      })
+
+      it('should clear the ids when only a baggage header was injected', () => {
+        const tracer = startTracerWithDefaults({
+          initConfiguration: { allowedTracingUrls: NO_PROPAGATORS, propagateTraceBaggage: true },
+        })
+        const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT, init: {} }
+        tracer.traceFetch(context)
+
+        expect(toPlainObject(new Headers(context.init!.headers)).baggage).toBeDefined()
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expectIdsClearedOnStatus0(tracer, context)
+      })
+
+      it('should clear the ids when only a baggage header was injected into a Request input', () => {
+        const tracer = startTracerWithDefaults({
+          initConfiguration: { allowedTracingUrls: NO_PROPAGATORS, propagateTraceBaggage: true },
+        })
+        const context: Partial<RumFetchStartContext> = {
+          ...ALLOWED_DOMAIN_CONTEXT,
+          input: new Request(document.location.origin),
+        }
+        tracer.traceFetch(context)
+
+        expect((context.input as Request).headers.has('baggage')).toBe(true)
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expectIdsClearedOnStatus0(tracer, context)
+      })
+
+      it('should never set ids on a URL that is not allowed', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = { ...DISALLOWED_DOMAIN_CONTEXT }
+        tracer.traceFetch(context)
+
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expect(context.traceId).toBeUndefined()
+        const ended = endWithStatus0(context)
+        tracer.clearTracingIfNeeded(ended)
+        expect(ended.traceId).toBeUndefined()
+      })
+
+      it('should never set ids when sampled injection is configured and the request is not sampled', () => {
+        const tracer = startTracerWithDefaults({
+          initConfiguration: { traceSampleRate: 0, traceContextInjection: TraceContextInjection.SAMPLED },
+        })
+        const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT }
+        tracer.traceFetch(context)
+
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expect(context.traceId).toBeUndefined()
+        const ended = endWithStatus0(context)
+        tracer.clearTracingIfNeeded(ended)
+        expect(ended.traceId).toBeUndefined()
+      })
+
+      it('should clear the ids for a no-cors fetch init, whose trace headers are dropped by the browser', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = { ...ALLOWED_DOMAIN_CONTEXT, init: { mode: 'no-cors' } }
+        tracer.traceFetch(context)
+
+        expect(context.traceHeadersInjected).toBe(false)
+        expectIdsClearedOnStatus0(tracer, context)
+      })
+
+      it('should clear the ids for a no-cors Request input, whose headers are guarded', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = {
+          ...ALLOWED_DOMAIN_CONTEXT,
+          input: new Request(document.location.origin, { mode: 'no-cors' }),
+        }
+        tracer.traceFetch(context)
+
+        expect((context.input as Request).headers.has('x-openobserve-trace-id')).toBe(false)
+        expect(context.traceHeadersInjected).toBe(false)
+        expectIdsClearedOnStatus0(tracer, context)
+      })
+
+      it('should keep the ids taken from an application traceparent even without propagators', () => {
+        const tracer = startTracerWithDefaults({ initConfiguration: { allowedTracingUrls: NO_PROPAGATORS } })
+        const context: Partial<RumFetchStartContext> = {
+          ...ALLOWED_DOMAIN_CONTEXT,
+          init: { headers: { traceparent: VALID_TRACEPARENT } },
+        }
+        tracer.traceFetch(context)
+
+        expect(toPaddedTraceIdHex(context.traceId!)).toBe('0af7651916cd43dd8448eb211c80319c')
+        expect(context.traceHeadersInjected).toBe(true)
+        expectIdsKeptOnStatus0(tracer, context)
+      })
+
+      it('should clear the ids taken from an application traceparent on a no-cors fetch', () => {
+        const tracer = startTracerWithDefaults({ initConfiguration: { allowedTracingUrls: NO_PROPAGATORS } })
+        const context: Partial<RumFetchStartContext> = {
+          ...ALLOWED_DOMAIN_CONTEXT,
+          init: { mode: 'no-cors', headers: { traceparent: VALID_TRACEPARENT } },
+        }
+        tracer.traceFetch(context)
+
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expectIdsClearedOnStatus0(tracer, context)
+      })
+
+      it('should clear the ids taken from a Request traceparent that init.headers replaces', () => {
+        const tracer = startTracerWithDefaults({ initConfiguration: { allowedTracingUrls: NO_PROPAGATORS } })
+        const context: Partial<RumFetchStartContext> = {
+          ...ALLOWED_DOMAIN_CONTEXT,
+          input: new Request(document.location.origin, { headers: { traceparent: VALID_TRACEPARENT } }),
+          init: { headers: {} },
+        }
+        tracer.traceFetch(context)
+
+        // fetch ignores the Request headers when init.headers is set, so the traceparent is not on the wire
+        expect(toPaddedTraceIdHex(context.traceId!)).toBe('0af7651916cd43dd8448eb211c80319c')
+        expect(context.traceHeadersInjected).toBeFalsy()
+        expectIdsClearedOnStatus0(tracer, context)
+      })
+
+      it('should clear the ids when init.mode is cors over a no-cors Request, whose guarded headers drop ours', () => {
+        const tracer = startTracerWithDefaults()
+        const context: Partial<RumFetchStartContext> = {
+          ...ALLOWED_DOMAIN_CONTEXT,
+          input: new Request(document.location.origin, { mode: 'no-cors' }),
+          init: { mode: 'cors' },
+        }
+        tracer.traceFetch(context)
+
+        // init.mode wins in isNoCorsFetch, but the copied Request stays no-cors: its guarded headers ignore set()
+        expect((context.input as Request).headers.has('x-openobserve-trace-id')).toBe(false)
+        expect(context.traceHeadersInjected).toBe(false)
+        expectIdsClearedOnStatus0(tracer, context)
+      })
     })
   })
 })
