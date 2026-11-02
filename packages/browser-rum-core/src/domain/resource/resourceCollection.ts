@@ -16,7 +16,7 @@ import type { LifeCycle, RawRumEventCollectedData } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'
 import type { RequestCompleteEvent } from '../requestCollection'
 import { getDocumentTraceId } from '../tracing/getDocumentTraceId'
-import { createSpanIdentifier } from '../tracing/identifier'
+import { createSpanIdentifier, toPaddedSpanIdHex, toPaddedTraceIdHex } from '../tracing/identifier'
 import type { GraphQlMetadata } from './graphql'
 import { extractGraphQlMetadata, findGraphQlConfiguration } from './graphql'
 import { createRequestRegistry } from './requestRegistry'
@@ -208,8 +208,12 @@ function computeRequestTracingInfo(request: RequestCompleteEvent, configuration:
   }
   return {
     _o2: {
-      span_id: request.spanId!.toString(16),
-      trace_id: request.traceId!.toString(16),
+      // Fixed-width canonical hex: BigInt `toString(16)` drops leading zeros (UUIDv7 trace
+      // ids always have one; 64-bit-style reused ids have sixteen), so the unpadded form
+      // can never equal the trace_id stored by the backend (regression window
+      // 0.4.0-beta.7..0.4.2-beta.2).
+      span_id: toPaddedSpanIdHex(request.spanId!),
+      trace_id: toPaddedTraceIdHex(request.traceId!),
       rule_psr: configuration.rulePsr,
     },
   }
@@ -226,7 +230,7 @@ function computeResourceEntryTracingInfo(entry: ResourceLikeEntry, configuration
   return {
     _o2: {
       trace_id: traceId,
-      span_id: createSpanIdentifier().toString(16),
+      span_id: toPaddedSpanIdHex(createSpanIdentifier()),
       rule_psr: configuration.rulePsr,
     },
   }

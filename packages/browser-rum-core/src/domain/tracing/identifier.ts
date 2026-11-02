@@ -79,8 +79,28 @@ function createUuidV7Identifier(): BaseIdentifier {
 /**
  * Pads an identifier to its canonical hex length: 16 characters for 64-bit identifiers, 32
  * characters for 128-bit (trace) identifiers.
+ *
+ * NOTE: this guesses the width from the value and misjudges trace ids whose upper half is
+ * zero (64-bit-style ids reused from an external traceparent) — they serialize to 16 chars
+ * instead of 32. Kept only for the b3 propagators, which inherited this behavior from
+ * upstream. New call sites must use the fixed-width helpers below.
  */
 export function toPaddedHexadecimalString(id: BaseIdentifier) {
   const hexString = id.toString(16)
   return hexString.padStart(hexString.length > 16 ? 32 : 16, '0')
+}
+
+/**
+ * Canonical W3C hex forms. Fixed widths — never guess the width from the value: BigInt
+ * `toString(16)` drops leading zeros, UUIDv7 trace ids always start with a zero nibble
+ * (48-bit ms timestamp in the top bits), and a reused 64-bit-style trace id (zero upper
+ * half) has ≤16 hex chars but must still serialize to 32. Unpadded serialization is the
+ * regression that broke RUM↔trace correlation in 0.4.0-beta.7..0.4.2-beta.2.
+ */
+export function toPaddedTraceIdHex(id: TraceIdentifier): string {
+  return id.toString(16).padStart(32, '0')
+}
+
+export function toPaddedSpanIdHex(id: SpanIdentifier): string {
+  return id.toString(16).padStart(16, '0')
 }
