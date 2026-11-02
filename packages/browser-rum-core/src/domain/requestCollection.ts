@@ -32,6 +32,8 @@ export interface CustomContext {
   spanId?: SpanIdentifier
   traceId?: TraceIdentifier
   traceSampled?: boolean
+  /** True once at least one trace header was actually written to the request. */
+  traceHeadersInjected?: boolean
 }
 export interface RumFetchStartContext extends FetchStartContext, CustomContext {}
 export interface RumFetchResolveContext extends FetchResolveContext, CustomContext {}

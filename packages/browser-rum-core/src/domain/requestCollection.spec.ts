@@ -19,8 +19,10 @@ describe('collect fetch', () => {
   let startSpy: jasmine.Spy<(requestStartEvent: RequestStartEvent) => void>
   let completeSpy: jasmine.Spy<(requestCompleteEvent: RequestCompleteEvent) => void>
   let stopFetchTracking: () => void
+  let injectHeaders: boolean
 
   beforeEach(() => {
+    injectHeaders = true
     mockFetchManager = mockFetch()
     const { observable: bufferedDataObservable, stop: stopBuffering } = startBufferingData()
 
@@ -34,6 +36,7 @@ describe('collect fetch', () => {
       traceFetch: (context) => {
         context.traceId = createTraceIdentifier()
         context.spanId = createSpanIdentifier()
+        context.traceHeadersInjected = injectHeaders
       },
     }
     ;({ stop: stopFetchTracking } = trackFetch(
@@ -168,7 +171,20 @@ describe('collect fetch', () => {
       })
     })
 
-    it('should not trace requests ending with status 0', (done) => {
+    it('should keep the trace of requests ending with status 0', (done) => {
+      fetch(FAKE_URL).resolveWith({ status: 0, responseText: 'fetch cancelled' })
+
+      mockFetchManager.whenAllComplete(() => {
+        const request = completeSpy.calls.argsFor(0)[0]
+
+        expect(request.status).toEqual(0)
+        expect(request.traceId).toBeDefined()
+        done()
+      })
+    })
+
+    it('should clear the trace of requests ending with status 0 when no trace headers were injected', (done) => {
+      injectHeaders = false
       fetch(FAKE_URL).resolveWith({ status: 0, responseText: 'fetch cancelled' })
 
       mockFetchManager.whenAllComplete(() => {
@@ -186,8 +202,10 @@ describe('collect xhr', () => {
   let startSpy: jasmine.Spy<(requestStartEvent: RequestStartEvent) => void>
   let completeSpy: jasmine.Spy<(requestCompleteEvent: RequestCompleteEvent) => void>
   let stopXhrTracking: () => void
+  let injectHeaders: boolean
 
   beforeEach(() => {
+    injectHeaders = true
     mockXhr()
     const { observable: bufferedDataObservable, stop: stopBuffering } = startBufferingData()
 
@@ -201,6 +219,7 @@ describe('collect xhr', () => {
       traceXhr: (context) => {
         context.traceId = createTraceIdentifier()
         context.spanId = createSpanIdentifier()
+        context.traceHeadersInjected = injectHeaders
       },
     }
     ;({ stop: stopXhrTracking } = trackXhr(lifeCycle, tracerStub as Tracer, bufferedDataObservable))
@@ -280,22 +299,6 @@ describe('collect xhr', () => {
     })
   })
 
-  it('should not trace cancelled requests', (done) => {
-    withXhr({
-      setup(xhr) {
-        xhr.open('GET', '/ok')
-        xhr.send()
-        xhr.complete(0)
-      },
-      onComplete() {
-        const request = completeSpy.calls.argsFor(0)[0]
-        expect(request.status).toEqual(0)
-        expect(request.traceId).toEqual(undefined)
-        done()
-      },
-    })
-  })
-
   describe('tracing', () => {
     it('should trace requests by default', (done) => {
       withXhr({
@@ -327,7 +330,24 @@ describe('collect xhr', () => {
       })
     })
 
-    it('should not trace requests ending with status 0', (done) => {
+    it('should keep the trace of requests ending with status 0', (done) => {
+      withXhr({
+        setup(xhr) {
+          xhr.open('GET', '/ok')
+          xhr.send()
+          xhr.complete(0)
+        },
+        onComplete() {
+          const request = completeSpy.calls.argsFor(0)[0]
+          expect(request.status).toEqual(0)
+          expect(request.traceId).toBeDefined()
+          done()
+        },
+      })
+    })
+
+    it('should clear the trace of requests ending with status 0 when no trace headers were injected', (done) => {
+      injectHeaders = false
       withXhr({
         setup(xhr) {
           xhr.open('GET', '/ok')
