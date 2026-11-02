@@ -2597,10 +2597,10 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@openobserve/rum-events-format@openobserve/rum-events-format#commit=099b70ec2255f45ee4a557c53bd509694cd86212":
+"@openobserve/rum-events-format@openobserve/rum-events-format#commit=8311b55a0bfb31bb7d0b9946c1b00a8c5cf925d8":
   version: 0.0.0
-  resolution: "@openobserve/rum-events-format@https://github.com/openobserve/rum-events-format.git#commit=099b70ec2255f45ee4a557c53bd509694cd86212"
-  checksum: 10c0/8b23325355986149ed2ae87c9c500c2d07b088a4445437761809ca5e4cee2deb073e7b71b7c96dfeebcb8b163347b93c622341c4585b41fd8eb5a7c1d0d58361
+  resolution: "@openobserve/rum-events-format@https://github.com/openobserve/rum-events-format.git#commit=8311b55a0bfb31bb7d0b9946c1b00a8c5cf925d8"
+  checksum: 10c0/4dda59cfbd75053af438da90ba6de5ddc1e613cf533404c5c9a08a802cc708134bd8dc271c6186163472b62b5fb09f9e1085ccf4fd8f76875d36f0299e979724
   languageName: node
   linkType: hard
 
@@ -6098,7 +6098,7 @@ __metadata:
     "@eslint/js": "npm:10.0.1"
     "@jsdevtools/coverage-istanbul-loader": "npm:3.0.5"
     "@microsoft/api-extractor": "npm:7.59.3"
-    "@openobserve/rum-events-format": "openobserve/rum-events-format#commit=099b70ec2255f45ee4a557c53bd509694cd86212"
+    "@openobserve/rum-events-format": "openobserve/rum-events-format#commit=8311b55a0bfb31bb7d0b9946c1b00a8c5cf925d8"
     "@playwright/test": "npm:1.63.0"
     "@salesforce/cli": "npm:2.153.5"
     "@swc/core": "npm:1.16.13"

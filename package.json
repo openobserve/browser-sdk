@@ -49,7 +49,7 @@
     "@eslint/js": "10.0.1",
     "@jsdevtools/coverage-istanbul-loader": "3.0.5",
     "@microsoft/api-extractor": "7.59.3",
-    "@openobserve/rum-events-format": "openobserve/rum-events-format#commit=099b70ec2255f45ee4a557c53bd509694cd86212",
+    "@openobserve/rum-events-format": "openobserve/rum-events-format#commit=8311b55a0bfb31bb7d0b9946c1b00a8c5cf925d8",
     "@playwright/test": "1.63.0",
     "@salesforce/cli": "2.153.5",
     "@swc/core": "1.16.13",
