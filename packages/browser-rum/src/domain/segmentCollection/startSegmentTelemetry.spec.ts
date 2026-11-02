@@ -1,5 +1,5 @@
 import type { Telemetry, HttpRequestEvent, BandwidthStats } from '@openobserve/browser-core'
-import { Observable } from '@openobserve/browser-core'
+import { Observable } from '@openobserve/js-core/util'
 import type { MockTelemetry } from '@openobserve/browser-core/test'
 import { registerCleanupTask, startMockTelemetry } from '@openobserve/browser-core/test'
 import { startSegmentTelemetry } from './startSegmentTelemetry'

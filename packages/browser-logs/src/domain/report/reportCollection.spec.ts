@@ -1,6 +1,7 @@
-import { ErrorHandling, ErrorSource, noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
+import { ErrorHandling, ErrorSource } from '@openobserve/browser-core'
 import type { MockReportingObserver } from '@openobserve/browser-core/test'
-import { mockReportingObserver } from '@openobserve/browser-core/test'
+import { FAKE_REPORT, mockReportingObserver, mockSourceCodeContext } from '@openobserve/browser-core/test'
 import type { RawReportLogsEvent } from '../../rawLogsEvent.types'
 import { validateAndBuildLogsConfiguration } from '../configuration'
 import type { RawLogsEventCollectedData } from '../lifeCycle'
@@ -36,6 +37,7 @@ describe('reports', () => {
     ))
 
     reportingObserver.raiseReport('intervention')
+    expect(rawLogsEvents[0].domainContext).toEqual({ report: FAKE_REPORT })
     expect(rawLogsEvents[0].rawLogsEvent).toEqual({
       error: {
         kind: 'NavigatorVibrate',
@@ -49,6 +51,22 @@ describe('reports', () => {
       message: 'intervention: foo bar',
       status: StatusType.error,
       origin: ErrorSource.REPORT,
+      _o2: { debug_ids: undefined },
+    })
+  })
+
+  it('should attach debug_ids resolved from the report source file', () => {
+    const debugId = '01234567-89ab-cdef-0123-456789abcdef'
+    mockSourceCodeContext({ 'Error: foo\n    at foo (http://foo.bar/index.js:52:15)': { ddDebugId: debugId } })
+    ;({ stop: stopReportCollection } = startReportCollection(
+      validateAndBuildLogsConfiguration({ ...initConfiguration, forwardReports: ['intervention'] })!,
+      lifeCycle
+    ))
+
+    reportingObserver.raiseReport('intervention')
+
+    expect(rawLogsEvents[0].rawLogsEvent._o2).toEqual({
+      debug_ids: [{ url: 'http://foo.bar/index.js', id: debugId }],
     })
   })
 
@@ -70,12 +88,17 @@ describe('reports', () => {
 
     reportingObserver.raiseReport('deprecation')
 
+    expect(rawLogsEvents[0].domainContext).toEqual({
+      report: jasmine.objectContaining({ ...FAKE_REPORT, type: 'deprecation' }),
+    })
+
     expect(rawLogsEvents[0].rawLogsEvent).toEqual({
       date: jasmine.any(Number),
       message: 'deprecation: foo bar Found in http://foo.bar/index.js:20:10',
       status: StatusType.warn,
       origin: ErrorSource.REPORT,
       error: undefined,
+      _o2: { debug_ids: undefined },
     })
   })
 })

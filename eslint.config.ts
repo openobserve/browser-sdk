@@ -12,6 +12,7 @@ import eslintLocalRules from './eslint-local-rules/index.ts'
 import { SCHEMAS } from './scripts/lib/generatedSchemaTypes.ts'
 
 const SPEC_FILES = '**/*.{spec,specHelper}.{ts,tsx,js}'
+const PUBLIC_PACKAGE_ENTRIES = 'packages/{browser-rum,browser-logs,browser-rum-slim}/src/entries/*.ts'
 const MONITOR_UNTIL_COMMENT_EXPIRED_LEVEL =
   (process.env.MONITOR_UNTIL_COMMENT_EXPIRED_LEVEL as 'warn' | 'error' | undefined) || 'warn'
 
@@ -22,7 +23,7 @@ const MONITOR_UNTIL_COMMENT_EXPIRED_LEVEL =
 const PACKAGES_NO_RESTRICTED_SYNTAX_RULES = [
   {
     selector: 'Identifier[name="globalThis"]',
-    message: 'Use `globalObject` from @openobserve/browser-core instead of `globalThis`.',
+    message: 'Use `globalObject` from @openobserve/js-core/util instead of `globalThis`.',
   },
 ]
 
@@ -52,6 +53,9 @@ export default defineConfig(
       'test/apps/vue-router-v4-app',
       'test/apps/nuxt-app',
       'test/apps/nuxt-vue-router-v4-app',
+      'test/apps/sf-lwc-app/force-app/main/default/staticresources/*.js',
+      'test/apps/sf-experience-app/force-app/main/default/staticresources/*.js',
+      'test/apps/sf-experience-headmarkup-app/force-app/main/default/staticresources/*.js',
       'sandbox',
       'coverage',
       '.yarn',
@@ -416,6 +420,14 @@ export default defineConfig(
 
   {
     files: ['packages/*/src/**/*.ts'],
+    ignores: [SPEC_FILES, PUBLIC_PACKAGE_ENTRIES],
+    rules: {
+      'local-rules/disallow-re-exports-from-other-packages': 'error',
+    },
+  },
+
+  {
+    files: ['packages/*/src/**/*.ts'],
     ignores: [SPEC_FILES],
     rules: {
       'import-x/consistent-type-specifier-style': ['error', 'prefer-top-level'],
@@ -423,7 +435,7 @@ export default defineConfig(
   },
 
   {
-    files: ['packages/{browser-rum,browser-logs,browser-rum-slim}/src/entries/*.ts'],
+    files: [PUBLIC_PACKAGE_ENTRIES],
     rules: {
       'local-rules/disallow-enum-exports': 'error',
     },
@@ -453,6 +465,28 @@ export default defineConfig(
               message: 'Use node:fs or node:fs/promises (fs.glob) instead.',
             },
           ],
+        },
+      ],
+    },
+  },
+
+  {
+    files: [
+      'test/apps/sf-lwc-app/force-app/main/default/lwc/**/*.js',
+      'test/apps/sf-experience-app/force-app/main/default/lwc/**/*.js',
+      'test/apps/sf-experience-headmarkup-app/force-app/main/default/lwc/**/*.js',
+    ],
+    languageOptions: {
+      globals: globals.browser,
+    },
+    rules: {
+      // Salesforce LWC components are deployed as default-exported classes and import platform-provided
+      // virtual modules that do not exist in this repository's node_modules.
+      'import-x/no-default-export': 'off',
+      'import-x/no-unresolved': [
+        'error',
+        {
+          ignore: ['^lwc$', '^lightning/', '^@salesforce/resourceUrl/'],
         },
       ],
     },

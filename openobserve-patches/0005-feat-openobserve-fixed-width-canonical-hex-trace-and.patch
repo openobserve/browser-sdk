@@ -1,0 +1,359 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MinaKaramApex <Mina.Karam@apexmedical.ai>
+Date: Mon, 2 Nov 2026 09:56:58 +0200
+Subject: [PATCH 5/7] feat(openobserve): fixed-width canonical hex trace and
+ span ids
+
+Carries over openobserve/browser-sdk#25 (commit 40443a4a2), which was made
+directly on the openobserve branch and so was not in the patch series:
+
+- RUM event fields _o2.trace_id and _o2.span_id (resource events) use
+  fixed-width hex (32 and 16 chars). BigInt toString(16) drops leading zeros
+  and UUIDv7 trace ids always start with a zero nibble, so the stored id never
+  matched the 32-char trace_id of the traces stream.
+- x-openobserve-* propagator headers follow the backend contract
+  (get_or_create_trace_id): x-openobserve-span-id (was -parent-id) and padded
+  hex values instead of decimal.
+- new toPaddedTraceIdHex / toPaddedSpanIdHex helpers; the width-guessing
+  toPaddedHexadecimalString is kept for b3 only.
+
+Specs updated as in the original change.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../resource/resourceCollection.spec.ts       | 37 +++++++++-
+ .../src/domain/resource/resourceCollection.ts | 12 ++--
+ .../src/domain/tracing/identifier.spec.ts     | 72 +++++++++++++++----
+ .../src/domain/tracing/identifier.ts          | 20 ++++++
+ .../src/domain/tracing/tracer.spec.ts         | 19 +++--
+ .../src/domain/tracing/tracer.ts              | 12 +++-
+ 6 files changed, 142 insertions(+), 30 deletions(-)
+
+diff --git a/packages/browser-rum-core/src/domain/resource/resourceCollection.spec.ts b/packages/browser-rum-core/src/domain/resource/resourceCollection.spec.ts
+index 15da17391..140daa303 100644
+--- a/packages/browser-rum-core/src/domain/resource/resourceCollection.spec.ts
++++ b/packages/browser-rum-core/src/domain/resource/resourceCollection.spec.ts
+@@ -23,7 +23,12 @@ import type { RawRumEventCollectedData } from '../lifeCycle'
+ import { LifeCycle, LifeCycleEventType } from '../lifeCycle'
+ import type { RequestCompleteEvent } from '../requestCollection'
+ import { getDocumentTraceId } from '../tracing/getDocumentTraceId'
+-import { createSpanIdentifier, createTraceIdentifier } from '../tracing/identifier'
++import {
++  createSpanIdentifier,
++  createSpanIdentifierFromHex,
++  createTraceIdentifier,
++  createTraceIdentifierFromHex,
++} from '../tracing/identifier'
+ import { REQUEST_MATCHING_DELAY, startResourceCollection } from './resourceCollection'
+ 
+ function buildMatchHeadersForAllUrls(headerNames: MatchOption[]): MatchHeader[] {
+@@ -1128,6 +1133,36 @@ describe('resourceCollection', () => {
+       expect(privateFields.span_id).toBeDefined()
+     })
+ 
++    it('serializes trace and span ids as fixed-width canonical hex', () => {
++      // UUIDv7 trace ids always start with a zero nibble, which BigInt toString(16)
++      // drops — the id then never matches the 32-char trace_id stored by the backend
++      // (regression in 0.4.0-beta.7..0.4.2-beta.2).
++      setupResourceCollection()
++      notifyRequest({
++        request: {
++          traceSampled: true,
++          spanId: createSpanIdentifierFromHex('0123456789abcdef'),
++          traceId: createTraceIdentifierFromHex('01a034c1aabc72f78880daf6c9755cff'),
++        },
++      })
++      const privateFields = (rawRumEvents[0].rawRumEvent as RawRumResourceEvent)._o2
++      expect(privateFields.trace_id).toBe('01a034c1aabc72f78880daf6c9755cff')
++      expect(privateFields.span_id).toBe('0123456789abcdef')
++    })
++
++    it('pads a 64-bit-style reused trace id (zero upper half) to 32 chars', () => {
++      setupResourceCollection()
++      notifyRequest({
++        request: {
++          traceSampled: true,
++          spanId: createSpanIdentifier(),
++          traceId: createTraceIdentifierFromHex('00000000000000001234567890abcdef'),
++        },
++      })
++      const privateFields = (rawRumEvents[0].rawRumEvent as RawRumResourceEvent)._o2
++      expect(privateFields.trace_id).toBe('00000000000000001234567890abcdef')
++    })
++
+     it('should not be processed from not sampled completed request', () => {
+       setupResourceCollection()
+       notifyRequest({
+diff --git a/packages/browser-rum-core/src/domain/resource/resourceCollection.ts b/packages/browser-rum-core/src/domain/resource/resourceCollection.ts
+index f779ba060..495cd581b 100644
+--- a/packages/browser-rum-core/src/domain/resource/resourceCollection.ts
++++ b/packages/browser-rum-core/src/domain/resource/resourceCollection.ts
+@@ -16,7 +16,7 @@ import type { LifeCycle, RawRumEventCollectedData } from '../lifeCycle'
+ import { LifeCycleEventType } from '../lifeCycle'
+ import type { RequestCompleteEvent } from '../requestCollection'
+ import { getDocumentTraceId } from '../tracing/getDocumentTraceId'
+-import { createSpanIdentifier } from '../tracing/identifier'
++import { createSpanIdentifier, toPaddedSpanIdHex, toPaddedTraceIdHex } from '../tracing/identifier'
+ import type { GraphQlMetadata } from './graphql'
+ import { extractGraphQlMetadata, findGraphQlConfiguration } from './graphql'
+ import { createRequestRegistry } from './requestRegistry'
+@@ -208,8 +208,12 @@ function computeRequestTracingInfo(request: RequestCompleteEvent, configuration:
+   }
+   return {
+     _o2: {
+-      span_id: request.spanId!.toString(16),
+-      trace_id: request.traceId!.toString(16),
++      // Fixed-width canonical hex: BigInt `toString(16)` drops leading zeros (UUIDv7 trace
++      // ids always have one; 64-bit-style reused ids have sixteen), so the unpadded form
++      // can never equal the trace_id stored by the backend (regression window
++      // 0.4.0-beta.7..0.4.2-beta.2).
++      span_id: toPaddedSpanIdHex(request.spanId!),
++      trace_id: toPaddedTraceIdHex(request.traceId!),
+       rule_psr: configuration.rulePsr,
+     },
+   }
+@@ -226,7 +230,7 @@ function computeResourceEntryTracingInfo(entry: ResourceLikeEntry, configuration
+   return {
+     _o2: {
+       trace_id: traceId,
+-      span_id: createSpanIdentifier().toString(16),
++      span_id: toPaddedSpanIdHex(createSpanIdentifier()),
+       rule_psr: configuration.rulePsr,
+     },
+   }
+diff --git a/packages/browser-rum-core/src/domain/tracing/identifier.spec.ts b/packages/browser-rum-core/src/domain/tracing/identifier.spec.ts
+index 6835e2cbc..00f539f21 100644
+--- a/packages/browser-rum-core/src/domain/tracing/identifier.spec.ts
++++ b/packages/browser-rum-core/src/domain/tracing/identifier.spec.ts
+@@ -1,22 +1,31 @@
+-import { createSpanIdentifier, createTraceIdentifier, toPaddedHexadecimalString } from './identifier'
++import {
++  createSpanIdentifier,
++  createSpanIdentifierFromHex,
++  createTraceIdentifier,
++  createTraceIdentifierFromHex,
++  toPaddedHexadecimalString,
++  toPaddedSpanIdHex,
++  toPaddedTraceIdHex,
++} from './identifier'
+ 
+ describe('identifier', () => {
+   describe('TraceIdentifier', () => {
+-    it('generates a random id', () => {
+-      const identifier = createTraceIdentifier()
+-      expect(identifier.toString()).toMatch(/^\d+$/)
++    it('generates a UUIDv7-shaped 128-bit id (version 7, variant 0b10)', () => {
++      const hex = toPaddedTraceIdHex(createTraceIdentifier())
++      expect(hex).toMatch(/^[0-9a-f]{32}$/)
++      // nibble 13 is the UUID version
++      expect(hex[12]).toEqual('7')
++      // nibble 17's top two bits are the variant 0b10
++      expect(['8', '9', 'a', 'b']).toContain(hex[16])
+     })
+ 
+-    it('formats using base 16', () => {
+-      mockRandomValues((buffer) => (buffer[0] = 0xff))
+-      const identifier = createTraceIdentifier()
+-      expect(identifier.toString(16)).toEqual('ff')
+-    })
+-
+-    it('should generate a max value of 64 bits', () => {
+-      mockRandomValues((buffer) => buffer.fill(0xff))
+-      const identifier = createTraceIdentifier()
+-      expect(identifier.toString(16)).toEqual('ffffffffffffffff')
++    it('embeds the current timestamp in the top 48 bits', () => {
++      const before = Date.now()
++      const hex = toPaddedTraceIdHex(createTraceIdentifier())
++      const after = Date.now()
++      const embedded = parseInt(hex.slice(0, 12), 16)
++      expect(embedded).toBeGreaterThanOrEqual(before)
++      expect(embedded).toBeLessThanOrEqual(after)
+     })
+   })
+ 
+@@ -29,10 +38,43 @@ describe('identifier', () => {
+   })
+ })
+ 
++describe('fixed-width hex serialization', () => {
++  // BigInt toString(16) drops leading zeros; UUIDv7 trace ids always start with a zero
++  // nibble, so unpadded serialization is one char short on effectively every id — the
++  // regression that broke RUM↔trace correlation in 0.4.0-beta.7..0.4.2-beta.2.
++  it('pads a UUIDv7 trace id to 32 chars', () => {
++    const id = createTraceIdentifierFromHex('01a034c1aabc72f78880daf6c9755cff')
++    expect(id.toString(16).length).toEqual(31) // the raw form IS short...
++    expect(toPaddedTraceIdHex(id)).toEqual('01a034c1aabc72f78880daf6c9755cff')
++  })
++
++  it('pads a freshly generated trace id to 32 chars', () => {
++    expect(toPaddedTraceIdHex(createTraceIdentifier()).length).toEqual(32)
++  })
++
++  it('pads a 64-bit-style trace id (zero upper half) to 32 chars', () => {
++    // e.g. reused from the traceparent of a system using 64-bit ids — the
++    // width-guessing toPaddedHexadecimalString gets this one wrong.
++    const id = createTraceIdentifierFromHex('00000000000000001234567890abcdef')
++    expect(toPaddedTraceIdHex(id)).toEqual('00000000000000001234567890abcdef')
++  })
++
++  it('pads a span id with leading zeros to 16 chars', () => {
++    expect(toPaddedSpanIdHex(createSpanIdentifierFromHex('0123456789abcdef'))).toEqual(
++      '0123456789abcdef'
++    )
++  })
++
++  it('pads a freshly generated span id to 16 chars', () => {
++    mockRandomValues((buffer) => (buffer[0] = 0x01))
++    expect(toPaddedSpanIdHex(createSpanIdentifier())).toEqual('0000000000000001')
++  })
++})
++
+ describe('toPaddedHexadecimalString', () => {
+   it('should pad the string to 16 characters', () => {
+     mockRandomValues((buffer) => (buffer[0] = 0x01))
+-    const identifier = createTraceIdentifier()
++    const identifier = createSpanIdentifier()
+     expect(toPaddedHexadecimalString(identifier)).toEqual('0000000000000001')
+   })
+ })
+diff --git a/packages/browser-rum-core/src/domain/tracing/identifier.ts b/packages/browser-rum-core/src/domain/tracing/identifier.ts
+index 885475c7b..5b7d9404e 100644
+--- a/packages/browser-rum-core/src/domain/tracing/identifier.ts
++++ b/packages/browser-rum-core/src/domain/tracing/identifier.ts
+@@ -79,8 +79,28 @@ function createUuidV7Identifier(): BaseIdentifier {
+ /**
+  * Pads an identifier to its canonical hex length: 16 characters for 64-bit identifiers, 32
+  * characters for 128-bit (trace) identifiers.
++ *
++ * NOTE: this guesses the width from the value and misjudges trace ids whose upper half is
++ * zero (64-bit-style ids reused from an external traceparent) — they serialize to 16 chars
++ * instead of 32. Kept only for the b3 propagators, which inherited this behavior from
++ * upstream. New call sites must use the fixed-width helpers below.
+  */
+ export function toPaddedHexadecimalString(id: BaseIdentifier) {
+   const hexString = id.toString(16)
+   return hexString.padStart(hexString.length > 16 ? 32 : 16, '0')
+ }
++
++/**
++ * Canonical W3C hex forms. Fixed widths — never guess the width from the value: BigInt
++ * `toString(16)` drops leading zeros, UUIDv7 trace ids always start with a zero nibble
++ * (48-bit ms timestamp in the top bits), and a reused 64-bit-style trace id (zero upper
++ * half) has ≤16 hex chars but must still serialize to 32. Unpadded serialization is the
++ * regression that broke RUM↔trace correlation in 0.4.0-beta.7..0.4.2-beta.2.
++ */
++export function toPaddedTraceIdHex(id: TraceIdentifier): string {
++  return id.toString(16).padStart(32, '0')
++}
++
++export function toPaddedSpanIdHex(id: SpanIdentifier): string {
++  return id.toString(16).padStart(16, '0')
++}
+diff --git a/packages/browser-rum-core/src/domain/tracing/tracer.spec.ts b/packages/browser-rum-core/src/domain/tracing/tracer.spec.ts
+index 3c4efad62..3a09ecbd9 100644
+--- a/packages/browser-rum-core/src/domain/tracing/tracer.spec.ts
++++ b/packages/browser-rum-core/src/domain/tracing/tracer.spec.ts
+@@ -8,7 +8,12 @@ import type { RumInitConfiguration } from '../configuration'
+ import { validateAndBuildRumConfiguration } from '../configuration'
+ import { startTracer } from './tracer'
+ import type { SpanIdentifier, TraceIdentifier } from './identifier'
+-import { createSpanIdentifier, createTraceIdentifier } from './identifier'
++import {
++  createSpanIdentifier,
++  createTraceIdentifier,
++  toPaddedSpanIdHex,
++  toPaddedTraceIdHex,
++} from './identifier'
+ 
+ describe('tracer', () => {
+   const ALLOWED_DOMAIN_CONTEXT: Partial<RumXhrStartContext | RumFetchStartContext> = {
+@@ -191,7 +196,7 @@ describe('tracer', () => {
+       )
+ 
+       expect(xhr.headers['x-openobserve-origin']).toBeUndefined()
+-      expect(xhr.headers['x-openobserve-parent-id']).toBeUndefined()
++      expect(xhr.headers['x-openobserve-span-id']).toBeUndefined()
+       expect(xhr.headers['x-openobserve-trace-id']).toBeUndefined()
+       expect(xhr.headers['x-openobserve-sampling-priority']).toBeUndefined()
+     })
+@@ -613,7 +618,7 @@ describe('tracer', () => {
+       )
+ 
+       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-origin']))
+-      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-parent-id']))
++      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-span-id']))
+       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
+       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-sampling-priority']))
+     })
+@@ -679,7 +684,7 @@ describe('tracer', () => {
+       tracer.traceFetch(context)
+ 
+       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-origin']))
+-      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-parent-id']))
++      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-span-id']))
+       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
+       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-sampling-priority']))
+     })
+@@ -696,7 +701,7 @@ describe('tracer', () => {
+       tracer.traceFetch(context)
+ 
+       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-origin']))
+-      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-parent-id']))
++      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-span-id']))
+       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
+       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-sampling-priority']))
+     })
+@@ -744,9 +749,9 @@ function toPlainObject(headers: Headers) {
+ function tracingHeadersFor(traceId: TraceIdentifier, spanId: SpanIdentifier, samplingPriority: '1' | '0') {
+   return {
+     'x-openobserve-origin': 'rum',
+-    'x-openobserve-parent-id': spanId.toString(),
++    'x-openobserve-span-id': toPaddedSpanIdHex(spanId),
+     'x-openobserve-sampling-priority': samplingPriority,
+-    'x-openobserve-trace-id': traceId.toString(),
++    'x-openobserve-trace-id': toPaddedTraceIdHex(traceId),
+     baggage: `session.id=${MOCK_SESSION_ID},user.id=1234,account.id=5678`,
+   }
+ }
+diff --git a/packages/browser-rum-core/src/domain/tracing/tracer.ts b/packages/browser-rum-core/src/domain/tracing/tracer.ts
+index 46e861738..2a12057e1 100644
+--- a/packages/browser-rum-core/src/domain/tracing/tracer.ts
++++ b/packages/browser-rum-core/src/domain/tracing/tracer.ts
+@@ -24,6 +24,8 @@ import {
+   createTraceIdentifier,
+   createTraceIdentifierFromHex,
+   toPaddedHexadecimalString,
++  toPaddedSpanIdHex,
++  toPaddedTraceIdHex,
+ } from './identifier'
+ 
+ export interface Tracer {
+@@ -290,18 +292,22 @@ function makeTracingHeaders(
+     switch (propagatorType) {
+       case 'datadog':
+       case 'openobserve': {
++        // The backend (get_or_create_trace_id) reads `x-openobserve-trace-id` and
++        // `x-openobserve-span-id` and validates 32/16 hex chars — decimal values or the
++        // upstream `-parent-id` name are silently ignored (masked by the traceparent
++        // fallback).
+         Object.assign(tracingHeaders, {
+           'x-openobserve-origin': 'rum',
+-          'x-openobserve-parent-id': spanId.toString(),
++          'x-openobserve-span-id': toPaddedSpanIdHex(spanId),
+           'x-openobserve-sampling-priority': traceSampled ? '1' : '0',
+-          'x-openobserve-trace-id': traceId.toString(),
++          'x-openobserve-trace-id': toPaddedTraceIdHex(traceId),
+         })
+         break
+       }
+       // https://www.w3.org/TR/trace-context/
+       case 'tracecontext': {
+         Object.assign(tracingHeaders, {
+-          traceparent: `00-${traceId.toString(16).padStart(32, '0')}-${toPaddedHexadecimalString(spanId)}-0${
++          traceparent: `00-${toPaddedTraceIdHex(traceId)}-${toPaddedSpanIdHex(spanId)}-0${
+             traceSampled ? '1' : '0'
+           }`,
+           tracestate: `dd=s:${traceSampled ? '1' : '0'};o:rum`,
+-- 
+2.54.0 (Apple Git-157)
+

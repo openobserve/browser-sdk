@@ -1,6 +1,8 @@
-import { DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT } from '@openobserve/browser-logs/src/domain/configuration'
+import { DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT } from '@openobserve/browser-logs/src/domain/networkError/networkErrorCollection'
+import { ONE_HOUR, ONE_MINUTE } from '@openobserve/js-core/time'
+import { SESSION_EXPIRATION_DELAY } from '@openobserve/browser-core'
 import { test, expect } from '@playwright/test'
-import { createTest, createWorker } from '../lib/framework'
+import { createTest, createWorker, html, npmSetup } from '../lib/framework'
 import { APPLICATION_ID } from '../lib/helpers/configuration'
 
 const UNREACHABLE_URL = 'http://localhost:9999/unreachable'
@@ -8,6 +10,7 @@ const UNREACHABLE_URL = 'http://localhost:9999/unreachable'
 declare global {
   interface Window {
     myServiceWorker: ServiceWorkerRegistration
+    DD_WASM_PLUGIN?: () => { name: string }
   }
 }
 
@@ -78,6 +81,23 @@ test.describe('logs', () => {
       await flushEvents()
       expect(intakeRegistry.logsEvents).toHaveLength(1)
       expect(intakeRegistry.logsEvents[0].message).toBe('hello')
+    })
+
+  createTest('send logs with read-only fetch')
+    .withSetup(npmSetup)
+    .withHead(html`
+      <script>
+        Object.defineProperty(window, 'fetch', { writable: false, configurable: false })
+      </script>
+    `)
+    .withLogs()
+    .run(async ({ intakeRegistry, flushEvents, page }) => {
+      await page.evaluate(() => {
+        window.O2_LOGS!.logger.log('hello with read-only fetch')
+      })
+      await flushEvents()
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].message).toBe('hello with read-only fetch')
     })
 
   createTest('display logs in the console')
@@ -285,6 +305,77 @@ test.describe('logs', () => {
       })
     })
 
+  createTest('send WebAssembly runtime errors with module metadata')
+    .withSetup(npmSetup)
+    .withLogs({ forwardErrorsToLogs: true })
+    .withWasmUnsafeEval()
+    .withLogsInit((configuration) => {
+      // The wasm plugin is only available in the npm setup, where the SDK and the plugin share
+      // the same browser-core instance (and thus the same wasm module registry).
+      configuration.plugins = [window.DD_WASM_PLUGIN!()]
+      window.O2_LOGS!.init(configuration)
+    })
+    .run(async ({ baseUrl, intakeRegistry, flushEvents, page, withBrowserLogs }) => {
+      test.skip(
+        test.info().project.name === 'webkit' || test.info().project.name === 'chromium-pinned',
+        'These browser versions do not expose uncaught WebAssembly traps through the runtime error event'
+      )
+
+      await page.evaluate(async () => {
+        const { instance } = await WebAssembly.instantiateStreaming(fetch('/test-module.wasm'))
+
+        // Schedule the trap outside page.evaluate() so it is reported through
+        // the browser's uncaught runtime-error path.
+        setTimeout(() => (instance.exports.run as () => void)())
+      })
+
+      await flushEvents()
+      const expectedWasmModules = [
+        { url: new URL('/test-module.wasm', baseUrl).href, build_id: 'abcd', debug_info_type: 'dwarf' },
+      ]
+
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].error?.source_type).toBe('browser+wasm')
+      expect(intakeRegistry.logsEvents[0].error?.wasm_modules).toEqual(expectedWasmModules)
+      withBrowserLogs((browserLogs) => {
+        expect(browserLogs).toHaveLength(1)
+      })
+    })
+
+  createTest('send WebAssembly source map metadata')
+    .withSetup(npmSetup)
+    .withLogs({ forwardErrorsToLogs: true })
+    .withWasmUnsafeEval()
+    .withLogsInit((configuration) => {
+      configuration.plugins = [window.DD_WASM_PLUGIN!()]
+      window.O2_LOGS!.init(configuration)
+    })
+    .run(async ({ baseUrl, intakeRegistry, flushEvents, page, withBrowserLogs }) => {
+      test.skip(
+        test.info().project.name === 'webkit' || test.info().project.name === 'chromium-pinned',
+        'These browser versions do not expose uncaught WebAssembly traps through the runtime error event'
+      )
+
+      await page.evaluate(async () => {
+        const { instance } = await WebAssembly.instantiateStreaming(fetch('/test-module-sourcemap.wasm'))
+        setTimeout(() => (instance.exports.run as () => void)())
+      })
+
+      await flushEvents()
+      expect(intakeRegistry.logsEvents).toHaveLength(1)
+      expect(intakeRegistry.logsEvents[0].error?.source_type).toBe('browser+wasm')
+      expect(intakeRegistry.logsEvents[0].error?.wasm_modules).toEqual([
+        {
+          url: new URL('/test-module-sourcemap.wasm', baseUrl).href,
+          build_id: '',
+          debug_info_type: 'sourcemap',
+        },
+      ])
+      withBrowserLogs((browserLogs) => {
+        expect(browserLogs).toHaveLength(1)
+      })
+    })
+
   createTest('add RUM internal context to logs')
     .withRum()
     .withLogs()
@@ -354,4 +445,38 @@ test.describe('logs', () => {
       expect(intakeRegistry.logsEvents).toHaveLength(1)
       expect(intakeRegistry.logsEvents[0].foo).toBe('bar')
     })
+
+  test.describe('session expiration', () => {
+    createTest('logs should keep being sent forever, even long after the session has expired')
+      .withLogs()
+      .withMockClock()
+      .run(async ({ intakeRegistry, flushEvents, page }) => {
+        // Logs should keep being sent indefinitely, with or without a session attached, even
+        // long after the session has expired.
+
+        // Let the session expire from inactivity (no click/scroll/keydown/touch).
+        await page.clock.fastForward(SESSION_EXPIRATION_DELAY + ONE_MINUTE)
+
+        await page.evaluate(() => {
+          window.O2_LOGS!.logger.log('shortly after session expiration')
+        })
+
+        // Fast-forward well past the point where the session is expired.
+        await page.clock.fastForward(24 * ONE_HOUR)
+
+        await page.evaluate(() => {
+          window.O2_LOGS!.logger.log('long after session expiration')
+        })
+
+        await flushEvents()
+
+        expect(intakeRegistry.logsEvents).toHaveLength(2)
+
+        expect(intakeRegistry.logsEvents[0].message).toBe('shortly after session expiration')
+        expect(intakeRegistry.logsEvents[0].session_id).toBeUndefined()
+
+        expect(intakeRegistry.logsEvents[1].message).toBe('long after session expiration')
+        expect(intakeRegistry.logsEvents[1].session_id).toBeUndefined()
+      })
+  })
 })

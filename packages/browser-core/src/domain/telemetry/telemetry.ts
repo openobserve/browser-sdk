@@ -1,37 +1,38 @@
 import { clocksNow } from '@openobserve/js-core/time'
-import { getDebugMode, combine } from '@openobserve/js-core/util'
+import {
+  getDebugMode,
+  combine,
+  globalObject,
+  isWorkerEnvironment,
+  jsonStringify,
+  BufferedObservable,
+  Observable,
+  noop,
+} from '@openobserve/js-core/util'
 import type { Hook } from '@openobserve/js-core/assembly'
-import type { RecursivePartial } from '@openobserve/js-core/util'
+import type { RecursivePartial, Context } from '@openobserve/js-core/util'
 import { DISCARDED } from '@openobserve/js-core/assembly'
-import type { Context } from '../../tools/serialisation/context'
-import { NO_ERROR_STACK_PRESENT_MESSAGE, isError } from '../error/error'
+import { performDraw } from '@openobserve/js-core/sample'
+import {
+  createEndpointBuilder,
+  createReplicaEndpointBuilder,
+  INTAKE_SITE_STAGING,
+  INTAKE_SITE_US1_FED,
+  INTAKE_SITE_US2_FED,
+} from '@openobserve/js-core/transport'
+import { startMonitorErrorCollection } from '@openobserve/js-core/monitor'
+import { NO_ERROR_STACK_PRESENT_MESSAGE, isError } from '../error/isError'
 import { toStackTraceString } from '../../tools/stackTrace/handlingStack'
 import { getExperimentalFeatures } from '../../tools/experimentalFeatures'
-import { createEndpointBuilder, createReplicaEndpointBuilder } from '../configuration'
 import type { Configuration } from '../configuration'
 import { buildTags } from '../tags'
-import { INTAKE_SITE_STAGING, INTAKE_SITE_US1_FED, INTAKE_SITE_US2_FED } from '../intakeSites'
-import { BufferedObservable, Observable } from '../../tools/observable'
-import { startMonitorErrorCollection } from '../../tools/monitor'
 import { display } from '../../tools/display'
 import { sendToExtension } from '../../tools/sendToExtension'
-import { performDraw } from '../../tools/utils/numberUtils'
-import { jsonStringify } from '../../tools/serialisation/jsonStringify'
 import { NonErrorPrefix } from '../error/error.types'
 import type { StackTrace } from '../../tools/stackTrace/computeStackTrace'
 import { computeStackTrace } from '../../tools/stackTrace/computeStackTrace'
 import { getConnectivity } from '../connectivity'
-import {
-  canUseEventBridge,
-  createFlushController,
-  createHttpRequest,
-  getEventBridge,
-  createBatch,
-} from '../../transport'
-import { createIdentityEncoder } from '../../tools/encoder'
-import { createPageMayExitObservable } from '../../browser/pageMayExitObservable'
-import { globalObject, isWorkerEnvironment } from '../../tools/globalObject'
-import { noop } from '../../tools/utils/functionUtils'
+import { canUseEventBridge, getEventBridge, createBatch } from '../../transport'
 import type { TelemetryEvent } from './telemetryEvent.types'
 import type {
   RawTelemetryConfiguration,
@@ -70,7 +71,6 @@ export const enum TelemetryMetrics {
   REMOTE_CONFIGURATION_METRIC_NAME = 'remote configuration metrics',
   RECORDER_INIT_METRICS_TELEMETRY_NAME = 'Recorder init metrics',
   SEGMENT_METRICS_TELEMETRY_NAME = 'Segment network request metrics',
-  INITIAL_VIEW_METRICS_TELEMETRY_NAME = 'Initial view metrics',
   SESSION_MANAGER_INIT_METRICS_TELEMETRY_NAME = 'Session manager init metrics',
 }
 
@@ -91,10 +91,17 @@ export function getTelemetryObservable() {
 export function startTelemetry(
   telemetryService: TelemetryService,
   configuration: Configuration,
-  hook: Hook<any, any>
+  hook: Hook<any, any>,
+  sdkName?: string
 ): Telemetry {
   const observable = new Observable<TelemetryEvent & Context>()
-  const { enabled, metricsEnabled } = startTelemetryCollection(telemetryService, configuration, hook, observable)
+  const { enabled, metricsEnabled } = startTelemetryCollection(
+    telemetryService,
+    configuration,
+    hook,
+    observable,
+    sdkName
+  )
   const { stop } = startTelemetryTransport(configuration, observable)
   return {
     stop,
@@ -108,6 +115,7 @@ export function startTelemetryCollection(
   configuration: Configuration,
   hook: Hook<any, any>,
   observable: Observable<TelemetryEvent & Context>,
+  sdkName?: string,
   metricSampleRate = METRIC_SAMPLE_RATE,
   maxTelemetryEventsPerPage = MAX_TELEMETRY_EVENTS_PER_PAGE
 ) {
@@ -193,6 +201,7 @@ export function startTelemetryCollection(
         runtime_env: runtimeEnvInfo,
         connectivity: getConnectivity(),
         sdk_setup: __BUILD_ENV__SDK_SETUP__,
+        sdk_name: sdkName,
       }) as TelemetryEvent['telemetry'],
       o2tags: buildTags(configuration).join(','),
       experimental_features: Array.from(getExperimentalFeatures()),
@@ -218,19 +227,9 @@ export function startTelemetryTransport(
       endpoints.push(replicaEndpoint)
     }
     const telemetryBatch = createBatch({
-      encoder: createIdentityEncoder(),
-      request: createHttpRequest(
-        endpoints,
-        // Ignore transport errors for telemetry
-        noop
-      ),
-      flushController: createFlushController({
-        pageMayExitObservable: createPageMayExitObservable(),
-
-        // We don't use an actual session expire observable here, to make telemetry collection
-        // independent of the session. This allows to start and send telemetry events earlier.
-        sessionExpireObservable: new Observable(),
-      }),
+      endpoints,
+      // Ignore transport errors for telemetry
+      reportError: noop,
     })
     cleanupTasks.push(telemetryBatch.stop)
     const telemetrySubscription = telemetryObservable.subscribe(telemetryBatch.add)

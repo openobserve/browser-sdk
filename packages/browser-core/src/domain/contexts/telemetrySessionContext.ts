@@ -1,7 +1,7 @@
 import type { Hook } from '@openobserve/js-core/assembly'
 import { SKIPPED } from '@openobserve/js-core/assembly'
+import type { Context } from '@openobserve/js-core/util'
 import type { SessionManager } from '../session/sessionManager'
-import type { Context } from '../../tools/serialisation/context'
 
 export function startTelemetrySessionContext(
   assembleTelemetryHook: Hook<any, any>,

@@ -1,4 +1,6 @@
-import type { RumInitConfiguration, RumPublicApi } from '@openobserve/browser-rum-core'
+import { version as vueVersion } from 'vue'
+import { toMajorVersionIntegration } from '@openobserve/browser-core'
+import type { RumInitConfiguration, RumPluginOnInitOptions, RumPublicApi } from '@openobserve/browser-rum-core'
 import { registerCleanupTask } from '../../../browser-core/test'
 import { onRumInit, vuePlugin, resetVuePlugin } from './vuePlugin'
 
@@ -18,31 +20,45 @@ describe('vuePlugin', () => {
     const spy = jasmine.createSpy()
     const config = {}
     onRumInit(spy)
-    vuePlugin(config).onInit({ publicApi: PUBLIC_API, initConfiguration: INIT_CONFIGURATION })
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
+    vuePlugin(config).onInit({ publicApi: PUBLIC_API, initConfiguration: INIT_CONFIGURATION } as RumPluginOnInitOptions)
     expect(spy).toHaveBeenCalledOnceWith(config, PUBLIC_API)
   })
 
   it('calls callbacks immediately if onInit was already invoked', () => {
     const spy = jasmine.createSpy()
     const config = {}
-    vuePlugin(config).onInit({ publicApi: PUBLIC_API, initConfiguration: INIT_CONFIGURATION })
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
+    vuePlugin(config).onInit({ publicApi: PUBLIC_API, initConfiguration: INIT_CONFIGURATION } as RumPluginOnInitOptions)
     onRumInit(spy)
     expect(spy).toHaveBeenCalledOnceWith(config, PUBLIC_API)
   })
 
   it('sets trackViewsManually when router is true', () => {
     const initConfiguration = { ...INIT_CONFIGURATION }
-    vuePlugin({ router: true }).onInit({ publicApi: PUBLIC_API, initConfiguration })
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
+    vuePlugin({ router: true }).onInit({ publicApi: PUBLIC_API, initConfiguration } as RumPluginOnInitOptions)
     expect(initConfiguration.trackViewsManually).toBe(true)
   })
 
   it('does not set trackViewsManually when router is false', () => {
     const initConfiguration = { ...INIT_CONFIGURATION }
-    vuePlugin({ router: false }).onInit({ publicApi: PUBLIC_API, initConfiguration })
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
+    vuePlugin({ router: false }).onInit({ publicApi: PUBLIC_API, initConfiguration } as RumPluginOnInitOptions)
     expect(initConfiguration.trackViewsManually).toBeUndefined()
   })
 
   it('returns configuration telemetry', () => {
-    expect(vuePlugin({ router: true }).getConfigurationTelemetry()).toEqual({ router: true })
+    expect(vuePlugin({ router: true }).getConfigurationTelemetry()).toEqual({
+      router: true,
+      integrations: [toMajorVersionIntegration('vue', vueVersion), 'vue-router'],
+    })
+  })
+
+  it('returns the Vue integration when router tracking is disabled', () => {
+    expect(vuePlugin().getConfigurationTelemetry()).toEqual({
+      router: false,
+      integrations: [toMajorVersionIntegration('vue', vueVersion)],
+    })
   })
 })

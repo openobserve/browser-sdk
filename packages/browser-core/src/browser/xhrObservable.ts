@@ -1,11 +1,9 @@
 import { elapsed, timeStampNow, clocksNow } from '@openobserve/js-core/time'
 import type { Duration, ClocksState } from '@openobserve/js-core/time'
+import { normalizeUrl, globalObject, Observable } from '@openobserve/js-core/util'
+import { addEventListener } from '@openobserve/js-core/dom'
 import type { InstrumentedMethodCall } from '../tools/instrumentMethod'
 import { instrumentMethod } from '../tools/instrumentMethod'
-import { Observable } from '../tools/observable'
-import { normalizeUrl } from '../tools/utils/urlPolyfill'
-import { globalObject } from '../tools/globalObject'
-import { addEventListener } from './addEventListener'
 
 export interface XhrOpenContext {
   state: 'open'

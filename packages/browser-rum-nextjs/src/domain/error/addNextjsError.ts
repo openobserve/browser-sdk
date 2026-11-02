@@ -1,6 +1,7 @@
 import { clocksNow } from '@openobserve/js-core/time'
-import { callMonitored, createHandlingStack } from '@openobserve/browser-core'
-import type { Context } from '@openobserve/browser-core'
+import { callMonitored } from '@openobserve/js-core/monitor'
+import { createHandlingStack } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import type { ErrorInfo } from 'react'
 import { onRumStart } from '../nextjsPlugin'
 

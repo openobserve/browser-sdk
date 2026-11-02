@@ -1,8 +1,10 @@
 import { timeStampNow, addDuration, clocksNow, relativeNow } from '@openobserve/js-core/time'
 import type { Duration, RelativeTime } from '@openobserve/js-core/time'
-import { DefaultPrivacyLevel, Observable, PageExitReason } from '@openobserve/browser-core'
+import { DefaultPrivacyLevel, PageExitReason } from '@openobserve/browser-core'
+import { Observable } from '@openobserve/js-core/util'
 import type { Clock } from '@openobserve/browser-core/test'
 import { createNewEvent, mockClock } from '@openobserve/browser-core/test'
+import type { MutationRecord } from '@openobserve/js-core/dom'
 import { createFakeClick, createMutationRecord, mockRumConfiguration } from '../../../test'
 import type { AssembledRumEvent } from '../../rawRumEvent.types'
 import { RumEventType, ActionType, FrustrationType } from '../../rawRumEvent.types'
@@ -10,7 +12,6 @@ import { LifeCycle, LifeCycleEventType } from '../lifeCycle'
 import { PAGE_ACTIVITY_VALIDATION_DELAY } from '../waitPageActivityEnd'
 import type { RumConfiguration } from '../configuration'
 import type { BrowserWindow } from '../privacy'
-import type { RumMutationRecord } from '../../browser/domMutationObservable'
 import { SHADOW_DOM_MARKER } from '../getSelectorFromElement'
 import type { ClickAction } from './trackClickActions'
 import { finalizeClicks, trackClickActions } from './trackClickActions'
@@ -40,7 +41,7 @@ function eventsCollector<T>() {
 
 describe('trackClickActions', () => {
   let lifeCycle: LifeCycle
-  let domMutationObservable: Observable<RumMutationRecord[]>
+  let domMutationObservable: Observable<MutationRecord[]>
   let windowOpenObservable: Observable<void>
   let clock: Clock
 
@@ -71,7 +72,7 @@ describe('trackClickActions', () => {
   beforeEach(() => {
     lifeCycle = new LifeCycle()
     clock = mockClock()
-    domMutationObservable = new Observable<RumMutationRecord[]>()
+    domMutationObservable = new Observable<MutationRecord[]>()
     windowOpenObservable = new Observable<void>()
 
     button = document.createElement('button')
@@ -224,13 +225,22 @@ describe('trackClickActions', () => {
 
     clock.tick(12)
 
-    lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, {
-      reason: PageExitReason.HIDDEN,
-    })
+    lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, PageExitReason.HIDDEN)
 
     expect(events.length).toBe(1)
     expect(events[0].duration).toBe(12 as Duration)
     expect(events[0].frustrationTypes).toEqual([])
+  })
+
+  it('ongoing click action is not stopped when the page is terminated', () => {
+    startClickActionsTracking()
+    emulateClick()
+
+    clock.tick(12)
+
+    lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, PageExitReason.PAGE_TERMINATED)
+
+    expect(events.length).toBe(0)
   })
 
   it('collect click actions even if another one is ongoing', () => {
@@ -374,6 +384,34 @@ describe('trackClickActions', () => {
         ])
       )
     })
+
+    it('captures the rage ignore state before the attribute changes', () => {
+      button.setAttribute('data-dd-ignore-frustration', '')
+      startClickActionsTracking()
+
+      emulateClick({ activity: {} })
+      emulateClick({ activity: {} })
+      emulateClick({ activity: {} })
+      button.removeAttribute('data-dd-ignore-frustration')
+
+      clock.tick(EXPIRE_DELAY)
+      expect(events).toHaveSize(3)
+      events.forEach((event) => expect(event.frustrationTypes).not.toContain(FrustrationType.RAGE_CLICK))
+    })
+
+    it('keeps the current chain when a previous chain finalizes', () => {
+      startClickActionsTracking()
+
+      emulateClick({ target: emptyElement })
+      emulateClick({ activity: { delay: 5 } })
+      emulateClick({ activity: { delay: 5 } })
+      emulateClick({ activity: { delay: 5 } })
+
+      clock.tick(EXPIRE_DELAY)
+      const rageActions = events.filter((event) => event.frustrationTypes.includes(FrustrationType.RAGE_CLICK))
+      expect(rageActions).toHaveSize(1)
+      expect(rageActions[0].events).toHaveSize(3)
+    })
   })
 
   describe('error clicks', () => {
@@ -386,6 +424,33 @@ describe('trackClickActions', () => {
       clock.tick(EXPIRE_DELAY)
       expect(events.length).toBe(1)
       expect(events[0].frustrationTypes).toEqual([FrustrationType.ERROR_CLICK])
+    })
+
+    it('does not consider an ignored error as an error click', () => {
+      button.setAttribute('data-dd-ignore-frustration', 'error-click')
+      startClickActionsTracking()
+
+      emulateClick({ activity: {} })
+      lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, createFakeErrorEvent())
+
+      clock.tick(EXPIRE_DELAY)
+      expect(events).toHaveSize(1)
+      expect(events[0].frustrationTypes).not.toContain(FrustrationType.ERROR_CLICK)
+    })
+
+    it('captures the ignore state from the pointer-down element', () => {
+      button.setAttribute('data-dd-ignore-frustration', 'error-click')
+      startClickActionsTracking()
+
+      emulateClick({
+        activity: {},
+        afterPointerDown: () => button.removeAttribute('data-dd-ignore-frustration'),
+      })
+      lifeCycle.notify(LifeCycleEventType.RUM_EVENT_COLLECTED, createFakeErrorEvent())
+
+      clock.tick(EXPIRE_DELAY)
+      expect(events).toHaveSize(1)
+      expect(events[0].frustrationTypes).not.toContain(FrustrationType.ERROR_CLICK)
     })
 
     it('considers a "click without activity" followed by an error as a click action with "error" (and "dead") frustration type', () => {
@@ -567,6 +632,7 @@ describe('trackClickActions', () => {
     target = button,
     activity,
     eventProperty,
+    afterPointerDown,
   }: {
     target?: HTMLElement
     activity?: {
@@ -574,6 +640,7 @@ describe('trackClickActions', () => {
       on?: 'pointerup' | 'click' | 'pointerdown'
     }
     eventProperty?: { [key: string]: any }
+    afterPointerDown?: () => void
   } = {}) {
     const targetPosition = target.getBoundingClientRect()
     const offsetX = targetPosition.width / 2
@@ -588,6 +655,7 @@ describe('trackClickActions', () => {
       ...eventProperty,
     }
     target.dispatchEvent(createNewEvent('pointerdown', { ...baseEventProperties, timeStamp: relativeNow() }))
+    afterPointerDown?.()
     emulateActivityIfNeeded('pointerdown')
     clock!.tick(EMULATED_CLICK_DURATION)
     target.dispatchEvent(createNewEvent('pointerup', { ...baseEventProperties, timeStamp: relativeNow() }))
@@ -668,6 +736,37 @@ describe('trackClickActions', () => {
       expect(events.length).toBe(1)
       expect(events[0].target?.selector).toContain(SHADOW_DOM_MARKER)
       expect(events[0].target?.selector).toContain('BUTTON')
+    })
+
+    it('does not use an ignored click as the basis of a rage action', () => {
+      shadowButton.setAttribute('data-dd-ignore-frustration', 'rage-click')
+      const contributingButton = document.createElement('button')
+      contributingButton.textContent = 'Contributing Button'
+      shadowHost.shadowRoot!.appendChild(contributingButton)
+      startClickActionsTracking()
+
+      emulateShadowClick(shadowButton)
+      emulateShadowClick(contributingButton)
+      emulateShadowClick(contributingButton)
+      emulateShadowClick(contributingButton)
+
+      clock.tick(EXPIRE_DELAY)
+      expect(events).toHaveSize(2)
+      expect(events[0].frustrationTypes).not.toContain(FrustrationType.RAGE_CLICK)
+      expect(events[1].frustrationTypes).toContain(FrustrationType.RAGE_CLICK)
+      expect(events[1].name).toBe('Contributing Button')
+      expect(events[1].events).toHaveSize(3)
+
+      function emulateShadowClick(target: HTMLButtonElement) {
+        emulateClick({
+          target: shadowHost,
+          activity: { delay: 5 },
+          eventProperty: {
+            composed: true,
+            composedPath: () => [target, shadowHost.shadowRoot, shadowHost, document.body, document],
+          },
+        })
+      }
     })
   })
 

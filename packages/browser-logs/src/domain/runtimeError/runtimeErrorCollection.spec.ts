@@ -1,6 +1,7 @@
 import type { BufferedData, RawError } from '@openobserve/browser-core'
 import { clocksNow } from '@openobserve/js-core/time'
-import { ErrorSource, ErrorHandling, Observable, BufferedDataType } from '@openobserve/browser-core'
+import { ErrorSource, ErrorHandling, BufferedDataType } from '@openobserve/browser-core'
+import { Observable } from '@openobserve/js-core/util'
 import { registerCleanupTask } from '../../../../browser-core/test'
 import type { RawRuntimeLogsEvent } from '../../rawLogsEvent.types'
 import type { LogsConfiguration } from '../configuration'
@@ -71,6 +72,7 @@ describe('runtime error collection', () => {
         fingerprint: undefined,
         message: undefined,
       },
+      _o2: { debug_ids: undefined },
       message: 'error!',
       status: StatusType.error,
       origin: ErrorSource.SOURCE,
@@ -125,6 +127,7 @@ describe('runtime error collection', () => {
         fingerprint: undefined,
         message: undefined,
       },
+      _o2: { debug_ids: undefined },
       message: 'High level error',
       status: StatusType.error,
       origin: ErrorSource.SOURCE,
@@ -144,6 +147,22 @@ describe('runtime error collection', () => {
     expect(rawLogsEvents.length).toEqual(0)
   })
 
+  it('should attach debug_ids from runtime errors', () => {
+    const { rawLogsEvents, bufferedDataObservable } = startRuntimeErrorCollectionWithDefaults()
+
+    bufferedDataObservable.notify({
+      type: BufferedDataType.RUNTIME_ERROR,
+      data: {
+        ...RAW_ERROR,
+        debugIds: [{ url: 'http://path/to/debug-id.js', id: '01234567-89ab-cdef-0123-456789abcdef' }],
+      },
+    })
+
+    expect(rawLogsEvents[0].rawLogsEvent._o2).toEqual({
+      debug_ids: [{ url: 'http://path/to/debug-id.js', id: '01234567-89ab-cdef-0123-456789abcdef' }],
+    })
+  })
+
   it('should retrieve dd_context from runtime errors', () => {
     const { rawLogsEvents, bufferedDataObservable } = startRuntimeErrorCollectionWithDefaults()
 
@@ -155,6 +174,6 @@ describe('runtime error collection', () => {
       },
     })
 
-    expect(rawLogsEvents[0].messageContext).toEqual({ foo: 'bar' })
+    expect(rawLogsEvents[0].rawLogsEvent).toEqual(jasmine.objectContaining({ foo: 'bar' }))
   })
 })

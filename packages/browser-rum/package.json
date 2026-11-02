@@ -16,17 +16,17 @@
     "!src/**/*.specHelper.ts"
   ],
   "scripts": {
-    "build": "node ../../scripts/build/build-package.ts --modules --bundle openobserve-rum.js",
-    "build:bundle": "node ../../scripts/build/build-package.ts --bundle openobserve-rum.js",
+    "build": "node ../../scripts/build/build-package.ts --modules --worker-string --bundle openobserve-rum.js --bundle openobserve-rum-salesforce.js=./src/entries/salesforce.ts",
+    "build:bundle": "node ../../scripts/build/build-package.ts --worker-string --bundle openobserve-rum.js --bundle openobserve-rum-salesforce.js=./src/entries/salesforce.ts",
     "prepack": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.3",
-    "@openobserve/browser-rum-core": "0.4.3",
-    "@openobserve/js-core": "0.4.3"
+    "@openobserve/browser-core": "workspace:*",
+    "@openobserve/browser-rum-core": "workspace:*",
+    "@openobserve/js-core": "workspace:*"
   },
   "peerDependencies": {
-    "@openobserve/browser-logs": "0.4.3"
+    "@openobserve/browser-logs": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@openobserve/browser-logs": {
@@ -39,9 +39,8 @@
     "directory": "packages/browser-rum"
   },
   "devDependencies": {
-    "@openobserve/browser-worker": "0.4.3",
-    "@types/pako": "2.0.4",
-    "pako": "2.1.0"
+    "@openobserve/browser-worker": "workspace:*",
+    "pako": "3.0.2"
   },
   "volta": {
     "extends": "../../package.json"

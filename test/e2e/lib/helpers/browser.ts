@@ -33,9 +33,15 @@ export interface BrowserLog {
   message: string
   source: string
   timestamp: number
+  url?: string
 }
 
-const IGNORE_LOG_MESSAGES = ['Ignoring unsupported entryTypes:', 'Layout was forced before the page was fully loaded.']
+const IGNORE_LOG_MESSAGES = [
+  'Ignoring unsupported entryTypes:',
+  'Layout was forced before the page was fully loaded.',
+  // Salesforce generates console errors we cannot control
+  'O11Y Error {name: Error, message: Unsupported WebVital metrics',
+]
 
 export class BrowserLogsManager {
   private logs: BrowserLog[] = []

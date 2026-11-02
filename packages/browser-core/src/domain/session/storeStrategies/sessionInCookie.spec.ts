@@ -1,14 +1,17 @@
-import { registerCleanupTask, replaceMockable, mockCookies, collectAsyncCalls } from '../../../../test'
-import { globalObject } from '../../../tools/globalObject'
-import { Observable } from '../../../tools/observable'
+import { globalObject, Observable } from '@openobserve/js-core/util'
+import {
+  registerCleanupTask,
+  replaceMockable,
+  mockCookies,
+  mockBaseConfiguration,
+  collectAsyncCalls,
+} from '../../../../test'
 import type { SessionState } from '../sessionState'
-import type { Configuration, InitConfiguration } from '../../configuration'
+import type { Configuration } from '../../configuration'
 import { buildCookieOptions } from '../../configuration'
 import { SESSION_COOKIE_EXPIRATION_DELAY, SESSION_TIME_OUT_DELAY, SessionPersistence } from '../sessionConstants'
 import { CookieApi, LEGACY_SESSION_STORE_KEY } from './sessionStoreStrategy'
 import { createCookieAccess, selectCookieStrategy, initCookieStrategy } from './sessionInCookie'
-
-const DEFAULT_INIT_CONFIGURATION = { clientToken: 'abc', trackAnonymousUser: true }
 
 function createMockCookieAccess() {
   let storedValues: string[] = []
@@ -24,6 +27,11 @@ function createMockCookieAccess() {
         const { value, expireDelay } = cb(storedValues)
         storedValues = value ? [value] : []
         lastExpireDelay = expireDelay
+        observable.notify()
+        return Promise.resolve()
+      },
+      delete(): Promise<void> {
+        storedValues = []
         observable.notify()
         return Promise.resolve()
       },
@@ -43,14 +51,9 @@ function createMockCookieAccess() {
   }
 }
 
-function setupCookieStrategy(partialInitConfiguration: Partial<InitConfiguration> = {}) {
-  const initConfiguration = {
-    ...DEFAULT_INIT_CONFIGURATION,
-    ...partialInitConfiguration,
-  } as InitConfiguration
-
-  const cookieOptions = buildCookieOptions(initConfiguration)!
-  const configuration = { trackAnonymousUser: initConfiguration.trackAnonymousUser ?? true } as Configuration
+function setupCookieStrategy(partialConfiguration: Partial<Configuration> = {}) {
+  const configuration = mockBaseConfiguration({ trackAnonymousUser: true, ...partialConfiguration })
+  const cookieOptions = buildCookieOptions(configuration)!
 
   const { mockCookieAccess, mockCookie } = createMockCookieAccess()
   replaceMockable(createCookieAccess, () => mockCookieAccess)
@@ -183,6 +186,44 @@ describe('session in cookie strategy', () => {
       expect(calls).toEqual(['first', 'second'])
       expect(mockCookie.getStoredValues()[0]).toContain('id=second')
     })
+
+    describe('web lock teardown errors', () => {
+      function stubLocksRequest(error: Error) {
+        if (!navigator.locks) {
+          pending('Web Locks API not available')
+        }
+        // Reject inside callFake so Firefox 78 (no Web Locks) can pending() without creating an
+        // unhandled rejection from Promise.reject() evaluated as a stub argument.
+        spyOn(navigator.locks, 'request').and.callFake(() => Promise.reject(error))
+      }
+
+      it('should swallow InvalidStateError when the responsible document is not fully active', async () => {
+        stubLocksRequest(new DOMException('Responsible document is not fully active', 'InvalidStateError'))
+        const { strategy, mockCookie } = setupCookieStrategy()
+
+        await strategy.setSessionState((state) => ({ ...state, id: 'abc' }), 'updateState')
+
+        expect(mockCookie.getStoredValues()).toEqual([])
+      })
+
+      it('should swallow InvalidStateError when the document is not active', async () => {
+        stubLocksRequest(new DOMException('The document is not active.', 'InvalidStateError'))
+        const { strategy, mockCookie } = setupCookieStrategy()
+
+        await strategy.setSessionState((state) => ({ ...state, id: 'abc' }), 'updateState')
+
+        expect(mockCookie.getStoredValues()).toEqual([])
+      })
+
+      it('should rethrow unexpected lock request errors', async () => {
+        stubLocksRequest(new Error('boom'))
+        const { strategy } = setupCookieStrategy()
+
+        await expectAsync(
+          strategy.setSessionState((state) => ({ ...state, id: 'abc' }), 'updateState')
+        ).toBeRejectedWithError('boom')
+      })
+    })
   })
 
   describe('cookie options matching', () => {
@@ -232,11 +273,6 @@ describe('session in cookie strategy', () => {
   })
 
   describe('selectCookieStrategy', () => {
-    function makeConfiguration(): Configuration {
-      const cookieOptions = buildCookieOptions({ clientToken: 'abc' })
-      return { cookieOptions } as Configuration
-    }
-
     function disableCookieStore() {
       replaceMockable(globalObject.cookieStore, undefined)
     }
@@ -250,26 +286,21 @@ describe('session in cookie strategy', () => {
         pending('CookieStore API not available')
       }
       mockCookies()
-      const strategy = await selectCookieStrategy(makeConfiguration())
+      const strategy = await selectCookieStrategy(mockBaseConfiguration())
       expect(strategy).toEqual(jasmine.objectContaining({ cookieApi: CookieApi.COOKIE_STORE }))
     })
 
     it('falls back to document.cookie when CookieStore is unavailable', async () => {
       disableCookieStore()
       mockCookies()
-      const strategy = await selectCookieStrategy(makeConfiguration())
+      const strategy = await selectCookieStrategy(mockBaseConfiguration())
       expect(strategy).toEqual(jasmine.objectContaining({ cookieApi: CookieApi.DOCUMENT_COOKIE }))
     })
 
     it('returns undefined when both APIs are unavailable', async () => {
       disableCookieStore()
       disableDocumentCookie()
-      const strategy = await selectCookieStrategy(makeConfiguration())
-      expect(strategy).toBeUndefined()
-    })
-
-    it('returns undefined when cookieOptions is undefined', async () => {
-      const strategy = await selectCookieStrategy({ cookieOptions: undefined } as unknown as Configuration)
+      const strategy = await selectCookieStrategy(mockBaseConfiguration())
       expect(strategy).toBeUndefined()
     })
   })

@@ -8,6 +8,7 @@ export const packages: Package[] = [
   { packageName: 'browser-rum', service: 'browser-rum-sdk' },
   { packageName: 'browser-rum-slim', service: 'browser-rum-sdk' },
   { packageName: 'browser-debugger', service: 'browser-debugger-sdk' },
+  { packageName: 'browser-rum-shopify', service: 'browser-rum-sdk' },
 ]
 
 // ex: openobserve-rum-v4.js, chunks/recorder-8d8a8dfab6958424038f-openobserve-rum.js

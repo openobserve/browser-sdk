@@ -1,6 +1,8 @@
 import type { ClocksState } from '@openobserve/js-core/time'
-import type { Context, Observable, BufferedData } from '@openobserve/browser-core'
-import { noop, ErrorSource, BufferedDataType } from '@openobserve/browser-core'
+import { combine, noop } from '@openobserve/js-core/util'
+import type { BufferedData } from '@openobserve/browser-core'
+import type { Observable, Context } from '@openobserve/js-core/util'
+import { ErrorSource, BufferedDataType } from '@openobserve/browser-core'
 import type { LogsConfiguration } from '../configuration'
 import type { LifeCycle } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'
@@ -27,14 +29,17 @@ export function startRuntimeErrorCollection(
     if (bufferedData.type === BufferedDataType.RUNTIME_ERROR) {
       const error = bufferedData.data
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: {
-          message: error.message,
-          date: error.startClocks.timeStamp,
-          error: createErrorFieldFromRawError(error),
-          origin: ErrorSource.SOURCE,
-          status: StatusType.error,
-        },
-        messageContext: error.context,
+        rawLogsEvent: combine(
+          {
+            message: error.message,
+            date: error.startClocks.timeStamp,
+            error: createErrorFieldFromRawError(error),
+            _o2: { debug_ids: error.debugIds },
+            origin: ErrorSource.SOURCE,
+            status: StatusType.error,
+          },
+          error.context
+        ),
       })
     }
   })

@@ -1,18 +1,9 @@
-import type {
-  Uint8ArrayBuffer,
-  Encoder,
-  EncoderResult,
-  DeflateEncoderStreamId,
-  RawError,
-  Context,
-} from '@openobserve/browser-core'
-import {
-  addTelemetryDebug,
-  createEndpointBuilder,
-  createHttpRequest,
-  jsonStringify,
-  objectEntries,
-} from '@openobserve/browser-core'
+import type { Encoder, EncoderResult, DeflateEncoderStreamId } from '@openobserve/browser-core'
+import type { Context, Uint8ArrayBuffer } from '@openobserve/js-core/util'
+import { addTelemetryDebug, createHttpRequest, objectEntries, ErrorSource } from '@openobserve/browser-core'
+import { jsonStringify } from '@openobserve/js-core/util'
+import { clocksNow } from '@openobserve/js-core/time'
+import { createEndpointBuilder } from '@openobserve/js-core/transport'
 import type { RumConfiguration } from '../domain/configuration'
 import type { LifeCycle } from '../domain/lifeCycle'
 import { LifeCycleEventType } from '../domain/lifeCycle'
@@ -35,11 +26,13 @@ export function createFormDataTransport<T extends TransportPayload>(
   createEncoder: (streamId: DeflateEncoderStreamId) => Encoder,
   streamId: DeflateEncoderStreamId
 ) {
-  const reportError = (error: RawError) => {
-    lifeCycle.notify(LifeCycleEventType.RAW_ERROR_COLLECTED, { error })
+  const reportError = (message: string) => {
+    lifeCycle.notify(LifeCycleEventType.RAW_ERROR_COLLECTED, {
+      error: { message, source: ErrorSource.AGENT, startClocks: clocksNow() },
+    })
 
     // monitor-until: forever, to keep an eye on the errors reported to customers
-    addTelemetryDebug('Error reported to customer', { 'error.message': error.message })
+    addTelemetryDebug('Error reported to customer', { 'error.message': message })
   }
 
   const httpRequest = createHttpRequest([createEndpointBuilder(configuration, 'profile')], reportError)

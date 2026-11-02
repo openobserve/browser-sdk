@@ -1,7 +1,8 @@
 import type { RelativeTime, Duration, ServerDuration, TimeStamp } from '@openobserve/js-core/time'
 import { addDuration } from '@openobserve/js-core/time'
-import { Observable } from '@openobserve/browser-core'
+import { Observable } from '@openobserve/js-core/util'
 import { createNewEvent, registerCleanupTask } from '@openobserve/browser-core/test'
+import type { MutationRecord } from '@openobserve/js-core/dom'
 import { collectAndValidateRawRumEvents, mockRumConfiguration } from '../../../test'
 import type { RawRumActionEvent, RawRumEvent } from '../../rawRumEvent.types'
 import { RumEventType, ActionType } from '../../rawRumEvent.types'
@@ -9,7 +10,6 @@ import type { RawRumEventCollectedData } from '../lifeCycle'
 import { LifeCycle, LifeCycleEventType } from '../lifeCycle'
 import type { AssembleHookParams, DefaultTelemetryEventAttributes, Hooks } from '../hooks'
 import { createHooks } from '../hooks'
-import type { RumMutationRecord } from '../../browser/domMutationObservable'
 import { LONG_TASK_START_TIME_CORRECTION, startActionCollection } from './actionCollection'
 import { ActionNameSource } from './actionNameConstants'
 import type { ActionContexts } from './actionCollection'
@@ -22,7 +22,7 @@ describe('actionCollection', () => {
   let actionContexts: ActionContexts
 
   beforeEach(() => {
-    const domMutationObservable = new Observable<RumMutationRecord[]>()
+    const domMutationObservable = new Observable<MutationRecord[]>()
     const windowOpenObservable = new Observable<void>()
     hooks = createHooks()
 
@@ -176,7 +176,7 @@ describe('actionCollection', () => {
       it(`should add action properties on ${eventType} from the context`, () => {
         const actionId = ['1']
         spyOn(actionContexts, 'findActionId').and.returnValue(actionId)
-        const defaultRumEventAttributes = hooks.assemble.trigger({
+        const defaultRumEventAttributes = hooks.assembleEventDefaults.trigger({
           eventType,
           startTime: 0 as RelativeTime,
         } as AssembleHookParams)
@@ -188,7 +188,7 @@ describe('actionCollection', () => {
       it(`should not add action properties on ${eventType} from the context`, () => {
         const actionId = ['1']
         spyOn(actionContexts, 'findActionId').and.returnValue(actionId)
-        const defaultRumEventAttributes = hooks.assemble.trigger({
+        const defaultRumEventAttributes = hooks.assembleEventDefaults.trigger({
           eventType,
           startTime: 0 as RelativeTime,
         } as AssembleHookParams)
@@ -201,7 +201,7 @@ describe('actionCollection', () => {
       const longTaskStartTime = 100 as RelativeTime
       const findActionIdSpy = spyOn(actionContexts, 'findActionId').and.returnValue([])
 
-      hooks.assemble.trigger({
+      hooks.assembleEventDefaults.trigger({
         eventType: RumEventType.LONG_TASK,
         startTime: longTaskStartTime,
         duration: 50 as Duration,

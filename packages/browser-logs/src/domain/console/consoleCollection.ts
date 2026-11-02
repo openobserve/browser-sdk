@@ -1,8 +1,9 @@
 import type { ClocksState } from '@openobserve/js-core/time'
-import type { Context, Observable, BufferedData } from '@openobserve/browser-core'
+import { combine, ConsoleApiName } from '@openobserve/js-core/util'
+import type { BufferedData } from '@openobserve/browser-core'
+import type { Observable, Context } from '@openobserve/js-core/util'
 import { timeStampNow } from '@openobserve/js-core/time'
 import { BufferedDataType, ErrorSource } from '@openobserve/browser-core'
-import { ConsoleApiName } from '@openobserve/js-core/util'
 import type { LogsConfiguration } from '../configuration'
 import type { LifeCycle, RawLogsEventCollectedData } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'
@@ -35,14 +36,17 @@ export function startConsoleCollection(
       return
     }
     const collectedData: RawLogsEventCollectedData<RawLogsEvent> = {
-      rawLogsEvent: {
-        date: timeStampNow(),
-        message: log.message,
-        origin: ErrorSource.CONSOLE,
-        error: log.error && createErrorFieldFromRawError(log.error),
-        status: LogStatusForApi[log.api],
-      },
-      messageContext: log.error?.context,
+      rawLogsEvent: combine(
+        {
+          date: timeStampNow(),
+          message: log.message,
+          origin: ErrorSource.CONSOLE,
+          error: log.error && createErrorFieldFromRawError(log.error),
+          _o2: log.error && { debug_ids: log.error.debugIds },
+          status: LogStatusForApi[log.api],
+        },
+        log.error?.context
+      ),
       domainContext: {
         handlingStack: log.handlingStack,
       },

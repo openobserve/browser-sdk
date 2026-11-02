@@ -1,9 +1,11 @@
 import type { RumConfiguration } from '@openobserve/browser-rum-core'
-import { noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
 import { createElementsScrollPositions } from '../elementsScrollPositions'
 import type { RecordingScope } from '../recordingScope'
 import { createRecordingScope } from '../recordingScope'
+import type { CanvasManager } from '../canvas/canvasManager'
 import type { AddShadowRootCallBack, RemoveShadowRootCallBack } from '../shadowRootsController'
+import { createCanvasManager } from '../canvas/canvasManager'
 import { DEFAULT_CONFIGURATION } from './rumConfiguration.specHelper'
 import { DEFAULT_SHADOW_ROOT_CONTROLLER } from './shadowRootsController.specHelper'
 
@@ -11,13 +13,19 @@ export function createRecordingScopeForTesting({
   configuration,
   addShadowRoot,
   removeShadowRoot,
+  canvasManager = createCanvasManager(),
 }: {
   configuration?: Partial<RumConfiguration>
   addShadowRoot?: AddShadowRootCallBack
   removeShadowRoot?: RemoveShadowRootCallBack
+  canvasManager?: CanvasManager
 } = {}): RecordingScope {
   return createRecordingScope(
-    (configuration as RumConfiguration) || { ...DEFAULT_CONFIGURATION },
+    canvasManager,
+    {
+      ...DEFAULT_CONFIGURATION,
+      ...configuration,
+    },
     createElementsScrollPositions(),
     {
       ...DEFAULT_SHADOW_ROOT_CONTROLLER,

@@ -93,6 +93,21 @@ describe('logger collection', () => {
       expect(originalConsoleMethods.warn).not.toHaveBeenCalled()
       expect(originalConsoleMethods.debug).not.toHaveBeenCalled()
     })
+
+    it('does not leak debug ids into the console output', () => {
+      handleLog(
+        {
+          message: 'message',
+          status: StatusType.error,
+          debugIds: [{ url: 'http://path/to/debug-id.js', id: '01234567-89ab-cdef-0123-456789abcdef' }],
+        },
+        logger,
+        HANDLING_STACK,
+        COMMON_CONTEXT
+      )
+
+      expect(originalConsoleMethods.error).toHaveBeenCalledOnceWith('message', {})
+    })
   })
 
   describe('when handle type is set to "http"', () => {
@@ -116,8 +131,7 @@ describe('logger collection', () => {
           origin: ErrorSource.LOGGER,
           message: 'message',
           status: StatusType.error,
-        },
-        messageContext: {
+          _o2: { debug_ids: undefined },
           foo: 'from-logger',
           bar: 'from-message',
         },
@@ -125,8 +139,19 @@ describe('logger collection', () => {
         domainContext: {
           handlingStack: HANDLING_STACK,
         },
-        o2tags: [],
+        loggerTags: [],
       })
+    })
+
+    it('message context should take precedence over native raw log fields', () => {
+      handleLog(
+        { message: 'message', status: StatusType.error, context: { message: 'from-message-context' } },
+        logger,
+        HANDLING_STACK,
+        COMMON_CONTEXT
+      )
+
+      expect(rawLogsEvents[0].rawLogsEvent.message).toEqual('from-message-context')
     })
 
     it('should send the saved date when present', () => {
@@ -147,18 +172,35 @@ describe('logger collection', () => {
 
       expect(rawLogsEvents.length).toBe(0)
     })
+
+    it('attaches debug ids to the raw log event', () => {
+      handleLog(
+        {
+          message: 'message',
+          status: StatusType.error,
+          debugIds: [{ url: 'http://path/to/debug-id.js', id: '01234567-89ab-cdef-0123-456789abcdef' }],
+        },
+        logger,
+        HANDLING_STACK,
+        COMMON_CONTEXT
+      )
+
+      expect(rawLogsEvents[0].rawLogsEvent._o2).toEqual({
+        debug_ids: [{ url: 'http://path/to/debug-id.js', id: '01234567-89ab-cdef-0123-456789abcdef' }],
+      })
+    })
   })
 
-  describe('o2tags', () => {
+  describe('logger tags', () => {
     beforeEach(() => {
       logger.setHandler(HandlerType.http)
     })
 
-    it('should contain the o2tags of the logger', () => {
+    it('should contain the tags of the logger', () => {
       logger.addTag('tag1', 'value1')
       handleLog({ message: 'message', status: StatusType.error }, logger, HANDLING_STACK, COMMON_CONTEXT)
 
-      expect(rawLogsEvents[0].o2tags).toEqual(['tag1:value1'])
+      expect(rawLogsEvents[0].loggerTags).toEqual(['tag1:value1'])
     })
 
     it('should ignore the tags of the message context', () => {
@@ -169,14 +211,14 @@ describe('logger collection', () => {
         COMMON_CONTEXT
       )
 
-      expect(rawLogsEvents[0].o2tags).toEqual([])
+      expect(rawLogsEvents[0].loggerTags).toEqual([])
     })
 
     it('should ignore the tags of the logger context', () => {
       logger.setContext({ o2tags: ['tag1:value1'] })
       handleLog({ message: 'message', status: StatusType.error }, logger, HANDLING_STACK, COMMON_CONTEXT)
 
-      expect(rawLogsEvents[0].o2tags).toEqual([])
+      expect(rawLogsEvents[0].loggerTags).toEqual([])
     })
   })
 })

@@ -1,8 +1,8 @@
 import type { ClocksState, RelativeTime, Duration } from '@openobserve/js-core/time'
 import type { ValueHistoryEntry } from '@openobserve/browser-core'
 import { ONE_MINUTE, elapsed } from '@openobserve/js-core/time'
-import { generateUUID, createValueHistory } from '@openobserve/browser-core'
-import { combine } from '@openobserve/js-core/util'
+import { createValueHistory } from '@openobserve/browser-core'
+import { combine, generateUUID } from '@openobserve/js-core/util'
 import type { RumActionEvent, RumErrorEvent, RumLongTaskEvent, RumResourceEvent } from '../rumEvent.types'
 import { LifeCycleEventType } from './lifeCycle'
 import type { LifeCycle } from './lifeCycle'
@@ -74,9 +74,8 @@ export function startEventTracker<TData>(lifeCycle: LifeCycle): EventTracker<TDa
 
     const historyEntry = history.add(id, startClocks.relative)
 
-    const existing = keyedEvents.get(key)
-    if (existing) {
-      cleanUpEvent(existing)
+    if (keyedEvents.has(key)) {
+      discard(key)
     }
 
     const eventCounts = options?.isChildEvent

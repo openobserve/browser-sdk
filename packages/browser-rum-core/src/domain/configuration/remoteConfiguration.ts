@@ -1,31 +1,34 @@
-import type { createContextManager, Context } from '@openobserve/browser-core'
-import {
-  display,
-  mapValues,
-  getCookie,
-  addTelemetryMetrics,
-  TelemetryMetrics,
-  monitorError,
-  fetch,
-  buildEndpointUrl,
-} from '@openobserve/browser-core'
+import type { createContextManager } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
+import { display, mapValues, getCookie, addTelemetryMetrics, TelemetryMetrics } from '@openobserve/browser-core'
 import { isIndexableObject } from '@openobserve/js-core/util'
+import { fetch } from '@openobserve/js-core/dom'
+import { monitorError } from '@openobserve/js-core/monitor'
+import { buildEndpointUrl } from '@openobserve/js-core/transport'
 import { extractRegexMatch } from '../extractRegexMatch'
 import type { RumInitConfiguration } from './configuration'
 import type { RumSdkConfig, DynamicOption, ContextItem } from './remoteConfiguration.types'
 import { parseJsonPath } from './jsonPathParser'
+import type { RemoteConfigurationMetadata } from './remoteConfigurationCache'
 import { CACHE_STATUS_TO_METRIC_MAP, createConfigurationCache } from './remoteConfigurationCache'
 
 export type RemoteConfiguration = RumSdkConfig
 export type RumRemoteConfiguration = Exclude<RemoteConfiguration['rum'], undefined>
 const REMOTE_CONFIGURATION_VERSION = 'v1'
-const SUPPORTED_FIELDS: Array<keyof RumInitConfiguration> = [
+const SUPPORTED_RUM_FIELDS: Array<keyof RumInitConfiguration> = [
   'applicationId',
   'service',
   'env',
   'version',
   'sessionSampleRate',
   'sessionReplaySampleRate',
+  'telemetrySampleRate',
+  'trackAnonymousUser',
+  'trackUserInteractions',
+  'trackResources',
+  'trackLongTasks',
+  'traceContextInjection',
+  'actionNameAttribute',
   'defaultPrivacyLevel',
   'enablePrivacyForActionName',
   'traceSampleRate',
@@ -86,7 +89,7 @@ export async function fetchAndApplyRemoteConfiguration(
 
 export function applyRemoteConfiguration(
   initConfiguration: RumInitConfiguration,
-  rumRemoteConfiguration: RumRemoteConfiguration & { [key: string]: unknown },
+  remoteConfiguration: RemoteConfiguration,
   supportedContextManagers: SupportedContextManagers,
   metrics: ReturnType<typeof initMetrics>
 ): RumInitConfiguration {
@@ -94,16 +97,22 @@ export function applyRemoteConfiguration(
   // - explicitly set each supported field to limit risk in case an attacker can create configurations
   // - check the existence in the remote config to avoid clearing a provided init field
   const appliedConfiguration = { ...initConfiguration } as RumInitConfiguration & { [key: string]: unknown }
-  SUPPORTED_FIELDS.forEach((option: string) => {
-    if (option in rumRemoteConfiguration) {
-      appliedConfiguration[option] = resolveConfigurationProperty(rumRemoteConfiguration[option])
-    }
-  })
-  ;(Object.keys(supportedContextManagers) as Array<keyof SupportedContextManagers>).forEach((context) => {
-    if (rumRemoteConfiguration[context] !== undefined) {
-      resolveContextProperty(supportedContextManagers[context], rumRemoteConfiguration[context])
-    }
-  })
+  if (remoteConfiguration.rum) {
+    const rumRemoteConfiguration = remoteConfiguration.rum as RumRemoteConfiguration & { [key: string]: unknown }
+    SUPPORTED_RUM_FIELDS.forEach((option: string) => {
+      if (option in rumRemoteConfiguration) {
+        appliedConfiguration[option] = resolveConfigurationProperty(rumRemoteConfiguration[option])
+      }
+    })
+    ;(Object.keys(supportedContextManagers) as Array<keyof SupportedContextManagers>).forEach((context) => {
+      if (rumRemoteConfiguration[context] !== undefined) {
+        resolveContextProperty(supportedContextManagers[context], rumRemoteConfiguration[context])
+      }
+    })
+  }
+  if (remoteConfiguration.profiling?.sampleRate !== undefined) {
+    appliedConfiguration.profilingSampleRate = remoteConfiguration.profiling.sampleRate
+  }
   return appliedConfiguration
 
   // share context to access metrics
@@ -282,7 +291,23 @@ function extractValue(extractor: SerializedRegex, candidate: string) {
   return extractRegexMatch(candidate, resolvedExtractor)
 }
 
-type FetchRemoteConfigurationResult = { ok: true; value: RumRemoteConfiguration } | { ok: false; error: Error }
+type FetchRemoteConfigurationResult =
+  { ok: true; value: RemoteConfiguration; lastModified?: number } | { ok: false; error: Error }
+
+/**
+ * Reads the CDN publish time. `Last-Modified` is a CORS-safelisted response header, so it is
+ * readable cross-origin without the CDN having to expose it explicitly. It carries an HTTP-date,
+ * so the value is only accurate to the second.
+ */
+function parseLastModified(response: Response): number | undefined {
+  const header = response.headers?.get('last-modified')
+  if (!header) {
+    return
+  }
+  const timestamp = new Date(header).getTime()
+
+  return isNaN(timestamp) ? undefined : timestamp
+}
 
 export async function fetchRemoteConfiguration(
   configuration: RumInitConfiguration
@@ -300,10 +325,11 @@ export async function fetchRemoteConfiguration(
     }
   }
   const remoteConfiguration: RemoteConfiguration = await response.json()
-  if (remoteConfiguration.rum) {
+  if (remoteConfiguration.rum || remoteConfiguration.profiling) {
     return {
       ok: true,
-      value: remoteConfiguration.rum,
+      value: remoteConfiguration,
+      lastModified: parseLastModified(response),
     }
   }
   return {
@@ -340,7 +366,7 @@ function doBackgroundCacheSync(
         display.error(fetchResult.error)
       } else {
         metrics.increment('fetch', 'success')
-        cache.write(fetchResult.value)
+        cache.write(fetchResult.value, fetchResult.lastModified)
       }
     })
     .catch(monitorError)
@@ -350,10 +376,20 @@ function doBackgroundCacheSync(
     })
 }
 
+export interface ResolvedRemoteConfiguration {
+  initConfiguration: RumInitConfiguration
+  /** Only set when a cached configuration was applied, and reported on configuration telemetry. */
+  metadata?: RemoteConfigurationMetadata
+}
+
+/**
+ * Returns `undefined` when RUM must not start, which only happens with `required: true` and no
+ * usable cache entry.
+ */
 export function getRemoteConfiguration(
   initConfiguration: RumInitConfiguration,
   supportedContextManagers: SupportedContextManagers
-): RumInitConfiguration | undefined {
+): ResolvedRemoteConfiguration | undefined {
   const configurationCache = createConfigurationCache({
     remoteConfigurationId: getRemoteConfigurationId(initConfiguration)!,
   })
@@ -366,12 +402,21 @@ export function getRemoteConfiguration(
   doBackgroundCacheSync(initConfiguration, configurationCache, metrics)
 
   if (cacheResult.status === 'hit') {
-    return applyRemoteConfiguration(initConfiguration, cacheResult.config, supportedContextManagers, metrics)
+    return {
+      // Stamping is synchronous, so it always lands before the background sync above can write.
+      metadata: configurationCache.stampFirstApplied(cacheResult),
+      initConfiguration: applyRemoteConfiguration(
+        initConfiguration,
+        cacheResult.config,
+        supportedContextManagers,
+        metrics
+      ),
+    }
   }
 
   if (initConfiguration.remoteConfiguration?.required) {
     return
   }
 
-  return initConfiguration
+  return { initConfiguration }
 }

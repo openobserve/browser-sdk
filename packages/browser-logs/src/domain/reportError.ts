@@ -1,20 +1,20 @@
-import type { RawError } from '@openobserve/browser-core'
 import { ErrorSource, addTelemetryDebug } from '@openobserve/browser-core'
+import { timeStampNow } from '@openobserve/js-core/time'
 import type { LifeCycle } from './lifeCycle'
 import { LifeCycleEventType } from './lifeCycle'
 import { StatusType } from './logger/isAuthorized'
 
 export function startReportError(lifeCycle: LifeCycle) {
-  return (error: RawError) => {
+  return (message: string) => {
     lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
       rawLogsEvent: {
-        message: error.message,
-        date: error.startClocks.timeStamp,
+        message,
+        date: timeStampNow(),
         origin: ErrorSource.AGENT,
         status: StatusType.error,
       },
     })
     // monitor-until: forever, to keep an eye on the errors reported to customers
-    addTelemetryDebug('Error reported to customer', { 'error.message': error.message })
+    addTelemetryDebug('Error reported to customer', { 'error.message': message })
   }
 }

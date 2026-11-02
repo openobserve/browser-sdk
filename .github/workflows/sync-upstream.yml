@@ -49,14 +49,17 @@ jobs:
         id: sync
         env:
           ALLOW_MAJOR: ${{ inputs.allow_major && '1' || '0' }}
+          # Outside the work tree on purpose: sync-upstream.sh runs `git clean -fd`, which would
+          # delete an untracked sync.log in the checkout (and the failure report needs the log).
+          SYNC_LOG: ${{ runner.temp }}/sync.log
         run: |
           set +e
-          bash scripts/openobserve/sync-upstream.sh "${{ inputs.target }}" 2>&1 | tee sync.log
+          bash scripts/openobserve/sync-upstream.sh "${{ inputs.target }}" 2>&1 | tee "$SYNC_LOG"
           code=${PIPESTATUS[0]}
           set -e
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           if [ "$code" = "0" ]; then
-            if grep -q 'Already up to date' sync.log; then
+            if grep -q 'Already up to date' "$SYNC_LOG"; then
               echo "status=up-to-date" >> "$GITHUB_OUTPUT"
             else
               echo "status=synced" >> "$GITHUB_OUTPUT"
@@ -128,30 +131,52 @@ jobs:
         if: steps.sync.outputs.status == 'major-blocked'
         env:
           GH_TOKEN: ${{ github.token }}
+          SYNC_LOG: ${{ runner.temp }}/sync.log
         run: |
           TITLE='Upstream major version available - manual sync required'
+          {
+            echo "## $TITLE"
+            echo
+            [ -f "$SYNC_LOG" ] && tail -20 "$SYNC_LOG"
+            echo
+            echo 'Run the **Sync upstream** workflow manually with `allow_major: true` after reviewing the upstream migration guide. Majors usually require re-porting `openobserve-patches/`.'
+          } > "$RUNNER_TEMP/major.md"
+          cat "$RUNNER_TEMP/major.md" >> "$GITHUB_STEP_SUMMARY"
+          # Issues are disabled on this repository, so this can fail; the summary above is the report.
           if ! gh issue list --state open --search "$TITLE" --json title --jq '.[].title' | grep -qF "$TITLE"; then
-            gh issue create --title "$TITLE" --body "$(tail -20 sync.log)
-
-          Run the **Sync upstream** workflow manually with \`allow_major: true\` after reviewing the upstream migration guide. Majors usually require re-porting \`openobserve-patches/\`."
+            gh issue create --title "$TITLE" --body-file "$RUNNER_TEMP/major.md" \
+              || echo "::warning::Could not create an issue (issues may be disabled); see the job summary."
           fi
 
       - name: Report failure
         if: steps.sync.outputs.status == 'failed'
         env:
           GH_TOKEN: ${{ github.token }}
+          EXIT_CODE: ${{ steps.sync.outputs.exit_code }}
+          SYNC_LOG: ${{ runner.temp }}/sync.log
         run: |
-          gh issue create \
-            --title "Upstream sync failed ($(date -u +%Y-%m-%d))" \
-            --body "The automated upstream sync failed (usually a patch conflict — see exit code ${{ steps.sync.outputs.exit_code }}).
-
-          \`\`\`
-          $(tail -40 sync.log)
-          \`\`\`
-
-          To resolve locally:
-          1. \`bash scripts/openobserve/sync-upstream.sh\` — reproduces the git-am conflict
-          2. Fix conflicts, \`git am --continue\`
-          3. Refresh the series: \`git format-patch --zero-commit -o openobserve-patches '<base-commit>..HEAD^'\`
-          4. Commit the refreshed patches on the sync branch and push."
+          {
+            echo "## Upstream sync failed ($(date -u +%Y-%m-%d))"
+            echo
+            echo "The automated upstream sync failed (usually a patch conflict, exit code $EXIT_CODE)."
+            echo
+            if [ -f "$SYNC_LOG" ]; then
+              echo '```'
+              tail -40 "$SYNC_LOG"
+              echo '```'
+            else
+              echo "No sync log was found at $SYNC_LOG."
+            fi
+            echo
+            echo "To resolve locally:"
+            echo '1. `bash scripts/openobserve/sync-upstream.sh` - reproduces the git-am conflict'
+            echo '2. Fix conflicts, `git am --continue`'
+            echo "3. Refresh the series: \`git format-patch --zero-commit -o openobserve-patches '<base-commit>..HEAD^'\`"
+            echo '4. Commit the refreshed patches on the sync branch and push.'
+          } > "$RUNNER_TEMP/failure.md"
+          # The job summary is the primary report. Issues are disabled on this repository, so the
+          # issue is best effort and must not hide the summary or change the job result.
+          cat "$RUNNER_TEMP/failure.md" >> "$GITHUB_STEP_SUMMARY"
+          gh issue create --title "Upstream sync failed ($(date -u +%Y-%m-%d))" --body-file "$RUNNER_TEMP/failure.md" \
+            || echo "::warning::Could not create an issue (issues may be disabled); see the job summary."
           exit 1

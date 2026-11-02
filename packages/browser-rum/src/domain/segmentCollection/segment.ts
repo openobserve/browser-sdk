@@ -1,4 +1,5 @@
-import type { Encoder, EncoderResult, Uint8ArrayBuffer } from '@openobserve/browser-core'
+import type { Encoder, EncoderResult } from '@openobserve/browser-core'
+import type { Uint8ArrayBuffer } from '@openobserve/js-core/util'
 import type { BrowserRecord, BrowserSegmentMetadata, CreationReason, SegmentContext } from '../../types'
 import { RecordType } from '../../types'
 import * as replayStats from '../replayStats'

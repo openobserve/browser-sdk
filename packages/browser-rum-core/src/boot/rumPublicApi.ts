@@ -1,8 +1,7 @@
 import { timeStampNow, clocksNow, timeStampToClocks } from '@openobserve/js-core/time'
-import { deepClone } from '@openobserve/js-core/util'
+import { deepClone, mockable, generateUUID } from '@openobserve/js-core/util'
 import type { Duration, TimeStamp, RelativeTime } from '@openobserve/js-core/time'
 import type {
-  Context,
   DeflateWorker,
   DeflateEncoderStreamId,
   DeflateEncoder,
@@ -17,12 +16,11 @@ import type {
   ResourceType,
   SessionManager,
 } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import {
   ContextManagerMethod,
   addTelemetryUsage,
   makePublicApi,
-  monitor,
-  callMonitored,
   createHandlingStack,
   sanitize,
   createIdentityEncoder,
@@ -31,9 +29,9 @@ import {
   CustomerContextKey,
   defineContextMethod,
   startBufferingData,
-  mockable,
-  generateUUID,
+  display,
 } from '@openobserve/browser-core'
+import { monitor, callMonitored } from '@openobserve/js-core/monitor'
 
 import type { LifeCycle } from '../domain/lifeCycle'
 import type { ViewHistory } from '../domain/contexts/viewHistory'
@@ -49,7 +47,7 @@ import type {
   FeatureOperationOptions,
   FailureReason,
 } from '../domain/vital/vitalCollection'
-import { callPluginsMethod } from '../domain/plugins'
+import { callPluginsOnRumStart } from '../domain/plugins'
 import type { Hooks } from '../domain/hooks'
 import type { SdkName } from '../domain/contexts/defaultContext'
 import type { ActionOptions } from '../domain/action/trackManualActions'
@@ -586,7 +584,9 @@ export interface RumPublicApi extends PublicApi {
   failFeatureOperation: (name: string, failureReason: FailureReason, options?: FeatureOperationOptions) => void
 
   /**
-   * List of default headers used by the {@link RumInitConfiguration.trackResourceHeaders | trackResourceHeaders} option. See configuration example for extending them.
+   * List of default headers used by the {@link RumInitConfiguration.trackResourceHeaders | trackResourceHeaders} option.
+   *
+   * @deprecated You can now omit `name` from a MatchHeader entry to include default headers.
    */
   DEFAULT_TRACKED_RESOURCE_HEADERS: typeof DEFAULT_TRACKED_RESOURCE_HEADERS
 }
@@ -711,7 +711,7 @@ export function makeRumPublicApi(
 
       strategy = createPostStartStrategy(strategy, startRumResult)
 
-      callPluginsMethod(configuration.plugins, 'onRumStart', {
+      callPluginsOnRumStart(configuration.plugins, {
         addEvent: startRumResult.addEvent,
         addError: startRumResult.addError,
       })
@@ -728,7 +728,13 @@ export function makeRumPublicApi(
     const handlingStack = createHandlingStack('view')
     callMonitored(() => {
       const sanitizedOptions = typeof options === 'object' ? options : { name: options }
-      strategy.startView({ ...sanitizedOptions, handlingStack })
+      strategy.startView({
+        ...sanitizedOptions,
+        name: sanitizeStringOption(sanitizedOptions.name, 'view name'),
+        service: sanitizeStringOption(sanitizedOptions.service, 'view service'),
+        version: sanitizeStringOption(sanitizedOptions.version, 'view version'),
+        handlingStack,
+      })
       addTelemetryUsage({ feature: 'start-view' })
     })
   }
@@ -763,7 +769,7 @@ export function makeRumPublicApi(
     }),
 
     setViewName: monitor((name: string) => {
-      strategy.setViewName(name)
+      strategy.setViewName(sanitizeStringOption(name, 'view name')!)
       addTelemetryUsage({ feature: 'set-view-name' })
     }),
 
@@ -1033,6 +1039,17 @@ export function makeRumPublicApi(
   })
 
   return rumPublicApi
+}
+
+function sanitizeStringOption(value: unknown, label: string): string | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+  if (typeof value !== 'string') {
+    display.warn(`Invalid ${label} provided (expected a string, got ${typeof value}). Ignoring.`)
+    return undefined
+  }
+  return sanitize(value)
 }
 
 function createPostStartStrategy(preStartStrategy: Strategy, startRumResult: StartRumResult): Strategy {

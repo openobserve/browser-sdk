@@ -19,11 +19,12 @@
     "prepack": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.3",
-    "@openobserve/browser-rum-core": "0.4.3"
+    "@openobserve/browser-core": "workspace:*",
+    "@openobserve/browser-rum-core": "workspace:*",
+    "@openobserve/js-core": "workspace:*"
   },
   "peerDependencies": {
-    "@openobserve/browser-logs": "0.4.3"
+    "@openobserve/browser-logs": "workspace:*"
   },
   "peerDependenciesMeta": {
     "@openobserve/browser-logs": {

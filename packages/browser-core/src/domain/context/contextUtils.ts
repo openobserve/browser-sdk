@@ -1,5 +1,5 @@
 import { getType } from '@openobserve/js-core/util'
-import type { Context } from '../../tools/serialisation/context'
+import type { Context } from '@openobserve/js-core/util'
 import { display } from '../../tools/display'
 
 /**

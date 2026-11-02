@@ -1,6 +1,7 @@
 import type { ClocksState, Duration } from '@openobserve/js-core/time'
 import { toServerDuration, clocksNow } from '@openobserve/js-core/time'
-import { generateUUID, sanitize } from '@openobserve/browser-core'
+import { sanitize } from '@openobserve/browser-core'
+import { generateUUID } from '@openobserve/js-core/util'
 import type { LifeCycle, RawRumEventCollectedData } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'
 import type { RawRumVitalEvent } from '../../rawRumEvent.types'

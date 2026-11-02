@@ -1,5 +1,5 @@
+import { globalObject, Observable } from '@openobserve/js-core/util'
 import { buildLocation, replaceMockable } from '@openobserve/browser-core/test'
-import { globalObject, Observable } from '@openobserve/browser-core'
 import type { LocationChange } from '../src/browser/locationChangeObservable'
 
 export function setupLocationObserver(initialLocation?: string) {

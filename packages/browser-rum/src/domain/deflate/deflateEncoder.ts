@@ -4,9 +4,10 @@ import type {
   DeflateEncoderStreamId,
   DeflateWorker,
   EncoderResult,
-  Uint8ArrayBuffer,
 } from '@openobserve/browser-core'
-import { addEventListener, concatBuffers } from '@openobserve/browser-core'
+import type { Uint8ArrayBuffer } from '@openobserve/js-core/util'
+import { concatBuffers } from '@openobserve/js-core/util'
+import { addEventListener } from '@openobserve/js-core/dom'
 
 export function createDeflateEncoder(worker: DeflateWorker, streamId: DeflateEncoderStreamId): DeflateEncoder {
   let rawBytesCount = 0

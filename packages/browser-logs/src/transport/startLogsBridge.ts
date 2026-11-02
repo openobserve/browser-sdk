@@ -1,4 +1,4 @@
-import type { Context } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import { getEventBridge } from '@openobserve/browser-core'
 import type { LifeCycle } from '../domain/lifeCycle'
 import { LifeCycleEventType } from '../domain/lifeCycle'

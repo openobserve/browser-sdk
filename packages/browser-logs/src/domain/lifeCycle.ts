@@ -1,5 +1,5 @@
 import { AbstractLifeCycle } from '@openobserve/browser-core'
-import type { Context } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import type { LogsEvent } from '../logsEvent.types'
 import type { CommonContext, RawLogsEvent } from '../rawLogsEvent.types'
 import type { LogsEventDomainContext } from '../domainContext.types'
@@ -19,8 +19,7 @@ export type LifeCycle = AbstractLifeCycle<LifeCycleEventMap>
 
 export interface RawLogsEventCollectedData<E extends RawLogsEvent = RawLogsEvent> {
   rawLogsEvent: E
-  messageContext?: Context
   savedCommonContext?: CommonContext
   domainContext?: LogsEventDomainContext<E['origin']>
-  o2tags?: string[]
+  loggerTags?: string[]
 }

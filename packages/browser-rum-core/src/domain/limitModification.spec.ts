@@ -1,5 +1,6 @@
-import type { Context } from '@openobserve/browser-core'
-import { display, noop, objectEntries, SANITIZE_DEFAULT_MAX_CHARACTER_COUNT } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
+import { noop } from '@openobserve/js-core/util'
+import { display, objectEntries, SANITIZE_DEFAULT_MAX_CHARACTER_COUNT } from '@openobserve/browser-core'
 import type { ModifiableFieldPaths } from './limitModification'
 import { limitModification } from './limitModification'
 

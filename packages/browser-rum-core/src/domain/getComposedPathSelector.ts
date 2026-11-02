@@ -1,4 +1,5 @@
-import { safeTruncate, ONE_KIBI_BYTE } from '@openobserve/browser-core'
+import { safeTruncate } from '@openobserve/browser-core'
+import { ONE_KIBI_BYTE } from '@openobserve/js-core/util'
 import type { MatchOption } from '@openobserve/browser-core'
 import {
   STABLE_ATTRIBUTES,

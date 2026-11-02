@@ -1,7 +1,8 @@
-import { Observable } from '@openobserve/browser-core'
+import { Observable } from '@openobserve/js-core/util'
 import { DISCARDED } from '@openobserve/js-core/assembly'
 import type { Duration, ServerDuration, TimeStamp, RelativeTime } from '@openobserve/js-core/time'
 import { mockClock, registerCleanupTask } from '@openobserve/browser-core/test'
+import type { MutationRecord } from '@openobserve/js-core/dom'
 import type { RecorderApi } from '../../boot/rumPublicApi'
 import { collectAndValidateRawRumEvents, mockRumConfiguration, mockViewHistory, noopRecorderApi } from '../../../test'
 import type { RawRumEvent, RawRumViewEvent } from '../../rawRumEvent.types'
@@ -13,7 +14,6 @@ import type { LocationChange } from '../../browser/locationChangeObservable'
 import type { ViewHistoryEntry } from '../contexts/viewHistory'
 import type { AssembleHookParams, DefaultTelemetryEventAttributes, Hooks } from '../hooks'
 import { createHooks } from '../hooks'
-import type { RumMutationRecord } from '../../browser/domMutationObservable'
 import { startViewCollection } from './viewCollection'
 import type { ViewEvent } from './trackViews'
 
@@ -74,7 +74,7 @@ describe('viewCollection', () => {
     hooks = createHooks()
     const viewHistory = mockViewHistory(viewHistoryEntry)
     getReplayStatsSpy = jasmine.createSpy()
-    const domMutationObservable = new Observable<RumMutationRecord[]>()
+    const domMutationObservable = new Observable<MutationRecord[]>()
     const windowOpenObservable = new Observable<void>()
     const locationChangeObservable = new Observable<LocationChange>()
     mockClock()
@@ -113,6 +113,7 @@ describe('viewCollection', () => {
         replay_stats: undefined,
         configuration: {
           start_session_replay_recording_manually: jasmine.any(Boolean),
+          remote_configuration_id: undefined,
         },
         cls: undefined,
       },
@@ -240,11 +241,31 @@ describe('viewCollection', () => {
     })
   })
 
+  describe('with configuration.remote_configuration_id', () => {
+    it('should include the remote configuration id when configured', () => {
+      setupViewCollection({ remoteConfigurationId: 'foo' })
+      lifeCycle.notify(LifeCycleEventType.VIEW_UPDATED, VIEW)
+
+      expect(
+        (rawRumEvents[rawRumEvents.length - 1].rawRumEvent as RawRumViewEvent)._o2.configuration.remote_configuration_id
+      ).toBe('foo')
+    })
+
+    it('should be undefined when remote configuration is not used', () => {
+      setupViewCollection({ remoteConfigurationId: undefined })
+      lifeCycle.notify(LifeCycleEventType.VIEW_UPDATED, VIEW)
+
+      expect(
+        (rawRumEvents[rawRumEvents.length - 1].rawRumEvent as RawRumViewEvent)._o2.configuration.remote_configuration_id
+      ).toBeUndefined()
+    })
+  })
+
   describe('assembly hook', () => {
     it('should add view properties from the history', () => {
       setupViewCollection({ trackViewsManually: true }, VIEW)
 
-      const defaultRumEventAttributes = hooks.assemble.trigger({
+      const defaultRumEventAttributes = hooks.assembleEventDefaults.trigger({
         eventType: 'view',
         startTime: 0 as RelativeTime,
       } as AssembleHookParams)
@@ -265,7 +286,7 @@ describe('viewCollection', () => {
     it('should discard the event if no view', () => {
       const viewHistoryEntry = undefined
       setupViewCollection({ trackViewsManually: true }, viewHistoryEntry)
-      const defaultRumEventAttributes = hooks.assemble.trigger({
+      const defaultRumEventAttributes = hooks.assembleEventDefaults.trigger({
         eventType: 'view',
         startTime: 0 as RelativeTime,
       } as AssembleHookParams)

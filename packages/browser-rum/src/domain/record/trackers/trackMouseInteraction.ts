@@ -1,4 +1,4 @@
-import { addEventListeners, DOM_EVENT } from '@openobserve/browser-core'
+import { addEventListeners, DOM_EVENT } from '@openobserve/js-core/dom'
 import { getNodePrivacyLevel, NodePrivacyLevel } from '@openobserve/browser-rum-core'
 import type { MouseInteraction, MouseInteractionData, BrowserIncrementalSnapshotRecord } from '../../../types'
 import { IncrementalSource, MouseInteractionType } from '../../../types'

@@ -1,15 +1,11 @@
-export type { Configuration, InitConfiguration, EndpointBuilder, ProxyFn } from './domain/configuration'
+export type { Configuration, InitConfiguration } from './domain/configuration'
 export {
-  validateAndBuildConfiguration,
+  BROWSER_CORE_SCHEMA,
   DefaultPrivacyLevel,
   TraceContextInjection,
   serializeConfiguration,
-  isSampleRate,
-  buildEndpointUrl,
-  createEndpointBuilder,
-  createReplicaEndpointBuilder,
+  isAllowedTrackingOrigins,
 } from './domain/configuration'
-export * from './domain/intakeSites'
 export type { TrackingConsentState } from './domain/trackingConsent'
 export { TrackingConsent, createTrackingConsentState } from './domain/trackingConsent'
 export {
@@ -26,6 +22,8 @@ export type { PublicApi } from './boot/init'
 export { defineGlobal, makePublicApi } from './boot/init'
 export { displayAlreadyInitializedError } from './boot/displayAlreadyInitializedError'
 export { initReportObservable, RawReportType } from './domain/report/reportObservable'
+export type { RawReportError } from './domain/report/reportObservable'
+export type { Report } from './domain/report/browser.types'
 export type {
   Telemetry,
   RawTelemetryEvent,
@@ -48,13 +46,11 @@ export {
   addTelemetryUsage,
   addTelemetryMetrics,
 } from './domain/telemetry'
-export { monitored, monitor, callMonitored, monitorError } from './tools/monitor'
-export type { Subscription } from './tools/observable'
-export { Observable, BufferedObservable } from './tools/observable'
 export type { SessionManager, SessionContext } from './domain/session/sessionManager'
 export { startSessionManager, startSessionManagerStub, stopSessionManager } from './domain/session/sessionManager'
 export {
   SESSION_TIME_OUT_DELAY, // Exposed for tests
+  SESSION_EXPIRATION_DELAY,
   SESSION_NOT_TRACKED,
   SessionPersistence,
 } from './domain/session/sessionConstants'
@@ -66,6 +62,7 @@ export type {
   Payload,
   FlushEvent,
   FlushReason,
+  UrgentFlushReason,
 } from './transport'
 export {
   createHttpRequest,
@@ -80,59 +77,38 @@ export {
 export * from './tools/display'
 export type { Encoder, EncoderResult } from './tools/encoder'
 export { createIdentityEncoder } from './tools/encoder'
-export * from './tools/utils/urlPolyfill'
 export * from './tools/utils/arrayUtils'
 
 export * from './tools/serialisation/sanitize'
-export * from './tools/globalObject'
 export { AbstractLifeCycle } from './tools/abstractLifeCycle'
 export * from './domain/eventRateLimiter/createEventRateLimiter'
 export * from './tools/utils/browserDetection'
 export { sendToExtension } from './tools/sendToExtension'
 export { runOnReadyState, asyncRunOnReadyState } from './browser/runOnReadyState'
-export { getZoneJsOriginalValue } from './tools/getZoneJsOriginalValue'
-export { mockable } from './tools/mockable'
 export type { InstrumentedMethodCall, InstrumentedConstructorCall } from './tools/instrumentMethod'
 export { instrumentMethod, instrumentConstructor, instrumentSetter } from './tools/instrumentMethod'
 export {
   computeRawError,
   getFileFromStackTraceString,
+  getStackTraceUrls,
   isError,
   NO_ERROR_STACK_PRESENT_MESSAGE,
 } from './domain/error/error'
 export { NonErrorPrefix } from './domain/error/error.types'
-export type { Context, ContextArray, ContextValue } from './tools/serialisation/context'
+export { buildDebugIdByUrl, getSourceCodeContext } from './domain/sourceCodeContext'
+export type { DebugIdEntry } from './domain/sourceCodeContext'
 export { getCookie, getInitCookie, setCookie, deleteCookie, resetInitCookies } from './browser/cookie'
 export { isCookieStoreSupported } from './browser/cookieAccess'
-export type {
-  CookieStore,
-  WeakRef,
-  WeakRefConstructor,
-  NetworkInformation,
-  BrowserNavigator,
-  NetworkInterface,
-  EffectiveType,
-  Profiler,
-  ProfilerConstructor,
-  ProfilerTrace,
-  ProfilerInitOptions,
-  ProfilerFrame,
-  ProfilerStack,
-  ProfilerSample,
-  ProfilerResource,
-  SampleBufferFullEvent,
-} from './browser/browser.types'
+export type { WeakRef, WeakRefConstructor } from './browser/browser.types'
 export type { XhrCompleteContext, XhrStartContext, XhrContext } from './browser/xhrObservable'
 export { initXhrObservable } from './browser/xhrObservable'
 export type { FetchResolveContext, FetchStartContext, FetchContext } from './browser/fetchObservable'
 export { initFetchObservable, ResponseBodyAction } from './browser/fetchObservable'
-export { fetch } from './browser/fetch'
 export type { PageMayExitEvent } from './browser/pageMayExitObservable'
 export { createPageMayExitObservable, PageExitReason, isPageExitReason } from './browser/pageMayExitObservable'
-export * from './browser/addEventListener'
 export { requestIdleCallback } from './tools/requestIdleCallback'
 export * from './tools/taskQueue'
-export * from './tools/timer'
+export * from './tools/thenable'
 export type { ConsoleLog } from './domain/console/consoleObservable'
 export { initConsoleObservable } from './domain/console/consoleObservable'
 export { catchUserErrors } from './tools/catchUserErrors'
@@ -167,10 +143,7 @@ export * from './domain/bufferedData'
 export * from './tools/utils/polyfills'
 export * from './tools/utils/timezone'
 export * from './tools/utils/numberUtils'
-export * from './tools/utils/byteUtils'
 export * from './tools/utils/objectUtils'
-export * from './tools/utils/functionUtils'
-export * from './tools/serialisation/jsonStringify'
 export * from './tools/serialisation/stringify'
 export * from './tools/utils/stringUtils'
 export * from './tools/matchOption'

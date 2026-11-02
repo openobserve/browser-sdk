@@ -1,6 +1,6 @@
 import type { RumInitConfiguration, RumPublicApi } from '@openobserve/browser-rum-core'
 import type { LogsInitConfiguration, LogsGlobal } from '@openobserve/browser-logs'
-import type { Context } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 
 declare global {
   interface Window {

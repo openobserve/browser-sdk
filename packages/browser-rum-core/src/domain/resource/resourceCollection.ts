@@ -1,45 +1,36 @@
+import { createTaskQueue, display, matchList, RequestType, runOnReadyState, safeTruncate } from '@openobserve/browser-core'
+import { mockable, combine, setTimeout, generateUUID } from '@openobserve/js-core/util'
+import type { MatchOption } from '@openobserve/browser-core'
 import type { Duration } from '@openobserve/js-core/time'
-import { toServerDuration, relativeToClocks } from '@openobserve/js-core/time'
-import {
-  generateUUID,
-  createTaskQueue,
-  mockable,
-  runOnReadyState,
-  matchList,
-  safeTruncate,
-  display,
-  addTelemetryDebug,
-  RequestType,
-  setTimeout,
-} from '@openobserve/browser-core'
-import { combine } from '@openobserve/js-core/util'
-import type { MatchHeader, RumConfiguration } from '../configuration'
-import { RumPerformanceEntryType, createPerformanceObservable } from '../../browser/performanceObservable'
+import { relativeToClocks, toServerDuration } from '@openobserve/js-core/time'
+import { createPerformanceObservable, RumPerformanceEntryType } from '../../browser/performanceObservable'
+import { getNavigationEntry } from '../../browser/performanceUtils'
 import type { RumResourceEventDomainContext } from '../../domainContext.types'
 import type { NetworkHeaders, RawRumResourceEvent, ResourceRequest, ResourceResponse } from '../../rawRumEvent.types'
 import { RumEventType } from '../../rawRumEvent.types'
-import type { RawRumEventCollectedData, LifeCycle } from '../lifeCycle'
-import { LifeCycleEventType } from '../lifeCycle'
-import type { RequestCompleteEvent } from '../requestCollection'
-import { createSpanIdentifier, toPaddedSpanIdHex, toPaddedTraceIdHex } from '../tracing/identifier'
-import { getDocumentTraceId } from '../tracing/getDocumentTraceId'
-import { getNavigationEntry } from '../../browser/performanceUtils'
+import type { MatchHeader, RumConfiguration } from '../configuration'
+import { DEFAULT_TRACKED_RESOURCE_HEADERS } from '../configuration'
 import { startEventTracker } from '../eventTracker'
 import { extractRegexMatch } from '../extractRegexMatch'
+import type { LifeCycle, RawRumEventCollectedData } from '../lifeCycle'
+import { LifeCycleEventType } from '../lifeCycle'
+import type { RequestCompleteEvent } from '../requestCollection'
+import { getDocumentTraceId } from '../tracing/getDocumentTraceId'
+import { createSpanIdentifier, toPaddedSpanIdHex, toPaddedTraceIdHex } from '../tracing/identifier'
+import type { GraphQlMetadata } from './graphql'
+import { extractGraphQlMetadata, findGraphQlConfiguration } from './graphql'
+import { createRequestRegistry } from './requestRegistry'
+import type { ResourceLikeEntry } from './resourceUtils'
 import {
+  computeResourceEntryDeliveryType,
   computeResourceEntryDetails,
   computeResourceEntryDuration,
-  computeResourceEntryType,
-  computeResourceEntrySize,
   computeResourceEntryProtocol,
-  computeResourceEntryDeliveryType,
+  computeResourceEntrySize,
+  computeResourceEntryType,
   isResourceEntryRequestType,
   sanitizeIfLongDataUrl,
 } from './resourceUtils'
-import type { ResourceLikeEntry } from './resourceUtils'
-import { createRequestRegistry } from './requestRegistry'
-import type { GraphQlMetadata } from './graphql'
-import { extractGraphQlMetadata, findGraphQlConfiguration } from './graphql'
 import type { ManualResourceData } from './trackManualResources'
 import { trackManualResources } from './trackManualResources'
 
@@ -200,6 +191,7 @@ function getResourceDomainContext(
     performanceEntry: entry as unknown as PerformanceResourceTiming | PerformanceNavigationTiming,
     isManual: false,
     isAborted: request ? request.isAborted : false,
+    isWebSocket: false,
     handlingStack: request?.handlingStack,
     requestInit: request?.init,
     requestInput: request?.input as RequestInfo | undefined,
@@ -327,16 +319,15 @@ const FORBIDDEN_HEADER_PATTERN =
   /(token|cookie|secret|authorization|(api|secret|access|app).?key|(client|connecting|real).?ip|forwarded)/
 const MAX_HEADER_COUNT = 100
 const MAX_HEADER_VALUE_LENGTH = 128
+const defaultHeadersMatchOption: MatchOption = (headerName) =>
+  (DEFAULT_TRACKED_RESOURCE_HEADERS as readonly string[]).includes(headerName)
 
 function filterHeaders(headers: Headers, matchers: MatchHeader[]): NetworkHeaders | undefined {
   const result: NetworkHeaders = {}
   let collectedHeaderCount = 0
-  let totalHeaderCount = 0
   let hasReachedMaxHeaderCount = false
 
   headers.forEach((value, name) => {
-    totalHeaderCount++
-
     if (collectedHeaderCount >= MAX_HEADER_COUNT) {
       if (!hasReachedMaxHeaderCount) {
         display.warn(`Maximum number of headers (${MAX_HEADER_COUNT}) has been reached. Further headers are dropped.`)
@@ -352,7 +343,7 @@ function filterHeaders(headers: Headers, matchers: MatchHeader[]): NetworkHeader
       return
     }
 
-    const matchHeader = matchers.find((m) => matchList([m.name], lowerName))
+    const matchHeader = matchers.find((m) => matchList([m.name ?? defaultHeadersMatchOption], lowerName))
     if (!matchHeader) {
       return
     }
@@ -367,25 +358,11 @@ function filterHeaders(headers: Headers, matchers: MatchHeader[]): NetworkHeader
       display.warn(
         `Header "${lowerName}" value was truncated from ${capturedValue.length} to ${MAX_HEADER_VALUE_LENGTH} characters.`
       )
-      // monitor-until: 2026-07-23
-      addTelemetryDebug('Resource header value was truncated', {
-        header_name: lowerName,
-        original_length: capturedValue.length,
-        limit: MAX_HEADER_VALUE_LENGTH,
-      })
     }
 
     result[lowerName] = safeTruncate(capturedValue, MAX_HEADER_VALUE_LENGTH)
     collectedHeaderCount++
   })
-
-  if (hasReachedMaxHeaderCount) {
-    // monitor-until: 2026-07-23
-    addTelemetryDebug('Maximum number of resource headers reached', {
-      collectedHeaderCount,
-      totalHeaderCount,
-    })
-  }
 
   return collectedHeaderCount > 0 ? result : undefined
 }

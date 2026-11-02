@@ -1,4 +1,4 @@
-import { globalObject } from './globalObject'
+import { globalObject } from '@openobserve/js-core/util'
 
 interface BrowserWindow {
   __ooBrowserSdkExtensionCallback?: (message: unknown) => void

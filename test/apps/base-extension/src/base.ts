@@ -2,7 +2,7 @@ import { openobserveRum } from '@openobserve/browser-rum'
 import { openobserveLogs } from '@openobserve/browser-logs'
 import type { RumInitConfiguration } from '@openobserve/browser-rum-core'
 import type { LogsInitConfiguration } from '@openobserve/browser-logs'
-import type { Context } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 
 declare global {
   interface Window {

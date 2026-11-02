@@ -1,5 +1,5 @@
 import type { MouseEventOnElement } from '@openobserve/browser-rum-core'
-import type { TrustableEvent } from '../../src'
+import type { TrustableEvent } from '@openobserve/js-core/dom'
 import { objectEntries } from '../../src'
 
 export function createNewEvent(eventName: 'click', properties?: Partial<MouseEvent>): MouseEvent

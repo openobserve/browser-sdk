@@ -1,5 +1,7 @@
-import type { BandwidthStats, Context, HttpRequestEvent, Observable, Telemetry } from '@openobserve/browser-core'
-import { TelemetryMetrics, addTelemetryMetrics, noop } from '@openobserve/browser-core'
+import type { BandwidthStats, HttpRequestEvent, Telemetry } from '@openobserve/browser-core'
+import type { Observable, Context } from '@openobserve/js-core/util'
+import { noop } from '@openobserve/js-core/util'
+import { TelemetryMetrics, addTelemetryMetrics } from '@openobserve/browser-core'
 import type { ReplayPayload } from './buildReplayPayload'
 
 interface SegmentMetrics extends Context {
@@ -45,7 +47,7 @@ export function startSegmentTelemetry(
       (requestEvent.type === 'success' && requestEvent.payload.isFullSnapshot)
     ) {
       const metrics = createSegmentMetrics(requestEvent.type, requestEvent.bandwidth, requestEvent.payload)
-      // monitor-until: 2026-07-01
+      // monitor-until: forever
       addTelemetryMetrics(TelemetryMetrics.SEGMENT_METRICS_TELEMETRY_NAME, { metrics })
     }
   })

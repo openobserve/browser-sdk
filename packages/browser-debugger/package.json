@@ -19,11 +19,11 @@
     "prepack": "yarn build"
   },
   "devDependencies": {
-    "acorn": "8.17.0"
+    "acorn": "8.19.0"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.3",
-    "@openobserve/js-core": "0.4.3"
+    "@openobserve/browser-core": "workspace:*",
+    "@openobserve/js-core": "workspace:*"
   },
   "repository": {
     "type": "git",

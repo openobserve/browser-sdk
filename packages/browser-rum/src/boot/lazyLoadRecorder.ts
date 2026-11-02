@@ -1,4 +1,4 @@
-import { mockable } from '@openobserve/browser-core'
+import { mockable } from '@openobserve/js-core/util'
 import { reportScriptLoadingError } from '../domain/scriptLoadingError'
 import type { startRecording } from './datadogRecorder'
 

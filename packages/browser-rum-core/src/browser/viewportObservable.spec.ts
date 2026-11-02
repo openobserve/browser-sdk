@@ -1,4 +1,4 @@
-import type { Subscription } from '@openobserve/browser-core/src/tools/observable'
+import type { Subscription } from '@openobserve/js-core/util'
 import type { Clock } from '@openobserve/browser-core/test'
 import { mockClock, createNewEvent, registerCleanupTask, waitAfterNextPaint } from '@openobserve/browser-core/test'
 import type { ViewportDimension } from './viewportObservable'

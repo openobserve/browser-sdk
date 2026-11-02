@@ -1,5 +1,5 @@
-import type { EndpointBuilder } from '../src'
-import { noop } from '../src'
+import type { EndpointBuilder } from '@openobserve/js-core/transport'
+import { noop } from '@openobserve/js-core/util'
 import { mockXhr, MockXhr } from './emulate/mockXhr'
 import { readFormData } from './readFormData'
 import { registerCleanupTask } from './registerCleanupTask'
@@ -22,6 +22,7 @@ export function interceptRequests() {
   const requests: Request[] = []
   const originalSendBeacon = isSendBeaconSupported() && navigator.sendBeacon.bind(navigator)
   const originalRequest = window.Request
+  // eslint-disable-next-line @typescript-eslint/unbound-method
   const originalFetch = window.fetch
 
   if (isSendBeaconSupported()) {

@@ -1,13 +1,5 @@
-import type {
-  Observable,
-  RawError,
-  DeflateEncoderStreamId,
-  Encoder,
-  BufferedData,
-  BufferedObservable,
-  Telemetry,
-  SessionManager,
-} from '@openobserve/browser-core'
+import type { DeflateEncoderStreamId, Encoder, BufferedData, Telemetry, SessionManager } from '@openobserve/browser-core'
+import type { Observable, BufferedObservable } from '@openobserve/js-core/util'
 import {
   sendToExtension,
   createPageMayExitObservable,
@@ -17,13 +9,16 @@ import {
   startGlobalContext,
   startUserContext,
   startTabContext,
+  ErrorSource,
 } from '@openobserve/browser-core'
-import { createDOMMutationObservable } from '../browser/domMutationObservable'
+import { clocksNow } from '@openobserve/js-core/time'
+import { createDOMMutationObservable } from '@openobserve/js-core/dom'
 import { createWindowOpenObservable } from '../browser/windowOpenObservable'
 import { startInternalContext } from '../domain/contexts/internalContext'
 import { LifeCycle, LifeCycleEventType } from '../domain/lifeCycle'
 import { startViewHistory } from '../domain/contexts/viewHistory'
 import { startRequestCollection } from '../domain/requestCollection'
+import { startWebSocketCollection } from '../domain/webSocket/webSocketCollection'
 import { startActionCollection } from '../domain/action/actionCollection'
 import { startErrorCollection } from '../domain/error/errorCollection'
 import { startResourceCollection } from '../domain/resource/resourceCollection'
@@ -49,8 +44,7 @@ import type { SdkName } from '../domain/contexts/defaultContext'
 import { startDefaultContext } from '../domain/contexts/defaultContext'
 import type { Hooks } from '../domain/hooks'
 import { startEventCollection } from '../domain/event/eventCollection'
-import { startInitialViewMetricsTelemetry } from '../domain/view/viewMetrics/startInitialViewMetricsTelemetry'
-import { startSourceCodeContext } from '../domain/contexts/sourceCodeContext'
+import { startSourceCodeMfeContext } from '../domain/contexts/sourceCodeMfeContext'
 import type { RecorderApi, ProfilerApi } from './rumPublicApi'
 
 export type StartRum = typeof startRum
@@ -73,42 +67,35 @@ export function startRum(
 
   lifeCycle.subscribe(LifeCycleEventType.RUM_EVENT_COLLECTED, (event) => sendToExtension('rum', event))
 
-  sessionManager.expireObservable.subscribe(() => lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED))
+  sessionManager.expireObservable.subscribe(() =>
+    lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED, { endClocks: clocksNow() })
+  )
   sessionManager.renewObservable.subscribe(() => lifeCycle.notify(LifeCycleEventType.SESSION_RENEWED))
 
-  const reportError = (error: RawError) => {
-    lifeCycle.notify(LifeCycleEventType.RAW_ERROR_COLLECTED, { error })
+  const reportError = (message: string) => {
+    lifeCycle.notify(LifeCycleEventType.RAW_ERROR_COLLECTED, {
+      error: { message, source: ErrorSource.AGENT, startClocks: clocksNow() },
+    })
     // monitor-until: forever, to keep an eye on the errors reported to customers
-    addTelemetryDebug('Error reported to customer', { 'error.message': error.message })
+    addTelemetryDebug('Error reported to customer', { 'error.message': message })
   }
 
-  const pageMayExitObservable = createPageMayExitObservable()
-
   if (!canUseEventBridge()) {
-    const batch = startRumBatch(
-      configuration,
-      lifeCycle,
-      reportError,
-      pageMayExitObservable,
-      sessionManager.expireObservable,
-      createEncoder
-    )
-    const preparePageExitSubscription = batch.flushController.preparePageExitFlushObservable.subscribe((reason) => {
-      lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, { reason })
+    const batch = startRumBatch(configuration, lifeCycle, reportError, sessionManager.expireObservable, createEncoder)
+    const preparePageExitSubscription = batch.prepareUrgentFlushObservable.subscribe((reason) => {
+      lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, reason)
     })
     cleanupTasks.push(() => preparePageExitSubscription.unsubscribe())
     cleanupTasks.push(() => batch.stop())
-    startCustomerDataTelemetry(telemetry, lifeCycle, batch.flushController.flushObservable)
+    startCustomerDataTelemetry(telemetry, lifeCycle, batch.flushObservable)
   } else {
     startRumEventBridge(lifeCycle)
+    const pageMayExitObservable = createPageMayExitObservable()
     const pageMayExitSubscription = pageMayExitObservable.subscribe((event) => {
-      lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, event)
+      lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, event.reason)
     })
     cleanupTasks.push(() => pageMayExitSubscription.unsubscribe())
   }
-
-  const { stop: stopInitialViewMetricsTelemetry } = startInitialViewMetricsTelemetry(lifeCycle, telemetry)
-  cleanupTasks.push(stopInitialViewMetricsTelemetry)
 
   const { stop: stopRumEventCollection, ...startRumEventCollectionResult } = startRumEventCollection(
     lifeCycle,
@@ -149,7 +136,7 @@ export function startRumEventCollection(
   initialViewOptions: ViewOptions | undefined,
   bufferedDataObservable: Observable<BufferedData>,
   sdkName: SdkName | undefined,
-  reportError: (error: RawError) => void
+  reportError: (message: string) => void
 ) {
   const cleanupTasks: Array<() => void> = []
 
@@ -158,7 +145,7 @@ export function startRumEventCollection(
   const { observable: windowOpenObservable, stop: stopWindowOpen } = createWindowOpenObservable()
   cleanupTasks.push(stopWindowOpen)
 
-  const { assemble: assembleHook } = hooks
+  const { assembleEventDefaults: assembleHook } = hooks
   startDefaultContext(assembleHook, configuration, sdkName)
   const pageStateHistory = startPageStateHistory(assembleHook)
   cleanupTasks.push(() => pageStateHistory.stop())
@@ -191,7 +178,7 @@ export function startRumEventCollection(
   cleanupTasks.push(ciVisibilityContext.stop)
   startSyntheticsContext(assembleHook)
 
-  startRumAssembly(configuration, lifeCycle, assembleHook, reportError)
+  startRumAssembly(configuration, lifeCycle, hooks, reportError)
 
   const {
     addTiming,
@@ -214,7 +201,7 @@ export function startRumEventCollection(
     initialViewOptions
   )
 
-  startSourceCodeContext(assembleHook)
+  startSourceCodeMfeContext(assembleHook)
 
   cleanupTasks.push(stopViewCollection)
 
@@ -229,6 +216,9 @@ export function startRumEventCollection(
   startRequestCollection(lifeCycle, configuration, sessionManager, userContext, accountContext, bufferedDataObservable)
 
   const vitalCollection = startVitalCollection(lifeCycle, pageStateHistory)
+
+  const webSocketCollection = startWebSocketCollection(lifeCycle, configuration)
+  cleanupTasks.push(webSocketCollection.stop)
 
   const internalContext = startInternalContext(
     configuration.applicationId,

@@ -1,6 +1,6 @@
+import { globalObject } from '@openobserve/js-core/util'
+import type { ProfilerTrace, ProfilerInitOptions } from '@openobserve/js-core/util'
 import { registerCleanupTask } from '@openobserve/browser-core/test'
-import { globalObject } from '@openobserve/browser-core'
-import type { ProfilerTrace, ProfilerInitOptions } from '@openobserve/browser-core'
 
 export function mockProfiler(mockedTrace: ProfilerTrace) {
   // Save original Profiler class to restore it during cleanup.

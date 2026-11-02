@@ -1,4 +1,4 @@
-import type { ErrorSource, RawErrorCause, ErrorHandling } from '@openobserve/browser-core'
+import type { ErrorSource, RawErrorCause, ErrorHandling, DebugIdEntry } from '@openobserve/browser-core'
 import type { TimeStamp } from '@openobserve/js-core/time'
 import type { StatusType } from './domain/logger/isAuthorized'
 
@@ -19,12 +19,16 @@ interface Error {
   handling: ErrorHandling | undefined
 }
 
-interface CommonRawLogsEvent {
+export interface CommonRawLogsEvent {
   date: TimeStamp
   message: string
   status: StatusType
   error?: Error
   origin: ErrorSource
+  _o2?: {
+    debug_ids?: DebugIdEntry[]
+  }
+  [key: string]: unknown
 }
 
 export interface RawConsoleLogsEvent extends CommonRawLogsEvent {

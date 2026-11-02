@@ -1,8 +1,6 @@
+import { ONE_KIBI_BYTE, detachToJsonMethod } from '@openobserve/js-core/util'
+import type { Context, ContextArray, ContextValue, ObjectWithToJsonMethod } from '@openobserve/js-core/util'
 import { display } from '../display'
-import { ONE_KIBI_BYTE } from '../utils/byteUtils'
-import type { Context, ContextArray, ContextValue } from './context'
-import type { ObjectWithToJsonMethod } from './jsonStringify'
-import { detachToJsonMethod } from './jsonStringify'
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 type PrimitivesAndFunctions = string | number | boolean | undefined | null | symbol | bigint | Function
@@ -252,8 +250,13 @@ function sanitizeEvent(event: Event): SanitizedEvent {
  *
  */
 function tryToApplyToJSON(value: ExtendedContextValue) {
+  // Primitive values are sanitized directly and should not use inherited toJSON methods.
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
+    return value
+  }
+
   const object = value as ObjectWithToJsonMethod
-  if (object && typeof object.toJSON === 'function') {
+  if (typeof object.toJSON === 'function') {
     try {
       return object.toJSON() as ExtendedContextValue
     } catch {

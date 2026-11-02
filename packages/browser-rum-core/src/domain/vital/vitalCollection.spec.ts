@@ -1,7 +1,7 @@
 import type { Duration } from '@openobserve/js-core/time'
 import { mockClock, type Clock } from '@openobserve/browser-core/test'
 import { clocksNow } from '@openobserve/js-core/time'
-import { generateUUID } from '@openobserve/browser-core'
+import { generateUUID } from '@openobserve/js-core/util'
 import { collectAndValidateRawRumEvents, mockPageStateHistory } from '../../../test'
 import type { RawRumEvent, RawRumVitalEvent } from '../../rawRumEvent.types'
 import { VitalType, RumEventType } from '../../rawRumEvent.types'

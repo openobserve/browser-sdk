@@ -1,13 +1,15 @@
+import { isWorkerEnvironment, mockable, BufferedObservable, noop } from '@openobserve/js-core/util'
+import { setAllowUntrustedEvents } from '@openobserve/js-core/dom'
 import { timeStampNow, clocksNow } from '@openobserve/js-core/time'
+import { monitorError } from '@openobserve/js-core/monitor'
 import type { TimeStamp } from '@openobserve/js-core/time'
-import type { TrackingConsentState, DeflateWorker, Context, Telemetry, SessionManager } from '@openobserve/browser-core'
+import type { TrackingConsentState, DeflateWorker, Telemetry, SessionManager } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import {
-  BufferedObservable,
   display,
   canUseEventBridge,
   displayAlreadyInitializedError,
   willSyntheticsInjectRum,
-  noop,
   getEventBridge,
   initFeatureFlags,
   addTelemetryConfiguration,
@@ -16,21 +18,18 @@ import {
   buildGlobalContextManager,
   buildUserContextManager,
   bufferContextCalls,
-  monitorError,
   sanitize,
   startSessionManager,
   startSessionManagerStub,
   startTelemetry,
   TelemetryService,
-  mockable,
-  isWorkerEnvironment,
   startTelemetrySessionContext,
   addTelemetryDebug,
-  setAllowUntrustedEvents,
+  isAllowedTrackingOrigins,
 } from '@openobserve/browser-core'
 import type { Hooks } from '../domain/hooks'
 import { createHooks } from '../domain/hooks'
-import type { RumConfiguration, RumInitConfiguration } from '../domain/configuration'
+import type { RemoteConfigurationMetadata, RumConfiguration, RumInitConfiguration } from '../domain/configuration'
 
 import {
   fetchAndApplyRemoteConfiguration,
@@ -41,7 +40,7 @@ import {
 } from '../domain/configuration'
 import type { ViewOptions } from '../domain/view/trackViews'
 import type { OperationOptions, FailureReason } from '../domain/vital/vitalCollection'
-import { callPluginsMethod } from '../domain/plugins'
+import { callPluginsOnInit } from '../domain/plugins'
 import { startTrackingConsentContext } from '../domain/contexts/trackingConsentContext'
 import type { StartRumResult } from './startRum'
 import type { RumPublicApiOptions, Strategy } from './rumPublicApi'
@@ -56,7 +55,7 @@ export type DoStartRum = (
 ) => StartRumResult
 
 export function createPreStartStrategy(
-  { ignoreInitIfSyntheticsWillInjectRum = true, startDeflateWorker }: RumPublicApiOptions,
+  { ignoreInitIfSyntheticsWillInjectRum = true, startDeflateWorker, sdkName }: RumPublicApiOptions,
   trackingConsentState: TrackingConsentState,
   doStartRum: DoStartRum
 ): Strategy {
@@ -77,8 +76,7 @@ export function createPreStartStrategy(
   bufferContextCalls(accountContext, CustomerContextKey.accountContext, bufferApiCalls)
 
   let firstStartViewCall:
-    | { options: ViewOptions | undefined; callback: (startRumResult: StartRumResult) => void }
-    | undefined
+    { options: ViewOptions | undefined; callback: (startRumResult: StartRumResult) => void } | undefined
   let deflateWorker: DeflateWorker | undefined
 
   let cachedInitConfiguration: RumInitConfiguration | undefined
@@ -136,7 +134,11 @@ export function createPreStartStrategy(
     bufferApiCalls.unbuffer()
   }
 
-  function doInit(initConfiguration: RumInitConfiguration, errorStack?: string) {
+  function doInit(
+    initConfiguration: RumInitConfiguration,
+    errorStack?: string,
+    remoteConfigurationMetadata?: RemoteConfigurationMetadata
+  ) {
     const eventBridgeAvailable = canUseEventBridge()
     if (eventBridgeAvailable) {
       initConfiguration = overrideInitConfigurationForBridge(initConfiguration)
@@ -150,8 +152,8 @@ export function createPreStartStrategy(
       return
     }
 
-    const configuration = validateAndBuildRumConfiguration(initConfiguration, errorStack)
-    if (!configuration) {
+    const configuration = validateAndBuildRumConfiguration(initConfiguration, sdkName)
+    if (!configuration || !isAllowedTrackingOrigins(configuration, errorStack ?? '')) {
       return
     }
 
@@ -177,31 +179,39 @@ export function createPreStartStrategy(
     trackingConsentState.onGrantedOnce(() => {
       const { assembleTelemetry: assembleTelemetryHook } = hooks
       startTrackingConsentContext(assembleTelemetryHook, trackingConsentState)
-      telemetry = mockable(startTelemetry)(TelemetryService.RUM, configuration, assembleTelemetryHook)
+      telemetry = mockable(startTelemetry)(TelemetryService.RUM, configuration, assembleTelemetryHook, sdkName)
 
       if (isWorkerEnvironment) {
         display.warn('The RUM SDK is not supported in a web or service worker environment.')
         return
       }
 
-      const sessionManagerPromise = canUseEventBridge()
-        ? startSessionManagerStub()
-        : mockable(startSessionManager)(configuration, trackingConsentState)
-
-      void sessionManagerPromise
-        .then((newSessionManager) => {
-          if (!newSessionManager) {
-            return
-          }
-          sessionManager = newSessionManager
-          startTelemetrySessionContext(assembleTelemetryHook, sessionManager, {
-            application: { id: configuration.applicationId },
-          })
-          addTelemetryConfiguration(serializeRumConfiguration(initConfiguration))
-
-          tryStartRum()
+      const onSessionManagerReady = (newSessionManager: SessionManager) => {
+        sessionManager = newSessionManager
+        startTelemetrySessionContext(assembleTelemetryHook, sessionManager, {
+          application: { id: configuration.applicationId },
         })
-        .catch(monitorError)
+        addTelemetryConfiguration(serializeRumConfiguration(initConfiguration, sdkName, remoteConfigurationMetadata))
+
+        tryStartRum()
+      }
+
+      if (canUseEventBridge()) {
+        // When using the event bridge, the session manager is a stub, so it can be created
+        // synchronously and RUM can start within the `init()` call. This matters for
+        // distributed tracing: the tracer only injects headers once it has a tracked session, so
+        // requests issued between `init()` and the session resolution would have been left
+        // untraced, and the sampling decision could not be propagated to the backend.
+        onSessionManagerReady(startSessionManagerStub())
+      } else {
+        void mockable(startSessionManager)(configuration, trackingConsentState)
+          .then((newSessionManager) => {
+            if (newSessionManager) {
+              onSessionManagerReady(newSessionManager)
+            }
+          })
+          .catch(monitorError)
+      }
     })
   }
 
@@ -242,31 +252,52 @@ export function createPreStartStrategy(
         return
       }
 
-      callPluginsMethod(initConfiguration.plugins, 'onInit', { initConfiguration, publicApi })
+      const shouldContinue = callPluginsOnInit(initConfiguration.plugins, {
+        initConfiguration,
+        publicApi,
+        registerAssembleEventHook: hooks.assembleEvent.register,
+      })
 
-      const hasRemoteConfiguration = getRemoteConfigurationId(initConfiguration)
-
-      if (hasRemoteConfiguration) {
-        const supportedContextManagers = { user: userContext, context: globalContext }
-        const isSyncLoading = !!initConfiguration.remoteConfigurationId || !!initConfiguration.remoteConfiguration?.sync
-
-        if (isSyncLoading) {
-          fetchAndApplyRemoteConfiguration(initConfiguration, supportedContextManagers)
-            .then((resolvedInitConfiguration) => {
-              if (resolvedInitConfiguration) {
-                doInit(resolvedInitConfiguration, errorStack)
-              }
-            })
-            .catch(monitorError)
-        } else {
-          const resolvedInitConfiguration = getRemoteConfiguration(initConfiguration, supportedContextManagers)
-
-          if (resolvedInitConfiguration) {
-            doInit(resolvedInitConfiguration, errorStack)
-          }
+      if (typeof shouldContinue === 'boolean') {
+        if (shouldContinue) {
+          proceedWithInit()
         }
       } else {
-        doInit(initConfiguration, errorStack)
+        shouldContinue
+          .then((result) => {
+            if (result) {
+              proceedWithInit()
+            }
+          })
+          .catch(monitorError)
+      }
+
+      function proceedWithInit() {
+        const hasRemoteConfiguration = getRemoteConfigurationId(initConfiguration)
+
+        if (hasRemoteConfiguration) {
+          const supportedContextManagers = { user: userContext, context: globalContext }
+          const isSyncLoading =
+            !!initConfiguration.remoteConfigurationId || !!initConfiguration.remoteConfiguration?.sync
+
+          if (isSyncLoading) {
+            fetchAndApplyRemoteConfiguration(initConfiguration, supportedContextManagers)
+              .then((resolvedInitConfiguration) => {
+                if (resolvedInitConfiguration) {
+                  doInit(resolvedInitConfiguration, errorStack)
+                }
+              })
+              .catch(monitorError)
+          } else {
+            const resolvedRemoteConfiguration = getRemoteConfiguration(initConfiguration, supportedContextManagers)
+
+            if (resolvedRemoteConfiguration) {
+              doInit(resolvedRemoteConfiguration.initConfiguration, errorStack, resolvedRemoteConfiguration.metadata)
+            }
+          }
+        } else {
+          doInit(initConfiguration, errorStack)
+        }
       }
     },
 
@@ -372,6 +403,9 @@ export function createPreStartStrategy(
 function overrideInitConfigurationForBridge(initConfiguration: RumInitConfiguration): RumInitConfiguration {
   return {
     ...initConfiguration,
+    // Resolve the service default here, while the web application id is still available: the
+    // placeholder below would otherwise be used, and it is shared by every bridge session.
+    service: initConfiguration.service || initConfiguration.applicationId,
     applicationId: '00000000-aaaa-0000-aaaa-000000000000',
     clientToken: 'empty',
     sessionSampleRate: 100,

@@ -1,7 +1,9 @@
-import type { Context, Telemetry, Observable } from '@openobserve/browser-core'
+import type { Telemetry } from '@openobserve/browser-core'
+import type { Observable, Context } from '@openobserve/js-core/util'
+import { noop } from '@openobserve/js-core/util'
 import { elapsed, timeStampNow } from '@openobserve/js-core/time'
 import type { Duration, TimeStamp } from '@openobserve/js-core/time'
-import { TelemetryMetrics, addTelemetryMetrics, noop } from '@openobserve/browser-core'
+import { TelemetryMetrics, addTelemetryMetrics } from '@openobserve/browser-core'
 import type { RecorderInitEvent } from '../boot/postStartStrategy'
 
 type RecorderInitResult = 'aborted' | 'deflate-encoder-load-failed' | 'recorder-load-failed' | 'succeeded'
@@ -57,7 +59,7 @@ export function startRecorderInitTelemetry(telemetry: Telemetry, observable: Obs
         unsubscribe()
 
         if (startContext) {
-          // monitor-until: 2026-07-01
+          // monitor-until: forever
           addTelemetryMetrics(TelemetryMetrics.RECORDER_INIT_METRICS_TELEMETRY_NAME, {
             metrics: createRecorderInitMetrics(
               startContext.forced,

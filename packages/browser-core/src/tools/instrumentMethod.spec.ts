@@ -1,8 +1,8 @@
+import { noop } from '@openobserve/js-core/util'
 import { mockClock, mockZoneJs, registerCleanupTask } from '../../test'
 import type { Clock, MockZoneJs } from '../../test'
 import type { InstrumentedMethodCall } from './instrumentMethod'
 import { instrumentConstructor, instrumentMethod, instrumentSetter } from './instrumentMethod'
-import { noop } from './utils/functionUtils'
 
 describe('instrumentMethod', () => {
   const THIRD_PARTY_RESULT = 42
@@ -14,6 +14,91 @@ describe('instrumentMethod', () => {
     instrumentMethod(object, 'method', noop)
 
     expect(object.method).not.toBe(original)
+  })
+
+  ;[false, true].forEach((configurable) => {
+    it(`skips a non-writable method with configurable: ${configurable}`, () => {
+      const object = { method: () => 1 }
+      Object.defineProperty(object, 'method', { writable: false, configurable })
+      const descriptor = Object.getOwnPropertyDescriptor(object, 'method')!
+      const instrumentationSpy = jasmine.createSpy()
+
+      const { stop } = instrumentMethod(object, 'method', instrumentationSpy)
+      registerCleanupTask(stop)
+
+      expect(Object.getOwnPropertyDescriptor(object, 'method')).toEqual(descriptor)
+      expect(object.method()).toBe(1)
+      expect(instrumentationSpy).not.toHaveBeenCalled()
+
+      stop()
+      expect(Object.getOwnPropertyDescriptor(object, 'method')).toEqual(descriptor)
+    })
+  })
+
+  it('skips a getter-only method', () => {
+    const original = () => 1
+    const object = {
+      get method() {
+        return original
+      },
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(object, 'method')!
+    const instrumentationSpy = jasmine.createSpy()
+
+    const { stop } = instrumentMethod(object, 'method', instrumentationSpy)
+    registerCleanupTask(stop)
+
+    expect(object.method).toBe(original)
+    expect(object.method()).toBe(1)
+    expect(instrumentationSpy).not.toHaveBeenCalled()
+    expect(Object.getOwnPropertyDescriptor(object, 'method')).toEqual(descriptor)
+
+    stop()
+    expect(Object.getOwnPropertyDescriptor(object, 'method')).toEqual(descriptor)
+  })
+
+  it('instruments a writable, non-configurable method', () => {
+    const object = { method: () => 1 }
+    Object.defineProperty(object, 'method', { configurable: false })
+    const descriptor = Object.getOwnPropertyDescriptor(object, 'method')!
+    const instrumentationSpy = jasmine.createSpy()
+
+    const { stop } = instrumentMethod(object, 'method', instrumentationSpy)
+    registerCleanupTask(stop)
+
+    expect(object.method()).toBe(1)
+    expect(instrumentationSpy).toHaveBeenCalledTimes(1)
+    expect(Object.getOwnPropertyDescriptor(object, 'method')).toEqual({ ...descriptor, value: object.method })
+
+    stop()
+    expect(Object.getOwnPropertyDescriptor(object, 'method')).toEqual(descriptor)
+  })
+
+  it('instruments a non-configurable accessor through its setter', () => {
+    const original = () => 1
+    let method = original
+    const object = {
+      get method() {
+        return method
+      },
+      set method(value: () => number) {
+        method = value
+      },
+    }
+    Object.defineProperty(object, 'method', { configurable: false })
+    const descriptor = Object.getOwnPropertyDescriptor(object, 'method')!
+    const instrumentationSpy = jasmine.createSpy()
+
+    const { stop } = instrumentMethod(object, 'method', instrumentationSpy)
+    registerCleanupTask(stop)
+
+    expect(object.method()).toBe(1)
+    expect(instrumentationSpy).toHaveBeenCalledTimes(1)
+    expect(Object.getOwnPropertyDescriptor(object, 'method')).toEqual(descriptor)
+
+    stop()
+    expect(object.method).toBe(original)
+    expect(Object.getOwnPropertyDescriptor(object, 'method')).toEqual(descriptor)
   })
 
   it('calls the instrumentation before the original method', () => {
@@ -141,6 +226,17 @@ describe('instrumentMethod', () => {
       expect(instrumentationSpy).not.toHaveBeenCalled()
     })
 
+    it('calls the original method with the same parameters when the instrumentation is still referenced', () => {
+      const object = { method: (a: number, b: number) => a + b }
+      const { stop } = instrumentMethod(object, 'method', noop)
+      // A third party may keep a reference to the instrumentation, e.g. by wrapping it
+      const instrumentedMethod = object.method
+
+      stop()
+
+      expect(instrumentedMethod(2, 3)).toBe(5)
+    })
+
     describe('when the method has been instrumented by a third party', () => {
       it('should not break the third party instrumentation', () => {
         const object = { method: () => 1 }
@@ -207,6 +303,27 @@ describe('instrumentConstructor', () => {
     MyClass = createMyClassFixture().MyClass
   })
 
+  it('skips a non-writable constructor without changing its prototype', () => {
+    const container = { MyClass }
+    Object.defineProperty(container, 'MyClass', { writable: false, configurable: false })
+    const descriptor = Object.getOwnPropertyDescriptor(container, 'MyClass')!
+    const prototype = MyClass.prototype
+    const constructorDescriptor = Object.getOwnPropertyDescriptor(prototype, 'constructor')!
+    const instrumentationSpy = jasmine.createSpy()
+
+    const { stop } = instrumentConstructor(container, 'MyClass', instrumentationSpy)
+    registerCleanupTask(stop)
+
+    expect(Object.getOwnPropertyDescriptor(container, 'MyClass')).toEqual(descriptor)
+    expect(container.MyClass.prototype).toBe(prototype)
+    expect(Object.getOwnPropertyDescriptor(prototype, 'constructor')).toEqual(constructorDescriptor)
+    expect(new container.MyClass(1).constructor).toBe(MyClass)
+    expect(instrumentationSpy).not.toHaveBeenCalled()
+
+    stop()
+    expect(Object.getOwnPropertyDescriptor(prototype, 'constructor')).toEqual(constructorDescriptor)
+  })
+
   it('calls the instrumentation when the constructor is called with new', () => {
     const container = { MyClass }
     const instrumentationSpy = jasmine.createSpy()
@@ -264,6 +381,17 @@ describe('instrumentConstructor', () => {
     }).toThrow()
 
     expect(instrumentationSpy).not.toHaveBeenCalled()
+  })
+
+  it('passes the parameters to the original when the constructor is invoked without new', () => {
+    // Some constructors, like `Date` or `String`, can also be called without `new`
+    function callableConstructor(value: number) {
+      return value * 2
+    }
+    const container = { callableConstructor }
+    instrumentConstructor(container, 'callableConstructor', noop)
+
+    expect(container.callableConstructor(21)).toBe(42)
   })
 
   it('preserves instanceof on the constructed instance', () => {

@@ -1,6 +1,8 @@
 import type { ClocksState, Duration, TimeStamp } from '@openobserve/js-core/time'
 import { timeStampNow, timeStampToClocks, relativeToClocks } from '@openobserve/js-core/time'
-import { Observable, generateUUID } from '@openobserve/browser-core'
+import { PageExitReason } from '@openobserve/browser-core'
+import { Observable, generateUUID } from '@openobserve/js-core/util'
+import type { MutationRecord } from '@openobserve/js-core/dom'
 import { isNodeShadowHost } from '../../browser/htmlDomUtils'
 import type { FrustrationType } from '../../rawRumEvent.types'
 import { ActionType } from '../../rawRumEvent.types'
@@ -11,13 +13,14 @@ import { getSelectorFromElement } from '../getSelectorFromElement'
 import { getNodePrivacyLevel } from '../privacy'
 import { NodePrivacyLevel } from '../privacyConstants'
 import type { RumConfiguration } from '../configuration'
-import type { RumMutationRecord } from '../../browser/domMutationObservable'
 import { startEventTracker } from '../eventTracker'
 import type { StoppedEvent, DiscardedEvent, EventTracker } from '../eventTracker'
 import { getComposedPathSelector } from '../getComposedPathSelector'
 import type { ClickChain } from './clickChain'
 import { createClickChain } from './clickChain'
 import { getActionNameFromElement } from './getActionNameFromElement'
+import type { FrustrationIgnore } from './frustrationIgnore'
+import { getFrustrationIgnore } from './frustrationIgnore'
 import type { ActionNameSource } from './actionNameConstants'
 import type { MouseEventOnElement, UserActivity } from './listenActionEvents'
 import { listenActionEvents } from './listenActionEvents'
@@ -53,7 +56,7 @@ export interface ClickAction {
 
 export function trackClickActions(
   lifeCycle: LifeCycle,
-  domMutationObservable: Observable<RumMutationRecord[]>,
+  domMutationObservable: Observable<MutationRecord[]>,
   windowOpenObservable: Observable<void>,
   configuration: RumConfiguration
 ) {
@@ -62,15 +65,20 @@ export function trackClickActions(
   let currentClickChain: ClickChain | undefined
 
   lifeCycle.subscribe(LifeCycleEventType.VIEW_ENDED, stopClickChain)
-  lifeCycle.subscribe(LifeCycleEventType.PAGE_MAY_EXIT, stopClickChain)
+  lifeCycle.subscribe(LifeCycleEventType.PREPARE_URGENT_FLUSH, (reason) => {
+    if (reason !== PageExitReason.PAGE_TERMINATED) {
+      stopClickChain()
+    }
+  })
 
   const { stop: stopActionEventsListener } = listenActionEvents<{
     clickActionBase: ClickActionBase
+    ignore: FrustrationIgnore
     hadActivityOnPointerDown: () => boolean
   }>({
     onPointerDown: (pointerDownEvent) =>
       processPointerDown(configuration, lifeCycle, domMutationObservable, pointerDownEvent, windowOpenObservable),
-    onPointerUp: ({ clickActionBase, hadActivityOnPointerDown }, startEvent, getUserActivity) => {
+    onPointerUp: ({ clickActionBase, ignore, hadActivityOnPointerDown }, startEvent, getUserActivity) => {
       startClickAction(
         configuration,
         lifeCycle,
@@ -80,6 +88,7 @@ export function trackClickActions(
         stopObservable,
         appendClickToClickChain,
         clickActionBase,
+        ignore,
         startEvent,
         getUserActivity,
         hadActivityOnPointerDown
@@ -100,13 +109,17 @@ export function trackClickActions(
   function appendClickToClickChain(click: Click) {
     if (!currentClickChain?.tryAppend(click)) {
       const rageClick = click.clone()
-      currentClickChain = createClickChain(click, (clicks) => {
+      const clickChain = createClickChain(click, (clicks) => {
         finalizeClicks(clicks, rageClick)
         // Clear the reference to allow garbage collection. Without this, the finalize callback
         // retains a closure reference to the old click chain, preventing it from being cleaned up
         // and causing a memory leak as click chains accumulate over time.
-        currentClickChain = undefined
+        // Only clear it if no newer chain has replaced it.
+        if (currentClickChain === clickChain) {
+          currentClickChain = undefined
+        }
       })
+      currentClickChain = clickChain
     }
   }
 
@@ -120,7 +133,7 @@ export function trackClickActions(
 function processPointerDown(
   configuration: RumConfiguration,
   lifeCycle: LifeCycle,
-  domMutationObservable: Observable<RumMutationRecord[]>,
+  domMutationObservable: Observable<MutationRecord[]>,
   pointerDownEvent: MouseEventOnElement,
   windowOpenObservable: Observable<void>
 ) {
@@ -153,23 +166,28 @@ function processPointerDown(
     PAGE_ACTIVITY_VALIDATION_DELAY
   )
 
-  return { clickActionBase, hadActivityOnPointerDown: () => hadActivityOnPointerDown }
+  return {
+    clickActionBase,
+    ignore: getFrustrationIgnore(getEventTarget(pointerDownEvent)),
+    hadActivityOnPointerDown: () => hadActivityOnPointerDown,
+  }
 }
 
 function startClickAction(
   configuration: RumConfiguration,
   lifeCycle: LifeCycle,
-  domMutationObservable: Observable<RumMutationRecord[]>,
+  domMutationObservable: Observable<MutationRecord[]>,
   windowOpenObservable: Observable<void>,
   actionTracker: EventTracker<ClickActionBase>,
   stopObservable: Observable<void>,
   appendClickToClickChain: (click: Click) => void,
   clickActionBase: ClickActionBase,
+  ignore: FrustrationIgnore,
   startEvent: MouseEventOnElement,
   getUserActivity: () => UserActivity,
   hadActivityOnPointerDown: () => boolean
 ) {
-  const click = newClick(lifeCycle, actionTracker, getUserActivity, clickActionBase, startEvent)
+  const click = newClick(lifeCycle, actionTracker, getUserActivity, clickActionBase, ignore, startEvent)
   appendClickToClickChain(click)
 
   const selector = clickActionBase?.target?.selector
@@ -207,8 +225,10 @@ function startClickAction(
     click.stop(endClocks.timeStamp)
   })
 
-  const pageMayExitSubscription = lifeCycle.subscribe(LifeCycleEventType.PAGE_MAY_EXIT, () => {
-    click.stop(timeStampNow())
+  const pageMayExitSubscription = lifeCycle.subscribe(LifeCycleEventType.PREPARE_URGENT_FLUSH, (reason) => {
+    if (reason !== PageExitReason.PAGE_TERMINATED) {
+      click.stop(timeStampNow())
+    }
   })
 
   const stopSubscription = stopObservable.subscribe(() => {
@@ -287,6 +307,7 @@ function newClick(
   actionTracker: EventTracker<ClickActionBase>,
   getUserActivity: () => UserActivity,
   clickActionBase: ClickActionBase,
+  ignore: FrustrationIgnore,
   startEvent: MouseEventOnElement
 ) {
   const clickKey = generateUUID()
@@ -319,6 +340,7 @@ function newClick(
 
   return {
     event: startEvent,
+    ignore,
     stop,
     stopObservable,
 
@@ -339,7 +361,7 @@ function newClick(
 
     isStopped: () => status === ClickStatus.STOPPED || status === ClickStatus.FINALIZED,
 
-    clone: () => newClick(lifeCycle, actionTracker, getUserActivity, clickActionBase, startEvent),
+    clone: () => newClick(lifeCycle, actionTracker, getUserActivity, clickActionBase, ignore, startEvent),
 
     validate: (domEvents?: Event[]) => {
       stop()

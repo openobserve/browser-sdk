@@ -1,10 +1,16 @@
-import { generateUUID, INTAKE_URL_PARAMETERS } from '@openobserve/browser-core'
+import { readFile } from 'node:fs/promises'
+import { resolve } from 'node:path'
+import { INTAKE_URL_PARAMETERS } from '@openobserve/js-core/transport'
 import type { LogsInitConfiguration } from '@openobserve/browser-logs'
 import type { RumInitConfiguration, RemoteConfiguration } from '@openobserve/browser-rum-core'
 import type { DebuggerInitConfiguration } from '@openobserve/browser-debugger'
 import type test from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { generateUUID } from '@openobserve/js-core/util'
 import { isBrowserStack, isContinuousIntegration } from './environment'
 import type { Servers } from './httpServers'
+import type { SalesforceApp } from './buildSalesforceUrl'
+import { getSalesforceLwcSession } from './buildSalesforceUrl'
 
 export interface SetupOptions {
   rum?: RumInitConfiguration
@@ -30,6 +36,9 @@ export interface SetupOptions {
   worker?: WorkerOptions
   callerLocation?: CallerLocation
   mockClock: boolean
+  allowWasmUnsafeEval: boolean
+  salesforceApp: SalesforceApp | undefined
+  shopifyApp: boolean
 }
 
 export interface CallerLocation {
@@ -49,8 +58,8 @@ export interface EventBridgeOptions {
   capabilities?: string[]
 }
 
-export type SetupFactory = (options: SetupOptions, servers: Servers) => string
-export type UrlHook = (baseUrl: URL, servers: Servers, options: SetupOptions) => void
+export type SetupFactory = (options: SetupOptions, servers: Servers, page: Page) => string | Promise<string>
+export type UrlHook = (baseUrl: URL, servers: Servers, options: SetupOptions) => void | Promise<void>
 
 // By default, run tests only with the 'bundle' setup outside of the CI (to run faster on the
 // developer laptop) or with Browser Stack (to limit flakiness).
@@ -279,7 +288,15 @@ export function microfrontendSetup(options: SetupOptions, servers: Servers) {
     header += setupExtension(options, servers)
   }
 
-  const { rumScriptUrl } = createCrossOriginScriptUrls(servers, options)
+  const { logsScriptUrl, rumScriptUrl, debuggerScriptUrl } = createCrossOriginScriptUrls(servers, options)
+
+  if (options.logs) {
+    header += html`<script type="text/javascript" src="${logsScriptUrl}" crossorigin></script>`
+    header += html`<script type="text/javascript">
+      O2_LOGS.setGlobalContext(${JSON.stringify(options.context)})
+      ;(${options.logsInit.toString()})(${formatConfiguration(options.logs, servers)})
+    </script>`
+  }
 
   if (options.rum) {
     header += html`<script type="text/javascript" src="${rumScriptUrl}" crossorigin></script>`
@@ -289,12 +306,129 @@ export function microfrontendSetup(options: SetupOptions, servers: Servers) {
     </script>`
   }
 
+  if (options.debugger) {
+    header += html`
+      <script type="text/javascript" src="${debuggerScriptUrl}"></script>
+      <script type="text/javascript">
+        DD_DEBUGGER.init(${formatConfiguration(options.debugger, servers)})
+      </script>
+    `
+  }
+
   header += html`<script type="module" src="/microfrontend/shell.js"></script>`
 
   return basePage({
     header,
     body: options.body,
   })
+}
+
+const salesforceAppDirectories: Record<SalesforceApp, string> = {
+  lwc: 'sf-lwc-app',
+  'experience-cloud': 'sf-experience-app',
+  'experience-cloud-headmarkup': 'sf-experience-headmarkup-app',
+}
+
+// Salesforce and Shopify apps don't serve a locally-generated page body; this factory only
+// intercepts the remote bundle request and injects the RUM configuration read by the app's
+// own init snippet/component, via globals set on every new document
+async function interceptRemoteBundleAndConfigureRum(
+  page: Page,
+  urlPattern: RegExp,
+  resolveFilePath: (url: string) => string,
+  options: SetupOptions,
+  servers: Servers,
+  headers?: Record<string, string>
+): Promise<void> {
+  await page.route(urlPattern, async (route) => {
+    await route.fulfill({
+      body: await readFile(resolveFilePath(route.request().url())),
+      contentType: 'application/javascript',
+      headers,
+    })
+  })
+
+  if (options.rum) {
+    await page.addInitScript(
+      `window.RUM_CONFIGURATION = ${formatConfiguration(options.rum, servers)}
+      window.RUM_CONTEXT = ${JSON.stringify(options.context)}`
+    )
+  }
+}
+
+export async function salesforceSetup(options: SetupOptions, servers: Servers, page: Page): Promise<string> {
+  if (!options.salesforceApp) {
+    throw new Error('Salesforce app is not set')
+  }
+  const salesforceAppDirectory = salesforceAppDirectories[options.salesforceApp]
+  const salesforceBundlePath = resolve(
+    __dirname,
+    `../../../apps/${salesforceAppDirectory}/force-app/main/default/staticresources/datadog_rum_salesforce.js`
+  )
+
+  if (options.salesforceApp === 'lwc') {
+    const { accessToken, instanceUrl } = await getSalesforceLwcSession()
+    await page.context().addCookies([
+      {
+        name: 'sid',
+        value: accessToken,
+        url: new URL('/', instanceUrl).href,
+      },
+    ])
+  }
+
+  // The LWC and standard Experience Cloud apps have a committed datadogInit LWC that reads
+  // these globals and calls O2_RUM.init. The Head Markup site reads the same globals from its
+  // configured head markup instead. On experience-cloud, that component only runs when the
+  // page is loaded with init=true.
+  await interceptRemoteBundleAndConfigureRum(
+    page,
+    /\/resource(?:\/[^/?#]+)?\/datadog_rum_salesforce(?:\.js)?(?:[/?#].*)?$/,
+    () => salesforceBundlePath,
+    options,
+    servers
+  )
+
+  // The full Head Markup bundle lazy-loads features such as Session Replay, so serve its chunks
+  // from the local build just like the main bundle.
+  if (options.salesforceApp === 'experience-cloud-headmarkup') {
+    const chunkUrlPattern = /\/resource(?:\/[^/?#]+)?\/chunks\/([\w-]+-openobserve-rum-salesforce\.js)(?:[?#].*)?$/
+    const chunkDirectory = resolve(__dirname, '../../../../packages/browser-rum/bundle/chunks')
+
+    await page.route(chunkUrlPattern, async (route) => {
+      const [, fileName] = chunkUrlPattern.exec(route.request().url()) || []
+      await route.fulfill({
+        body: await readFile(resolve(chunkDirectory, fileName)),
+        contentType: 'application/javascript',
+      })
+    })
+  }
+  return ''
+}
+
+// Matches the CDN URL used by the store's Theme Liquid snippet and Custom Pixel for the main
+// bundle and its dynamically-imported chunks (e.g. the session replay recorder), served from
+// `https://www.datadoghq-browser-agent.com/<site>/v<major>/[chunks/]<name->]openobserve-rum-shopify.js`
+const SHOPIFY_ASSET_URL_PATTERN =
+  /datadoghq-browser-agent\.com\/[^/]+\/v\d+\/(chunks\/)?([\w-]*openobserve-rum-shopify\.js)(?:[?#].*)?$/
+
+export async function shopifySetup(options: SetupOptions, servers: Servers, page: Page): Promise<string> {
+  const shopifyBundleDir = resolve(__dirname, '../../../../packages/browser-rum-shopify/bundle')
+
+  await interceptRemoteBundleAndConfigureRum(
+    page,
+    SHOPIFY_ASSET_URL_PATTERN,
+    (url) => {
+      const [, chunksSegment, fileName] = SHOPIFY_ASSET_URL_PATTERN.exec(url) || []
+      return resolve(shopifyBundleDir, chunksSegment || '', fileName)
+    },
+    options,
+    servers,
+    // The snippets load the script with `crossOrigin = 'anonymous'`, so the browser enforces
+    // CORS on this response even though it never leaves the machine.
+    { 'access-control-allow-origin': '*' }
+  )
+  return ''
 }
 
 function basePage({ header, body, footer }: { header?: string; body?: string; footer?: string }) {

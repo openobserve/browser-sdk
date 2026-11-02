@@ -1,4 +1,8 @@
+import { stopMonitorErrorCollection } from '@openobserve/js-core/monitor'
+import { setDebugMode } from '@openobserve/js-core/util'
+import { resetAllowUntrustedEvents } from '@openobserve/js-core/dom'
 import { resetManageResourceTimingBufferFull } from '../../browser-rum-core/src/browser/performanceObservable'
+import { resetWebSocketObservable } from '../../browser-rum-core/src/browser/webSocketObservable'
 import { resetExperimentalFeatures } from '../src/tools/experimentalFeatures'
 import { resetValueHistoryGlobals } from '../src/tools/valueHistory'
 import { resetFetchObservable } from '../src/browser/fetchObservable'
@@ -7,13 +11,9 @@ import { resetXhrObservable } from '../src/browser/xhrObservable'
 import { resetGetCurrentSite } from '../src/browser/cookie'
 import { resetReplayStats } from '../../browser-rum/src/domain/replayStats'
 import { resetInteractionCountPolyfill } from '../../browser-rum-core/src/domain/view/viewMetrics/interactionCountPolyfill'
-import { resetMonitor } from '../src/tools/monitor'
 import { resetTelemetry } from '../src/domain/telemetry'
 import { resetSampleDecisionCache } from '../src/domain/sampler'
-import { resetAllowUntrustedEvents } from '../src/browser/addEventListener'
 import { startLeakDetection } from './leakDetection'
-import type { BuildEnvWindow } from './buildEnv'
-;(window as unknown as BuildEnvWindow).__BUILD_ENV__SDK_VERSION__ = 'test'
 ;(window as any).IS_REACT_ACT_ENVIRONMENT = true
 
 beforeEach(() => {
@@ -34,9 +34,11 @@ afterEach(() => {
   resetFetchObservable()
   resetConsoleObservable()
   resetXhrObservable()
+  resetWebSocketObservable()
   resetGetCurrentSite()
   resetReplayStats()
-  resetMonitor()
+  stopMonitorErrorCollection()
+  setDebugMode(false)
   resetTelemetry()
   resetInteractionCountPolyfill()
   resetSampleDecisionCache()

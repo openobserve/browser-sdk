@@ -21,12 +21,23 @@ import {
   VUE_ROUTER_APP_PORT,
   VUE_ROUTER_V4_APP_PORT,
 } from '../helpers/playwright'
+import { buildSalesforceUrl } from './buildSalesforceUrl'
+import type { SalesforceApp } from './buildSalesforceUrl'
+import { SHOPIFY_STORE_URL, unlockShopifyStorePassword } from './shopify'
 import { IntakeRegistry } from './intakeRegistry'
 import { flushEvents } from './flushEvents'
 import type { Servers } from './httpServers'
 import { getTestServers, waitForServersIdle } from './httpServers'
 import type { CallerLocation, EventBridgeOptions, SetupFactory, SetupOptions, UrlHook } from './pageSetups'
-import { html, DEFAULT_SETUPS, npmSetup, appSetup, formatConfiguration } from './pageSetups'
+import {
+  html,
+  DEFAULT_SETUPS,
+  npmSetup,
+  appSetup,
+  formatConfiguration,
+  salesforceSetup,
+  shopifySetup,
+} from './pageSetups'
 import { createDatadogHttpApi } from './serverApps/datadogHttpApi'
 import type { DatadogHttpApiControl } from './serverApps/datadogHttpApi'
 import { createMockServerApp } from './serverApps/mock'
@@ -108,11 +119,14 @@ class TestBuilder {
   private setups: Array<{ factory: SetupFactory; name?: string }> = DEFAULT_SETUPS
   private testFixture: typeof test = test
   private mockClock = false
+  private allowWasmUnsafeEval = false
   private extension: {
     rumConfiguration?: RumInitConfiguration
     logsConfiguration?: LogsInitConfiguration
   } = {}
   private worker: Worker | undefined
+  private salesforceApp: SalesforceApp | undefined = undefined
+  private shopifyApp = false
 
   constructor(
     private title: string,
@@ -171,6 +185,11 @@ class TestBuilder {
 
   withMockClock() {
     this.mockClock = true
+    return this
+  }
+
+  withWasmUnsafeEval() {
+    this.allowWasmUnsafeEval = true
     return this
   }
 
@@ -268,6 +287,27 @@ class TestBuilder {
     return this
   }
 
+  withSalesforceApp(app: SalesforceApp) {
+    this.salesforceApp = app
+    this.setups = [{ factory: salesforceSetup }]
+    this.baseUrlHooks.push(async (baseUrl) => {
+      baseUrl.href = await buildSalesforceUrl(app)
+      if (app === 'experience-cloud') {
+        baseUrl.searchParams.set('init', 'true')
+      }
+    })
+    return this
+  }
+
+  withShopifyApp() {
+    this.shopifyApp = true
+    this.setups = [{ factory: shopifySetup }]
+    this.baseUrlHooks.push((baseUrl) => {
+      baseUrl.href = SHOPIFY_STORE_URL
+    })
+    return this
+  }
+
   withHostName(hostName: string) {
     this.baseUrlHooks.push((baseUrl) => {
       baseUrl.hostname = hostName
@@ -297,6 +337,9 @@ class TestBuilder {
       worker: this.worker,
       callerLocation: this.callerLocation,
       mockClock: this.mockClock,
+      allowWasmUnsafeEval: this.allowWasmUnsafeEval,
+      salesforceApp: this.salesforceApp,
+      shopifyApp: this.shopifyApp,
     }
 
     if (this.alsoRunWithRumSlim) {
@@ -304,7 +347,9 @@ class TestBuilder {
         declareTestsForSetups('rum', this.setups, setupOptions, runner)
         declareTestsForSetups(
           'rum-slim',
-          this.setups.filter((setup) => setup.factory !== npmSetup && setup.factory !== appSetup),
+          this.setups.filter(
+            (setup) => setup.factory !== npmSetup && (setup.factory as unknown) !== (appSetup as unknown)
+          ),
           { ...setupOptions, useRumSlim: true },
           runner
         )
@@ -403,7 +448,10 @@ function declareTest(title: string, setupOptions: SetupOptions, factory: SetupFa
 
     const servers = await getTestServers()
     const baseUrl = new URL(servers.base.origin)
-    setupOptions.baseUrlHooks.forEach((hook) => hook(baseUrl, servers, setupOptions))
+    // Some hooks (e.g. building the Salesforce URL) need to await network calls before mutating baseUrl
+    for (const hook of setupOptions.baseUrlHooks) {
+      await hook(baseUrl, servers, setupOptions)
+    }
 
     test.skip(
       baseUrl.hostname.endsWith('.localhost') && isBrowserStack,
@@ -438,7 +486,7 @@ function declareTest(title: string, setupOptions: SetupOptions, factory: SetupFa
     )
     servers.datadogHttpApi.bindServerApp(datadogHttpApi.app)
 
-    const setup = factory(setupOptions, servers)
+    const setup = await factory(setupOptions, servers, page)
     servers.base.bindServerApp(createMockServerApp(servers, setup, setupOptions))
     servers.crossOrigin.bindServerApp(createMockServerApp(servers, setup))
 
@@ -513,7 +561,7 @@ function createTestContext(
 
 async function setUpTest(
   browserLogsManager: BrowserLogsManager,
-  { mockClock }: SetupOptions,
+  { mockClock, shopifyApp }: SetupOptions,
   { baseUrl, page, browserContext }: TestContext
 ) {
   browserContext.on('console', (msg) => {
@@ -522,6 +570,7 @@ async function setUpTest(
       message: msg.text(),
       source: 'console',
       timestamp: Date.now(),
+      url: msg.location().url,
     })
   })
 
@@ -542,6 +591,11 @@ async function setUpTest(
     }
   }
   await page.goto(baseUrl)
+
+  if (shopifyApp) {
+    await unlockShopifyStorePassword(page)
+  }
+
   await waitForServersIdle()
 }
 

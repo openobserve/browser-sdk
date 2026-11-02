@@ -1,4 +1,5 @@
-import { addEventListeners, DOM_EVENT, throttle } from '@openobserve/browser-core'
+import { addEventListeners, DOM_EVENT } from '@openobserve/js-core/dom'
+import { throttle } from '@openobserve/js-core/util'
 import type { BrowserIncrementalSnapshotRecord, MousemoveData, MousePosition } from '../../../types'
 import { IncrementalSource } from '../../../types'
 import { getEventTarget, isTouchEvent } from '../eventsUtils'

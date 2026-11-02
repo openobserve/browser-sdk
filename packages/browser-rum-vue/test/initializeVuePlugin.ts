@@ -1,5 +1,10 @@
-import type { RumInitConfiguration, RumPublicApi, StartRumResult } from '@openobserve/browser-rum-core'
-import { noop } from '@openobserve/browser-core'
+import type {
+  RumInitConfiguration,
+  RumPublicApi,
+  StartRumResult,
+  RumPluginOnInitOptions,
+} from '@openobserve/browser-rum-core'
+import { noop } from '@openobserve/js-core/util'
 import type { VuePluginConfiguration } from '../src/domain/vuePlugin'
 import { vuePlugin, resetVuePlugin } from '../src/domain/vuePlugin'
 import { registerCleanupTask } from '../../browser-core/test'
@@ -17,10 +22,11 @@ export function initializeVuePlugin({
 } = {}) {
   resetVuePlugin()
   const plugin = vuePlugin(configuration)
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
   plugin.onInit({
-    publicApi: publicApi as RumPublicApi,
-    initConfiguration: initConfiguration as RumInitConfiguration,
-  })
+    publicApi,
+    initConfiguration,
+  } as RumPluginOnInitOptions)
   plugin.onRumStart({ addError })
   registerCleanupTask(() => resetVuePlugin())
 }

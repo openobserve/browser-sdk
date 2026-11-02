@@ -1,7 +1,7 @@
+import type { Observable } from '@openobserve/js-core/util'
 import type { CookieOptions } from '../../../browser/cookie'
 import type { SessionPersistence } from '../sessionConstants'
 import type { SessionState } from '../sessionState'
-import type { Observable } from '../../../tools/observable'
 
 export const SESSION_STORE_KEY = '_o2_s_v3'
 // One hop of migration only: a session that was still on the pre-rebrand

@@ -1,6 +1,7 @@
 import type { ClocksState } from '@openobserve/js-core/time'
 import type { HttpRequest, HttpRequestEvent } from '@openobserve/browser-core'
-import { DeflateEncoderStreamId, Observable, PageExitReason } from '@openobserve/browser-core'
+import { DeflateEncoderStreamId, PageExitReason } from '@openobserve/browser-core'
+import { Observable } from '@openobserve/js-core/util'
 import type { ViewHistory, ViewHistoryEntry } from '@openobserve/browser-rum-core'
 import { LifeCycle, LifeCycleEventType } from '@openobserve/browser-rum-core'
 import type { Clock } from '@openobserve/browser-core/test'
@@ -56,7 +57,7 @@ describe('startSegmentCollection', () => {
   }
 
   function emulatePageUnload() {
-    lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, { reason: PageExitReason.UNLOADING })
+    lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, PageExitReason.UNLOADING)
   }
 
   function readMostRecentMetadata(spy: jasmine.Spy<HttpRequest['send']>) {
@@ -155,12 +156,13 @@ describe('startSegmentCollection', () => {
 
     describe('flush when the page exits because it gets hidden', () => {
       function emulatePageHidden() {
-        lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, { reason: PageExitReason.HIDDEN })
+        lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, PageExitReason.HIDDEN)
       }
 
-      it('uses `httpRequest.sendOnExit` when sending the segment', () => {
+      it('uses `httpRequest.send` when sending the segment', () => {
         addRecordAndFlushSegment(emulatePageHidden)
-        expect(httpRequestSpy.sendOnExit).toHaveBeenCalled()
+        expect(httpRequestSpy.send).toHaveBeenCalled()
+        expect(httpRequestSpy.sendOnExit).not.toHaveBeenCalled()
       })
 
       it('next segment is created because of visibility hidden event', async () => {
@@ -172,7 +174,7 @@ describe('startSegmentCollection', () => {
 
     describe('flush when the page exits because it gets frozen', () => {
       function emulatePageFrozen() {
-        lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, { reason: PageExitReason.FROZEN })
+        lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, PageExitReason.FROZEN)
       }
 
       it('uses `httpRequest.sendOnExit` when sending the segment', () => {
@@ -184,6 +186,17 @@ describe('startSegmentCollection', () => {
         addRecordAndFlushSegment(emulatePageFrozen)
         addRecordAndFlushSegment()
         expect((await readMostRecentMetadata(httpRequestSpy.sendOnExit)).creation_reason).toBe('page_frozen')
+      })
+    })
+
+    describe('flush when the page is terminated', () => {
+      it('does not flush the segment', () => {
+        addRecord(RECORD)
+        lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, PageExitReason.PAGE_TERMINATED)
+        worker.processAllMessages()
+
+        expect(httpRequestSpy.send).not.toHaveBeenCalled()
+        expect(httpRequestSpy.sendOnExit).not.toHaveBeenCalled()
       })
     })
 

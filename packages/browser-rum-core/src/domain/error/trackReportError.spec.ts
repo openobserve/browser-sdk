@@ -1,6 +1,8 @@
-import type { RawError, Subscription } from '@openobserve/browser-core'
+import type { RawError } from '@openobserve/browser-core'
+import type { Subscription } from '@openobserve/js-core/util'
 import { clocksNow } from '@openobserve/js-core/time'
-import { ErrorHandling, ErrorSource, Observable } from '@openobserve/browser-core'
+import { ErrorHandling, ErrorSource } from '@openobserve/browser-core'
+import { Observable } from '@openobserve/js-core/util'
 import type { MockCspEventListener, MockReportingObserver } from '@openobserve/browser-core/test'
 import {
   FAKE_CSP_VIOLATION_EVENT,
@@ -46,6 +48,7 @@ describe('trackReportError', () => {
       handling: ErrorHandling.UNHANDLED,
       type: 'NavigatorVibrate',
       originalError: FAKE_REPORT,
+      debugIds: undefined,
     })
   })
 
@@ -64,6 +67,7 @@ describe('trackReportError', () => {
       csp: {
         disposition: FAKE_CSP_VIOLATION_EVENT.disposition,
       },
+      debugIds: undefined,
     })
   })
 })

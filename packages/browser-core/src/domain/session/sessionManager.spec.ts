@@ -1,4 +1,5 @@
 import { ONE_SECOND } from '@openobserve/js-core/time'
+import { DOM_EVENT } from '@openobserve/js-core/dom'
 import {
   collectAsyncCalls,
   createFakeSessionStoreStrategy,
@@ -13,7 +14,6 @@ import {
   waitNextMicrotask,
 } from '../../../test'
 import type { Clock } from '../../../test'
-import { DOM_EVENT } from '../../browser/addEventListener'
 import { display } from '../../tools/display'
 import type { Configuration } from '../configuration'
 import type { TrackingConsentState } from '../trackingConsent'
@@ -113,6 +113,7 @@ describe('startSessionManager', () => {
     it('should call setSessionState to initialize the session', async () => {
       await startSessionManagerWithDefaults()
 
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(fakeStrategy.setSessionState).toHaveBeenCalled()
     })
 
@@ -184,6 +185,22 @@ describe('startSessionManager', () => {
   })
 
   describe('session renewal', () => {
+    it('should renew on expandOrRenew() after expiration', async () => {
+      const sessionManager = await startSessionManagerWithDefaults()
+      const renewSpy = jasmine.createSpy('renew')
+      sessionManager.renewObservable.subscribe(renewSpy)
+      const initialId = sessionManager.findSession()!.id
+
+      sessionManager.expire()
+      clock.tick(ONE_SECOND)
+      sessionManager.expandOrRenew()
+      await collectAsyncCalls(sessionObservableSpy, 3)
+
+      expect(renewSpy).toHaveBeenCalledTimes(1)
+      expect(sessionManager.findSession()!.id).toBeDefined()
+      expect(sessionManager.findSession()!.id).not.toBe(initialId)
+    })
+
     it('should renew on user activity after expiration', async () => {
       const sessionManager = await startSessionManagerWithDefaults()
       const renewSpy = jasmine.createSpy('renew')
@@ -799,6 +816,18 @@ describe('startSessionManager', () => {
       expect(sessionManager.findTrackedSession()).toBeUndefined()
     })
 
+    it('should return the session older than TRACKED_SESSION_MAX_AGE when a larger maxAge is provided', async () => {
+      const sessionManager = await startSessionManagerWithDefaults()
+
+      // Let the session expire from inactivity, then age well past TRACKED_SESSION_MAX_AGE. The
+      // in-memory session context entry is kept (bounded by maxEntries, not elapsed time), so it
+      // can still be returned with `returnInactive: true` regardless of how old it is.
+      clock.tick(TRACKED_SESSION_MAX_AGE + ONE_SECOND)
+
+      expect(sessionManager.findTrackedSession(undefined, { returnInactive: true })).toBeUndefined()
+      expect(sessionManager.findTrackedSession(undefined, { returnInactive: true, maxAge: Infinity })).toBeDefined()
+    })
+
     describe('deterministic sampling', () => {
       it('should track a session whose ID has a low hash, even with a low sessionSampleRate', async () => {
         setupFakeStrategy({
@@ -965,14 +994,14 @@ describe('startSessionManager', () => {
 })
 
 describe('startSessionManagerStub', () => {
-  it('should always return a tracked session', async () => {
-    const sessionManager = await startSessionManagerStub()
+  it('should always return a tracked session', () => {
+    const sessionManager = startSessionManagerStub()
     expect(sessionManager.findTrackedSession()).toBeDefined()
     expect(sessionManager.findTrackedSession()!.id).toBeDefined()
   })
 
-  it('should allow updating session state', async () => {
-    const sessionManager = await startSessionManagerStub()
+  it('should allow updating session state', () => {
+    const sessionManager = startSessionManagerStub()
 
     sessionManager.updateSessionState({ extra: 'value' })
 

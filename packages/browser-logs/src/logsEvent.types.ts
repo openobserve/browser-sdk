@@ -24,6 +24,10 @@ export interface LogsEvent {
    */
   service?: string
   /**
+   * The version for this application
+   */
+  version?: string
+  /**
    * Tags of the log
    */
   o2tags?: string
@@ -105,6 +109,18 @@ export interface LogsEvent {
       type?: string
       stack?: string
     }>
+    /**
+     * The language or platform impacting the error stack trace format
+     */
+    source_type?: 'browser' | 'browser+wasm'
+    /**
+     * WebAssembly modules available for stack trace symbolication
+     */
+    wasm_modules?: Array<{
+      url: string
+      build_id: string
+      debug_info_type?: 'dwarf' | 'sourcemap' | 'unknown'
+    }>
 
     [k: string]: unknown
   }
@@ -159,6 +175,24 @@ export interface LogsEvent {
      */
     name?: string
     [k: string]: unknown
+  }
+  /**
+   * Internal properties
+   */
+  _o2?: {
+    /**
+     * Mapping of source file URLs to their debug IDs for source map deobfuscation
+     */
+    debug_ids?: Array<{
+      /**
+       * URL of the source file
+       */
+      url: string
+      /**
+       * Debug ID (UUID) for the source file
+       */
+      id: string
+    }>
   }
 
   [k: string]: unknown

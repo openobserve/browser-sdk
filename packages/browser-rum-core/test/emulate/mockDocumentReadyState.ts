@@ -1,4 +1,4 @@
-import { DOM_EVENT } from '@openobserve/browser-core'
+import { DOM_EVENT } from '@openobserve/js-core/dom'
 import { createNewEvent } from '../../../browser-core/test'
 
 export function mockDocumentReadyState() {

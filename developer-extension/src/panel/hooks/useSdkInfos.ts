@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { RumInternalContext, Context } from '@openobserve/browser-core'
+import type { RumInternalContext } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import type { LogsInitConfiguration } from '@openobserve/browser-logs'
 import type { RumInitConfiguration } from '@openobserve/browser-rum'
 import { createLogger } from '../../common/logger'
@@ -60,7 +61,7 @@ async function getInfos(): Promise<SdkInfos> {
       `
         // Helper to serialize objects while preserving function metadata
         function serializeWithFunctions(obj) {
-          return JSON.parse(JSON.stringify(obj, function(key, value) {
+          const stringified = JSON.stringify(obj, function(key, value) {
             if (typeof value === 'function') {
               return {
                 __type: 'function',
@@ -69,18 +70,24 @@ async function getInfos(): Promise<SdkInfos> {
               }
             }
             return value
-          }))
+          })
+          if (stringified === undefined) {
+            return stringified
+          }
+          return JSON.parse(stringified)
         }
 
-        const cookieRawValue = document.cookie
-          .split(';')
-          .map(cookie => cookie.match(/(\\S*?)=(.*)/)?.slice(1) || [])
-          .find(([name, _]) => name === '_oo_s')
-          ?.[1]
-
+        const cookies = new Map(
+          document.cookie
+            .split(';')
+            .map(cookie => cookie.match(/(\\S*?)=(.*)/)?.slice(1))
+            .filter(cookie => cookie !== undefined)
+        );
+        const cookieRawValue = cookies.get('_oo_s_v2') ?? cookies.get('_oo_s');
         const cookie = cookieRawValue && Object.fromEntries(
           cookieRawValue.split('&').map(value => value.split('='))
         )
+
         const rum = window.O2_RUM && {
           version: window.O2_RUM?.version,
           config: serializeWithFunctions(window.O2_RUM?.getInitConfiguration?.()),
@@ -88,12 +95,14 @@ async function getInfos(): Promise<SdkInfos> {
           globalContext: window.O2_RUM?.getGlobalContext?.(),
           user: window.O2_RUM?.getUser?.(),
         }
+
         const logs = window.O2_LOGS && {
           version: window.O2_LOGS?.version,
           config: serializeWithFunctions(window.O2_LOGS?.getInitConfiguration?.()),
           globalContext: window.O2_LOGS?.getGlobalContext?.(),
           user: window.O2_LOGS?.getUser?.(),
         }
+
         return { rum, logs, cookie }
       `
     )) as SdkInfos

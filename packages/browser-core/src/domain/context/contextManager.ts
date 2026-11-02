@@ -1,7 +1,6 @@
-import { deepClone } from '@openobserve/js-core/util'
+import { deepClone, Observable } from '@openobserve/js-core/util'
+import type { Context } from '@openobserve/js-core/util'
 import { sanitize } from '../../tools/serialisation/sanitize'
-import type { Context } from '../../tools/serialisation/context'
-import { Observable } from '../../tools/observable'
 import { display } from '../../tools/display'
 import { checkContext } from './contextUtils'
 

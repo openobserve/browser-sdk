@@ -1,7 +1,6 @@
 import { timeStampNow } from '@openobserve/js-core/time'
+import { Observable, noop } from '@openobserve/js-core/util'
 import type { SessionManager, startSessionManager } from '@openobserve/browser-core'
-import { Observable } from '../src/tools/observable'
-import { noop } from '../src/tools/utils/functionUtils'
 import { LOW_HASH_UUID } from './sampling'
 
 export interface SessionManagerMock extends SessionManager {
@@ -41,6 +40,7 @@ export function createSessionManagerMock(): SessionManagerMock {
     },
     expireObservable: new Observable(),
     renewObservable: new Observable(),
+    expandOrRenew: noop,
     updateSessionState: noop,
     setId(newId) {
       id = newId

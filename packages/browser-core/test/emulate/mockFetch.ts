@@ -1,10 +1,11 @@
-import type { Uint8ArrayBuffer } from '../../src'
-import { noop } from '../../src'
+import type { Uint8ArrayBuffer } from '@openobserve/js-core/util'
+import { noop } from '@openobserve/js-core/util'
 import { registerCleanupTask } from '../registerCleanupTask'
 
 export type MockFetchManager = ReturnType<typeof mockFetch>
 
 export function mockFetch() {
+  // eslint-disable-next-line @typescript-eslint/unbound-method
   const originalFetch = window.fetch
   let allFetchCompleteCallback = noop
   let pendingRequests = 0

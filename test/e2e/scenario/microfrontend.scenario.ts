@@ -29,8 +29,18 @@ const LOGS_CONFIG: Partial<LogsInitConfiguration> = {
   },
 }
 
+// Debug IDs are derived from each chunk's content hash, so they're stable across rebuilds
+// (regenerate these constants if app source/deps change). The shared `lib` remote is its own chunk,
+// so its debug ID is the same for every app.
+const APP1_EXPOSE_CHUNK = '__federation_expose_app1-d74be1a93aee64b4d047-app1.js'
+const APP1_DEBUG_ID = '4b3d6a63-fb93-4cad-b3ee-f178b7020ba3'
+const APP2_EXPOSE_CHUNK = '__federation_expose_app2-de619ccf294b7d2c971a-app2.js'
+const APP2_DEBUG_ID = '5f3dc267-79ac-4d44-99b9-251f9931b053'
+const LIB_EXPOSE_CHUNK = '__federation_expose_lib-c0a8a100340f04ff2712-lib.js'
+const LIB_DEBUG_ID = '4564c6ea-a5bb-4355-968a-7de8d685fe65'
+
 test.describe('microfrontend', () => {
-  test.describe('RUM', () => {
+  test.describe('RUM service and version attribution', () => {
     test.describe('with beforeSend', () => {
       createTest('expose handling stack for fetch requests')
         .withRum(RUM_CONFIG)
@@ -430,7 +440,345 @@ test.describe('microfrontend', () => {
     })
   })
 
-  test.describe('Logs', () => {
+  test.describe('RUM debug_id attribution', () => {
+    createTest('runtime errors should have debug_id from source code context')
+      .withRum(RUM_CONFIG)
+      .withSetup(microfrontendSetup)
+      .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs, baseUrl }) => {
+        await page.click('#app1-runtime-error')
+        await page.click('#app2-runtime-error')
+        await flushEvents()
+
+        expect(intakeRegistry.rumErrorEvents).toHaveLength(2)
+
+        // Stacks are browser-dependent and Firefox reports more frames/chunks, adding more debug_ids entries.
+        // We assert the chunk with toMatchObject instead of toEqual to allow those extras.
+
+        // frame 0 -> app1 expose chunk (app1.ts + common.ts).
+        expect(intakeRegistry.rumErrorEvents[0]._o2?.debug_ids).toEqual(
+          expect.arrayContaining([{ url: `${baseUrl}microfrontend/chunks/${APP1_EXPOSE_CHUNK}`, id: APP1_DEBUG_ID }])
+        )
+        // frame 0 -> app2 expose chunk (app2.ts + common.ts)
+        expect(intakeRegistry.rumErrorEvents[1]._o2?.debug_ids).toEqual(
+          expect.arrayContaining([{ url: `${baseUrl}microfrontend/chunks/${APP2_EXPOSE_CHUNK}`, id: APP2_DEBUG_ID }])
+        )
+
+        withBrowserLogs((browserLogs) => {
+          expect(browserLogs).toHaveLength(2)
+        })
+      })
+
+    createTest('LOAf should have debug_id from source code context')
+      .withRum(RUM_CONFIG)
+      .withSetup(microfrontendSetup)
+      .run(async ({ intakeRegistry, flushEvents, page, baseUrl }) => {
+        test.skip(
+          !(await isLongAnimationFrameSupported(page)),
+          'Browser does not support PerformanceLongAnimationFrameTiming'
+        )
+
+        await page.click('#app1-loaf')
+        await page.click('#app2-loaf')
+        await flushEvents()
+
+        const longTaskEvents = intakeRegistry.rumLongTaskEvents.filter((event) =>
+          event.long_task.scripts?.[0]?.invoker?.includes('onclick')
+        )
+
+        expect(longTaskEvents).toHaveLength(2)
+
+        // Stacks are browser-dependent and Firefox reports more frames/chunks, adding more debug_ids entries.
+        // We assert the chunk with toMatchObject instead of toEqual to allow those extras.
+
+        // script 0 -> app1 expose chunk (app1.ts + common.ts)
+        expect(longTaskEvents[0]._o2?.debug_ids).toEqual(
+          expect.arrayContaining([{ url: `${baseUrl}microfrontend/chunks/${APP1_EXPOSE_CHUNK}`, id: APP1_DEBUG_ID }])
+        )
+        // script 0 -> app2 expose chunk (app2.ts + common.ts)
+        expect(longTaskEvents[1]._o2?.debug_ids).toEqual(
+          expect.arrayContaining([{ url: `${baseUrl}microfrontend/chunks/${APP2_EXPOSE_CHUNK}`, id: APP2_DEBUG_ID }])
+        )
+      })
+
+    createTest('errors spanning multiple chunks should have a debug_id for each chunk in the stack')
+      .withRum(RUM_CONFIG)
+      .withSetup(microfrontendSetup)
+      .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs, baseUrl }) => {
+        await page.click('#app1-nested-error')
+        await page.click('#app2-nested-error')
+        await flushEvents()
+
+        expect(intakeRegistry.rumErrorEvents).toHaveLength(2)
+
+        // Stacks are browser-dependent and Firefox reports more frames/chunks, adding more debug_ids entries.
+        // We assert the chunk with toMatchObject instead of toEqual to allow those extras.
+
+        // frame 0 (throw) -> shared lib chunk (boom), frame 1 (caller) -> app1 expose chunk
+        expect(intakeRegistry.rumErrorEvents[0]._o2?.debug_ids).toEqual(
+          expect.arrayContaining([
+            { url: `${baseUrl}microfrontend/chunks/${LIB_EXPOSE_CHUNK}`, id: LIB_DEBUG_ID },
+            { url: `${baseUrl}microfrontend/chunks/${APP1_EXPOSE_CHUNK}`, id: APP1_DEBUG_ID },
+          ])
+        )
+        // same shared lib debug ID, merged with app2's own chunk
+        expect(intakeRegistry.rumErrorEvents[1]._o2?.debug_ids).toEqual(
+          expect.arrayContaining([
+            { url: `${baseUrl}microfrontend/chunks/${LIB_EXPOSE_CHUNK}`, id: LIB_DEBUG_ID },
+            { url: `${baseUrl}microfrontend/chunks/${APP2_EXPOSE_CHUNK}`, id: APP2_DEBUG_ID },
+          ])
+        )
+
+        withBrowserLogs((browserLogs) => {
+          expect(browserLogs).toHaveLength(2)
+        })
+      })
+  })
+
+  test.describe('Logs debug_id attribution', () => {
+    createTest('runtime errors should have debug_id from source code context')
+      .withLogs()
+      .withSetup(microfrontendSetup)
+      .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs, baseUrl }) => {
+        await page.click('#app1-runtime-error')
+        await page.click('#app2-runtime-error')
+        await flushEvents()
+
+        expect(intakeRegistry.logsEvents).toHaveLength(2)
+
+        // Stacks are browser-dependent and Firefox reports more frames/chunks, adding more debug_ids entries.
+        // We assert the chunk with arrayContaining instead of toEqual to allow those extras.
+
+        // frame 0 -> app1 expose chunk (app1.ts + common.ts).
+        expect(intakeRegistry.logsEvents[0]._o2?.debug_ids).toEqual(
+          expect.arrayContaining([{ url: `${baseUrl}microfrontend/chunks/${APP1_EXPOSE_CHUNK}`, id: APP1_DEBUG_ID }])
+        )
+        // frame 0 -> app2 expose chunk (app2.ts + common.ts)
+        expect(intakeRegistry.logsEvents[1]._o2?.debug_ids).toEqual(
+          expect.arrayContaining([{ url: `${baseUrl}microfrontend/chunks/${APP2_EXPOSE_CHUNK}`, id: APP2_DEBUG_ID }])
+        )
+
+        withBrowserLogs((browserLogs) => {
+          expect(browserLogs).toHaveLength(2)
+        })
+      })
+
+    createTest('errors spanning multiple chunks should have a debug_id for each chunk in the stack')
+      .withLogs()
+      .withSetup(microfrontendSetup)
+      .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs, baseUrl }) => {
+        await page.click('#app1-nested-error')
+        await page.click('#app2-nested-error')
+        await flushEvents()
+
+        expect(intakeRegistry.logsEvents).toHaveLength(2)
+
+        // Stacks are browser-dependent and Firefox reports more frames/chunks, adding more debug_ids entries.
+        // We assert the chunk with arrayContaining instead of toEqual to allow those extras.
+
+        // frame 0 (throw) -> shared lib chunk (boom), frame 1 (caller) -> app1 expose chunk
+        expect(intakeRegistry.logsEvents[0]._o2?.debug_ids).toEqual(
+          expect.arrayContaining([
+            { url: `${baseUrl}microfrontend/chunks/${LIB_EXPOSE_CHUNK}`, id: LIB_DEBUG_ID },
+            { url: `${baseUrl}microfrontend/chunks/${APP1_EXPOSE_CHUNK}`, id: APP1_DEBUG_ID },
+          ])
+        )
+        // same shared lib debug ID, merged with app2's own chunk
+        expect(intakeRegistry.logsEvents[1]._o2?.debug_ids).toEqual(
+          expect.arrayContaining([
+            { url: `${baseUrl}microfrontend/chunks/${LIB_EXPOSE_CHUNK}`, id: LIB_DEBUG_ID },
+            { url: `${baseUrl}microfrontend/chunks/${APP2_EXPOSE_CHUNK}`, id: APP2_DEBUG_ID },
+          ])
+        )
+
+        withBrowserLogs((browserLogs) => {
+          expect(browserLogs).toHaveLength(2)
+        })
+      })
+  })
+
+  test.describe('RUM profiling debug_id attribution', () => {
+    test.beforeEach(({ browserName }) => {
+      test.skip(browserName !== 'chromium', 'JS Profiling API is only available in Chromium')
+    })
+
+    createTest('profiling should have debug_id from source code context')
+      .withRum({ ...RUM_CONFIG, profilingSampleRate: 100 })
+      .withBasePath('/?js-profiling=true')
+      .withSetup(microfrontendSetup)
+      .run(async ({ intakeRegistry, flushEvents, page }) => {
+        await page.click('#app1-loaf')
+        await page.click('#app2-loaf')
+        await flushEvents()
+
+        expect(intakeRegistry.profileRequests).toHaveLength(1)
+
+        const trace = intakeRegistry.profileRequests[0].trace
+        // Microfrontend chunks are served from a cross-origin host, so their resource URL
+        // doesn't share `baseUrl`'s origin - match by chunk filename instead.
+        const app1ResourceId = trace.resources.findIndex((url: string) => url.endsWith(APP1_EXPOSE_CHUNK))
+        const app2ResourceId = trace.resources.findIndex((url: string) => url.endsWith(APP2_EXPOSE_CHUNK))
+
+        expect(app1ResourceId).toBeGreaterThan(-1)
+        expect(app2ResourceId).toBeGreaterThan(-1)
+
+        expect(trace.debugIds).toEqual(
+          expect.arrayContaining([
+            { resourceId: app1ResourceId, debugId: APP1_DEBUG_ID },
+            { resourceId: app2ResourceId, debugId: APP2_DEBUG_ID },
+          ])
+        )
+      })
+  })
+
+  test.describe('Logs service and version attribution', () => {
+    test.describe('with source code bundler plugin', () => {
+      // Chromium reports each deprecation only once per page, so test each bundle separately.
+      ;[
+        { app: 'app1', version: '1.0.0', chunk: APP1_EXPOSE_CHUNK },
+        { app: 'app2', version: '0.2.0', chunk: APP2_EXPOSE_CHUNK },
+      ].forEach(({ app, version, chunk }) => {
+        createTest(`deprecation reports from ${app} should have service and version from source code context`)
+          .withHead('<script>window.nativeXhrOpen = XMLHttpRequest.prototype.open</script>')
+          .withLogs({
+            ...LOGS_CONFIG,
+            service: 'shell-service',
+            version: 'shell-version',
+            forwardReports: ['deprecation'],
+          })
+          .withSetup(microfrontendSetup)
+          .run(async ({ intakeRegistry, flushEvents, page, browserName }) => {
+            test.skip(browserName !== 'chromium', 'Deprecation reports require Chromium ReportingObserver')
+
+            await page.click(`#${app}-deprecation`)
+            await flushEvents()
+
+            expect(intakeRegistry.logsEvents).toMatchObject([
+              {
+                origin: 'report',
+                status: 'warn',
+                message: expect.stringContaining('deprecation: Synchronous'),
+                service: `mfe-${app}-service`,
+                version,
+                o2tags: expect.stringContaining(`service:mfe-${app}-service,version:${version}`),
+              },
+            ])
+            const log = intakeRegistry.logsEvents[0]
+            expect(log.message).toContain(chunk)
+            expect(log.error).toBeUndefined()
+            expect(log.o2tags).not.toContain('service:shell-service')
+            expect(log.o2tags).not.toContain('version:shell-version')
+          })
+      })
+
+      createTest('CSP violation reports should have service and version from source code context')
+        .withLogs({
+          ...LOGS_CONFIG,
+          service: 'shell-service',
+          version: 'shell-version',
+          forwardReports: ['csp_violation'],
+        })
+        .withSetup(microfrontendSetup)
+        .run(async ({ intakeRegistry, flushEvents, page, browserName, withBrowserLogs }) => {
+          await page.click('#app1-csp-violation')
+          await page.click('#app2-csp-violation')
+          await flushEvents()
+
+          expect(intakeRegistry.logsEvents).toMatchObject([
+            {
+              origin: 'report',
+              service: 'mfe-app1-service',
+              version: '1.0.0',
+              o2tags: expect.stringContaining('service:mfe-app1-service,version:1.0.0'),
+              error: { stack: expect.stringContaining(APP1_EXPOSE_CHUNK) },
+            },
+            {
+              origin: 'report',
+              service: 'mfe-app2-service',
+              version: '0.2.0',
+              o2tags: expect.stringContaining('service:mfe-app2-service,version:0.2.0'),
+              error: { stack: expect.stringContaining(APP2_EXPOSE_CHUNK) },
+            },
+          ])
+
+          for (const log of intakeRegistry.logsEvents) {
+            expect(log.message).toMatch(
+              /^csp_violation: 'https:\/\/example\.com\/foo\.js' blocked by 'script-src(-elem)?' directive$/
+            )
+            expect(log.o2tags).not.toContain('version:shell-version')
+            expect(log.o2tags).not.toContain('service:shell-service')
+          }
+
+          withBrowserLogs((browserLogs) => {
+            // Firefox also warns that each blocked script failed to load.
+            expect(browserLogs).toHaveLength(browserName === 'firefox' ? 4 : 2)
+          })
+        })
+
+      createTest('errors from console.error should have service and version from source code context')
+        .withLogs({ ...LOGS_CONFIG, service: 'shell-service', version: 'shell-version' })
+        .withSetup(microfrontendSetup)
+        .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs }) => {
+          await page.click('#app1-console-error')
+          await page.click('#app2-console-error')
+          await flushEvents()
+
+          expect(intakeRegistry.logsEvents).toMatchObject([
+            {
+              message: 'app1-console-error',
+              service: 'mfe-app1-service',
+              version: '1.0.0',
+              o2tags: expect.stringContaining('service:mfe-app1-service,version:1.0.0'),
+            },
+            {
+              message: 'app2-console-error',
+              service: 'mfe-app2-service',
+              version: '0.2.0',
+              o2tags: expect.stringContaining('service:mfe-app2-service,version:0.2.0'),
+            },
+          ])
+
+          for (const log of intakeRegistry.logsEvents) {
+            expect(log.o2tags).not.toContain('version:shell-version')
+            expect(log.o2tags).not.toContain('service:shell-service')
+          }
+
+          withBrowserLogs((browserLogs) => {
+            expect(browserLogs).toHaveLength(2)
+          })
+        })
+
+      createTest('runtime errors should have service and version from source code context')
+        .withLogs({ ...LOGS_CONFIG, service: 'shell-service', version: 'shell-version' })
+        .withSetup(microfrontendSetup)
+        .run(async ({ intakeRegistry, flushEvents, page, withBrowserLogs }) => {
+          await page.click('#app1-runtime-error')
+          await page.click('#app2-runtime-error')
+          await flushEvents()
+
+          expect(intakeRegistry.logsEvents).toMatchObject([
+            {
+              service: 'mfe-app1-service',
+              version: '1.0.0',
+              o2tags: expect.stringContaining('service:mfe-app1-service,version:1.0.0'),
+            },
+            {
+              service: 'mfe-app2-service',
+              version: '0.2.0',
+              o2tags: expect.stringContaining('service:mfe-app2-service,version:0.2.0'),
+            },
+          ])
+
+          for (const log of intakeRegistry.logsEvents) {
+            expect(log.o2tags).not.toContain('version:shell-version')
+            expect(log.o2tags).not.toContain('service:shell-service')
+          }
+
+          withBrowserLogs((browserLogs) => {
+            expect(browserLogs).toHaveLength(2)
+          })
+        })
+    })
+
     createTest('expose handling stack for console.log')
       .withLogs(LOGS_CONFIG)
       .withLogsInit((configuration) => {

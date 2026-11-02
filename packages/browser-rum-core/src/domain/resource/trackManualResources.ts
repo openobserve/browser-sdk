@@ -1,4 +1,5 @@
-import type { Context, ResourceType } from '@openobserve/browser-core'
+import type { ResourceType } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import { elapsed, toServerDuration, clocksNow } from '@openobserve/js-core/time'
 import { ResourceType as ResourceTypeEnum } from '@openobserve/browser-core'
 import type { RawRumResourceEvent } from '../../rawRumEvent.types'

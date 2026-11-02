@@ -1,5 +1,6 @@
-import { DOM_EVENT, throttle, addEventListener } from '@openobserve/browser-core'
+import { DOM_EVENT, addEventListener } from '@openobserve/js-core/dom'
 import { getScrollX, getScrollY, getNodePrivacyLevel, NodePrivacyLevel } from '@openobserve/browser-rum-core'
+import { throttle } from '@openobserve/js-core/util'
 import { getEventTarget } from '../eventsUtils'
 import { IncrementalSource } from '../../../types'
 import type { BrowserIncrementalSnapshotRecord, ScrollData } from '../../../types'

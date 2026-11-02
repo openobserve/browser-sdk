@@ -1,5 +1,4 @@
-import { buildUrl } from '../../src'
-
+import { buildUrl } from '@openobserve/js-core/util'
 export function buildLocation(url: string, base = location.href) {
   const urlObject = buildUrl(url, base)
   return {

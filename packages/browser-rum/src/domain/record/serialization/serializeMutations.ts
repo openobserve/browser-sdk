@@ -1,5 +1,6 @@
 import type { TimeStamp } from '@openobserve/js-core/time'
-import type { NodePrivacyLevelCache, RumMutationRecord } from '@openobserve/browser-rum-core'
+import type { NodePrivacyLevelCache } from '@openobserve/browser-rum-core'
+import type { MutationRecord } from '@openobserve/js-core/dom'
 import {
   isNodeShadowHost,
   getParentNode,
@@ -7,22 +8,27 @@ import {
   getNodePrivacyLevel,
   getTextContent,
   NodePrivacyLevel,
+  isCanvasElement,
+  shouldMaskNode,
 } from '@openobserve/browser-rum-core'
-import type { AttributeChange } from '../../../types'
+import { StringRole } from '../../../types'
 import type { RecordingScope } from '../recordingScope'
-import type { EmitRecordCallback, EmitStatsCallback } from '../record.types'
-import type { NodeId, NodeIds } from '../itemIds'
+import type { EmitRecordCallback, EmitResourceCallback, EmitStatsCallback } from '../record.types'
+import type { NodeId, NodeIds, RoleAnnotatedAttributeChange } from '../encoding'
+import { createAttributeAssignment, createAttributeAssignmentOrDeletion, createString } from '../encoding'
+import { CanvasStatus } from '../canvas/canvasManager'
 import type { SerializationTransaction } from './serializationTransaction'
 import { SerializationKind, serializeInTransaction } from './serializationTransaction'
 import { serializeNode } from './serializeNode'
 import { createChildInsertionCursor } from './insertionCursor'
-import { getElementInputValue } from './serializationUtils'
+import { getElementInputValue, normalizedTagName } from './serializationUtils'
 import { serializeAttribute } from './serializeAttribute'
 
 export function serializeMutations(
   timestamp: TimeStamp,
-  mutations: RumMutationRecord[],
+  mutations: MutationRecord[],
   emitRecord: EmitRecordCallback,
+  emitResource: EmitResourceCallback,
   emitStats: EmitStatsCallback,
   scope: RecordingScope
 ): void {
@@ -32,14 +38,18 @@ export function serializeMutations(
     emitStats,
     scope,
     timestamp,
-    (transaction: SerializationTransaction) => processMutations(mutations, transaction)
+    (transaction: SerializationTransaction) => processMutations(mutations, emitResource, transaction)
   )
 }
 
 type AttributeName = string
 type OldValue = string | null
 
-function processMutations(mutations: RumMutationRecord[], transaction: SerializationTransaction): void {
+function processMutations(
+  mutations: MutationRecord[],
+  emitResource: EmitResourceCallback,
+  transaction: SerializationTransaction
+): void {
   const addedNodes = new Set<Node>()
   const attributeMutations = new Map<Element, Map<AttributeName, OldValue>>()
   const characterDataMutations = new Map<Node, OldValue>()
@@ -99,6 +109,7 @@ function processMutations(mutations: RumMutationRecord[], transaction: Serializa
   processAddedNodes(addedNodes, nodePrivacyLevelCache, transaction)
   processCharacterDataMutations(characterDataMutations, firstNewNodeId, nodePrivacyLevelCache, transaction)
   processAttributeMutations(attributeMutations, firstNewNodeId, nodePrivacyLevelCache, transaction)
+  processCanvasContentMutations(nodePrivacyLevelCache, emitResource, transaction)
 }
 
 function processRemovedNodes(nodes: Set<Node>, transaction: SerializationTransaction): void {
@@ -111,6 +122,10 @@ function processRemovedNodes(nodes: Set<Node>, transaction: SerializationTransac
     }
 
     forNodeAndDescendants(node, (node: Node) => {
+      if (isCanvasElement(node)) {
+        transaction.scope.canvasManager.forgetCanvas(node)
+      }
+
       if (isNodeShadowHost(node)) {
         transaction.scope.shadowRootsController.removeShadowRoot(node.shadowRoot)
       }
@@ -215,7 +230,7 @@ function processCharacterDataMutations(
     }
 
     const content = getTextContent(node, parentNodePrivacyLevel)
-    transaction.setText(nodeId, content)
+    transaction.setText(nodeId, createString(StringRole.TextContent, content))
   }
 }
 
@@ -251,30 +266,70 @@ function processAttributeMutations(
       continue // Mutations to this node should be ignored.
     }
 
-    const change: AttributeChange = [nodeId]
-    for (const [attributeName, oldValue] of attributeNames) {
-      if (node.getAttribute(attributeName) === oldValue) {
+    const tagName = normalizedTagName(node)
+
+    const change: RoleAnnotatedAttributeChange = [nodeId]
+    for (const [domAttributeName, oldValue] of attributeNames) {
+      if (node.getAttribute(domAttributeName) === oldValue) {
         continue // No change since the last snapshot.
       }
 
-      if (attributeName === 'value') {
-        const attributeValue = getElementInputValue(node, privacyLevel)
-        if (attributeValue !== undefined) {
-          change.push([attributeName, attributeValue])
+      if (domAttributeName === 'value') {
+        const domAttributeValue = getElementInputValue(node, privacyLevel)
+        if (domAttributeValue !== undefined) {
+          change.push(createAttributeAssignment(tagName, domAttributeName, domAttributeValue))
         }
         continue
       }
 
-      const attributeValue = serializeAttribute(node, privacyLevel, attributeName, transaction.scope.configuration)
-      if (attributeValue === null) {
-        change.push([attributeName])
-      } else {
-        change.push([attributeName, attributeValue])
-      }
+      const domAttributeValue = serializeAttribute(
+        node,
+        privacyLevel,
+        domAttributeName,
+        transaction.scope.configuration
+      )
+      change.push(createAttributeAssignmentOrDeletion(tagName, domAttributeName, domAttributeValue))
     }
 
     if (change.length > 1) {
       transaction.setAttributes(change)
+    }
+  }
+}
+
+function processCanvasContentMutations(
+  nodePrivacyLevelCache: NodePrivacyLevelCache,
+  emitResource: EmitResourceCallback,
+  transaction: SerializationTransaction
+): void {
+  for (const { canvas, captureAttempt, hash, image } of transaction.scope.canvasManager.takeCanvasContentMutations()) {
+    if (!captureAttempt.isCurrent() || !canvas.isConnected) {
+      continue
+    }
+    const nodeId = transaction.scope.nodeIds.get(canvas)
+    if (nodeId === undefined) {
+      transaction.scope.canvasManager.forgetCanvas(canvas)
+      continue
+    }
+    const privacyLevel = getNodePrivacyLevel(
+      canvas,
+      transaction.scope.configuration.defaultPrivacyLevel,
+      nodePrivacyLevelCache
+    )
+    if (shouldMaskNode(canvas, privacyLevel)) {
+      transaction.scope.canvasManager.markCanvas(canvas, CanvasStatus.Dirty)
+      continue
+    }
+    try {
+      emitResource(hash, image, () => {
+        if (captureAttempt.isCurrent()) {
+          transaction.scope.canvasManager.retryCanvas(canvas)
+        }
+      })
+      transaction.setImageContent(nodeId, createString(StringRole.ResourceId, hash))
+      captureAttempt.setLastChangeHash(hash)
+    } catch {
+      transaction.scope.canvasManager.markCanvas(canvas, CanvasStatus.Dirty)
     }
   }
 }

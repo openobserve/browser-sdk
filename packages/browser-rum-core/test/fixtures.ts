@@ -1,9 +1,9 @@
 import type { RelativeTime, Duration, ServerDuration, TimeStamp } from '@openobserve/js-core/time'
-import type { Context } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
+import type { MutationRecord } from '@openobserve/js-core/dom'
 import { relativeNow } from '@openobserve/js-core/time'
-import { ErrorHandling, ErrorSource, generateUUID, ResourceType } from '@openobserve/browser-core'
-import { combine } from '@openobserve/js-core/util'
-import type { RumMutationRecord } from '@openobserve/browser-rum-core'
+import { ErrorHandling, ErrorSource, ResourceType } from '@openobserve/browser-core'
+import { combine, generateUUID } from '@openobserve/js-core/util'
 import {
   type RumPerformanceEntry,
   type RumLayoutShiftAttribution,
@@ -174,6 +174,26 @@ export function createPerformanceEntry<T extends RumPerformanceEntryType>(
       }
       break
 
+    case RumPerformanceEntryType.SOFT_NAVIGATION:
+      entry = {
+        entryType: RumPerformanceEntryType.SOFT_NAVIGATION,
+        name: 'https://example.com/soft-nav',
+        startTime: 1000 as RelativeTime,
+        interactionId: 42,
+        getLargestInteractionContentfulPaint: () => null,
+      }
+      break
+
+    case RumPerformanceEntryType.INTERACTION_CONTENTFUL_PAINT:
+      entry = {
+        entryType: RumPerformanceEntryType.INTERACTION_CONTENTFUL_PAINT,
+        interactionId: 42,
+        largestContentfulPaint: createPerformanceEntry(RumPerformanceEntryType.LARGEST_CONTENTFUL_PAINT, {
+          startTime: 1200 as RelativeTime,
+        }),
+      }
+      break
+
     case RumPerformanceEntryType.LAYOUT_SHIFT:
       entry = {
         entryType: RumPerformanceEntryType.LAYOUT_SHIFT,
@@ -303,14 +323,14 @@ export function createPerformanceEntry<T extends RumPerformanceEntryType>(
   return fullEntry as EntryTypeToReturnType[T]
 }
 
-export function createMutationRecord<T extends RumMutationRecord['type']>(
+export function createMutationRecord<T extends MutationRecord['type']>(
   type: T = 'childList' as T,
-  overrides: Partial<Exclude<RumMutationRecord, { type: T }>> = {}
-): RumMutationRecord {
+  overrides: Partial<Exclude<MutationRecord, { type: T }>> = {}
+): MutationRecord {
   return {
     type,
     target: document.body,
 
     ...overrides,
-  } as RumMutationRecord
+  } as MutationRecord
 }

@@ -15,7 +15,8 @@
     "prepack": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.3"
+    "@openobserve/browser-core": "workspace:*",
+    "@openobserve/js-core": "workspace:*"
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,6 @@
     "access": "public"
   },
   "devDependencies": {
-    "webpack": "5.107.2"
+    "webpack": "5.111.1"
   }
 }

@@ -1,7 +1,12 @@
 import type { Router } from 'vue-router'
+import { noop } from '@openobserve/js-core/util'
 import { createRouter, createMemoryHistory } from 'vue-router'
-import type { RumInitConfiguration, RumPublicApi, StartRumResult } from '@openobserve/browser-rum-core'
-import { noop } from '@openobserve/browser-core'
+import type {
+  RumInitConfiguration,
+  RumPluginOnInitOptions,
+  RumPublicApi,
+  StartRumResult,
+} from '@openobserve/browser-rum-core'
 import { nuxtRumPlugin, resetNuxtPlugin } from '../src/domain/nuxtPlugin'
 import { registerCleanupTask } from '../../browser-core/test'
 
@@ -19,10 +24,11 @@ export function initializeNuxtPlugin({
   resetNuxtPlugin()
   const plugin = nuxtRumPlugin({ router })
 
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
   plugin.onInit({
     publicApi: publicApi as RumPublicApi,
     initConfiguration: initConfiguration as RumInitConfiguration,
-  })
+  } as RumPluginOnInitOptions)
   plugin.onRumStart({ addError })
   registerCleanupTask(() => resetNuxtPlugin())
 }

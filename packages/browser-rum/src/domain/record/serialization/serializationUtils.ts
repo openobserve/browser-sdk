@@ -1,4 +1,4 @@
-import { buildUrl } from '@openobserve/browser-core'
+import { buildUrl } from '@openobserve/js-core/util'
 import { CENSORED_STRING_MARK, shouldMaskNode } from '@openobserve/browser-rum-core'
 import type { NodePrivacyLevel } from '@openobserve/browser-rum-core'
 

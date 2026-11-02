@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 import { createWebHistory } from 'vue-router'
-import { createRouter } from '@openobserve/browser-rum-vue/vue-router-v4'
+import { createRouter } from '@openobserve/browser-rum-vue/vue-router'
 import { openobserveRum } from '@openobserve/browser-rum'
 import { vuePlugin, addVueError } from '@openobserve/browser-rum-vue'
 import App from './App.vue'

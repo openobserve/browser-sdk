@@ -56,8 +56,16 @@ describe('deploy', () => {
         env,
       },
       {
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
+        env,
+      },
+      {
         // Profiler chunk
         command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        env,
+      },
+      {
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
         env,
       },
       {
@@ -66,6 +74,11 @@ describe('deploy', () => {
         env,
       },
       // RUM bundle
+      {
+        command:
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/openobserve-rum-salesforce-v6.js',
+        env,
+      },
       {
         command:
           'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum.js s3://browser-agent-artifacts-prod/openobserve-rum-v6.js',
@@ -82,11 +95,24 @@ describe('deploy', () => {
           'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/datadog-debugger-v6.js',
         env,
       },
+      {
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/openobserve-rum-shopify-v6.js',
+        env,
+      },
     ])
 
     assert.deepEqual(getCloudfrontCommands(), [
       {
-        command: `aws cloudfront create-invalidation --distribution-id EGB08BYCT1DD9 --paths /openobserve-logs-v6.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/openobserve-rum-v6.js,/openobserve-rum-slim-v6.js,/datadog-debugger-v6.js`,
+        command: `aws cloudfront create-invalidation --distribution-id EGB08BYCT1DD9 --paths /openobserve-logs-v6.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/openobserve-rum-salesforce-v6.js,/openobserve-rum-v6.js,/openobserve-rum-slim-v6.js,/datadog-debugger-v6.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/openobserve-rum-shopify-v6.js`,
         env,
       },
     ])
@@ -103,11 +129,24 @@ describe('deploy', () => {
       },
       // RUM Profiler Chunk
       {
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/us1/v6/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
+        env,
+      },
+      {
         command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/us1/v6/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/us1/v6/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
+        env,
+      },
+      {
         command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/us1/v6/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/us1/v6/openobserve-rum-salesforce.js',
         env,
       },
       {
@@ -125,10 +164,23 @@ describe('deploy', () => {
           'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/us1/v6/datadog-debugger.js',
         env,
       },
+      {
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/us1/v6/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command: `aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/us1/v6/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=14400, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/us1/v6/openobserve-rum-shopify.js',
+        env,
+      },
     ])
     assert.deepEqual(getCloudfrontCommands(), [
       {
-        command: `aws cloudfront create-invalidation --distribution-id EGB08BYCT1DD9 --paths /us1/v6/openobserve-logs.js,/us1/v6/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/us1/v6/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/us1/v6/openobserve-rum.js,/us1/v6/openobserve-rum-slim.js,/us1/v6/datadog-debugger.js`,
+        command: `aws cloudfront create-invalidation --distribution-id EGB08BYCT1DD9 --paths /us1/v6/openobserve-logs.js,/us1/v6/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/us1/v6/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/us1/v6/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/us1/v6/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/us1/v6/openobserve-rum-salesforce.js,/us1/v6/openobserve-rum.js,/us1/v6/openobserve-rum-slim.js,/us1/v6/datadog-debugger.js,/us1/v6/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/us1/v6/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/us1/v6/openobserve-rum-shopify.js`,
         env,
       },
     ])
@@ -145,11 +197,24 @@ describe('deploy', () => {
       },
       // RUM Profiler Chunk
       {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-staging/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
+        env,
+      },
+      {
         command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-staging/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
+        env,
+      },
+      {
         command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum-salesforce.js s3://browser-agent-artifacts-staging/openobserve-rum-salesforce-staging.js',
         env,
       },
       {
@@ -167,11 +232,24 @@ describe('deploy', () => {
           'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-staging/datadog-debugger-staging.js',
         env,
       },
+      {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-staging/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-staging/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/openobserve-rum-shopify.js s3://browser-agent-artifacts-staging/openobserve-rum-shopify-staging.js',
+        env,
+      },
     ])
 
     assert.deepEqual(getCloudfrontCommands(), [
       {
-        command: `aws cloudfront create-invalidation --distribution-id E2FP11ZSCFD3EU --paths /openobserve-logs-staging.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/openobserve-rum-staging.js,/openobserve-rum-slim-staging.js,/datadog-debugger-staging.js`,
+        command: `aws cloudfront create-invalidation --distribution-id E2FP11ZSCFD3EU --paths /openobserve-logs-staging.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/openobserve-rum-salesforce-staging.js,/openobserve-rum-staging.js,/openobserve-rum-slim-staging.js,/datadog-debugger-staging.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/openobserve-rum-shopify-staging.js`,
         env,
       },
     ])
@@ -187,11 +265,24 @@ describe('deploy', () => {
         env,
       },
       {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
+        env,
+      },
+      {
         command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
+        env,
+      },
+      {
         command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/openobserve-rum-salesforce-canary.js',
         env,
       },
       {
@@ -209,11 +300,24 @@ describe('deploy', () => {
           'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/datadog-debugger-canary.js',
         env,
       },
+      {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/openobserve-rum-shopify-canary.js',
+        env,
+      },
     ])
 
     assert.deepEqual(getCloudfrontCommands(), [
       {
-        command: `aws cloudfront create-invalidation --distribution-id EGB08BYCT1DD9 --paths /openobserve-logs-canary.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/openobserve-rum-canary.js,/openobserve-rum-slim-canary.js,/datadog-debugger-canary.js`,
+        command: `aws cloudfront create-invalidation --distribution-id EGB08BYCT1DD9 --paths /openobserve-logs-canary.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/openobserve-rum-salesforce-canary.js,/openobserve-rum-canary.js,/openobserve-rum-slim-canary.js,/datadog-debugger-canary.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/openobserve-rum-shopify-canary.js`,
         env,
       },
     ])
@@ -229,11 +333,24 @@ describe('deploy', () => {
         env,
       },
       {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
+        env,
+      },
+      {
         command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
+        env,
+      },
+      {
         command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum-salesforce.js s3://browser-agent-artifacts-prod/openobserve-rum-salesforce-v7-canary.js',
         env,
       },
       {
@@ -251,11 +368,24 @@ describe('deploy', () => {
           'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-prod/datadog-debugger-v7-canary.js',
         env,
       },
+      {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/openobserve-rum-shopify.js s3://browser-agent-artifacts-prod/openobserve-rum-shopify-v7-canary.js',
+        env,
+      },
     ])
 
     assert.deepEqual(getCloudfrontCommands(), [
       {
-        command: `aws cloudfront create-invalidation --distribution-id EGB08BYCT1DD9 --paths /openobserve-logs-v7-canary.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/openobserve-rum-v7-canary.js,/openobserve-rum-slim-v7-canary.js,/datadog-debugger-v7-canary.js`,
+        command: `aws cloudfront create-invalidation --distribution-id EGB08BYCT1DD9 --paths /openobserve-logs-v7-canary.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/openobserve-rum-salesforce-v7-canary.js,/openobserve-rum-v7-canary.js,/openobserve-rum-slim-v7-canary.js,/datadog-debugger-v7-canary.js,/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/openobserve-rum-shopify-v7-canary.js`,
         env,
       },
     ])
@@ -275,11 +405,24 @@ describe('deploy', () => {
       },
       // RUM Profiler Chunk
       {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-staging/pull-request/123/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
+        env,
+      },
+      {
         command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/pull-request/123/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
         env,
       },
       {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js s3://browser-agent-artifacts-staging/pull-request/123/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js`,
+        env,
+      },
+      {
         command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js s3://browser-agent-artifacts-staging/pull-request/123/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js`,
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum/bundle/openobserve-rum-salesforce.js s3://browser-agent-artifacts-staging/pull-request/123/openobserve-rum-salesforce.js',
         env,
       },
       {
@@ -297,11 +440,24 @@ describe('deploy', () => {
           'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-debugger/bundle/datadog-debugger.js s3://browser-agent-artifacts-staging/pull-request/123/datadog-debugger.js',
         env,
       },
+      {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-staging/pull-request/123/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command: `aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js s3://browser-agent-artifacts-staging/pull-request/123/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js`,
+        env,
+      },
+      {
+        command:
+          'aws s3 cp --cache-control max-age=900, s-maxage=60 --content-type text/javascript packages/browser-rum-shopify/bundle/openobserve-rum-shopify.js s3://browser-agent-artifacts-staging/pull-request/123/openobserve-rum-shopify.js',
+        env,
+      },
     ])
 
     assert.deepEqual(getCloudfrontCommands(), [
       {
-        command: `aws cloudfront create-invalidation --distribution-id E2FP11ZSCFD3EU --paths /pull-request/123/openobserve-logs.js,/pull-request/123/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/pull-request/123/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/pull-request/123/openobserve-rum.js,/pull-request/123/openobserve-rum-slim.js,/pull-request/123/datadog-debugger.js`,
+        command: `aws cloudfront create-invalidation --distribution-id E2FP11ZSCFD3EU --paths /pull-request/123/openobserve-logs.js,/pull-request/123/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/pull-request/123/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum.js,/pull-request/123/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-salesforce.js,/pull-request/123/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum.js,/pull-request/123/openobserve-rum-salesforce.js,/pull-request/123/openobserve-rum.js,/pull-request/123/openobserve-rum-slim.js,/pull-request/123/datadog-debugger.js,/pull-request/123/chunks/profiler-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/pull-request/123/chunks/recorder-${FAKE_CHUNK_HASH}-openobserve-rum-shopify.js,/pull-request/123/openobserve-rum-shopify.js`,
         env,
       },
     ])

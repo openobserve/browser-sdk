@@ -6,8 +6,9 @@
  * @see [RUM Browser Monitoring Setup](https://docs.datadoghq.com/real_user_monitoring/browser/)
  */
 
+import { globalObject } from '@openobserve/js-core/util'
 // Keep the following in sync with packages/browser-rum-slim/src/entries/main.ts
-import { defineGlobal, globalObject } from '@openobserve/browser-core'
+import { defineGlobal } from '@openobserve/browser-core'
 import type { RumPublicApi } from '@openobserve/browser-rum-core'
 import { makeRumPublicApi } from '@openobserve/browser-rum-core'
 import { makeRecorderApi } from '../boot/recorderApi'
@@ -21,14 +22,11 @@ export type {
   SessionPersistence,
   TrackingConsent,
   MatchOption,
-  ProxyFn,
-  Site,
-  Context,
-  ContextValue,
-  ContextArray,
   RumInternalContext,
 } from '@openobserve/browser-core'
+export type { Context, ContextValue, ContextArray } from '@openobserve/js-core/util'
 export { DefaultPrivacyLevel } from '@openobserve/browser-core'
+export type { ProxyFn, Site } from '@openobserve/js-core/transport'
 
 /**
  * @deprecated Use {@link DatadogRum} instead
@@ -52,6 +50,7 @@ export type {
   TracingOption,
   RumPlugin,
   OnRumStartOptions,
+  RumPluginOnInitOptions,
   PropagatorType,
   FeatureFlagsForEvents,
   MatchHeader,
@@ -73,11 +72,13 @@ export type {
   RumErrorEventDomainContext,
   RumActionEventDomainContext,
   RumVitalEventDomainContext,
+  RumWebSocketVitalEventDomainContext,
   RumResourceEventDomainContext,
+  RumWebSocketResourceEventDomainContext,
   RumLongTaskEventDomainContext,
 } from '@openobserve/browser-rum-core'
 
-export { DEFAULT_TRACKED_RESOURCE_HEADERS } from '@openobserve/browser-rum-core'
+export { DEFAULT_TRACKED_RESOURCE_HEADERS, CanvasRecordingQuality } from '@openobserve/browser-rum-core'
 
 const recorderApi = makeRecorderApi()
 

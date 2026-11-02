@@ -1,4 +1,4 @@
-import { noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
 import { timeStampNow } from '@openobserve/js-core/time'
 import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import { getNodePrivacyLevel, NodePrivacyLevel } from '@openobserve/browser-rum-core'
@@ -10,6 +10,7 @@ import { createElementsScrollPositions } from './elementsScrollPositions'
 import type { EmitRecordCallback } from './record.types'
 import type { SerializationTransaction } from './serialization'
 import { createRootInsertionCursor, SerializationKind, serializeInTransaction, serializeNode } from './serialization'
+import { createCanvasManager } from './canvas/canvasManager'
 
 /**
  * Take a full snapshot of the document, generating the same records that the browser SDK
@@ -74,6 +75,7 @@ export function takeNodeSnapshot(
 
 function createTemporaryRecordingScope(configuration?: Partial<RumConfiguration>): RecordingScope {
   return createRecordingScope(
+    createCanvasManager(),
     {
       defaultPrivacyLevel: NodePrivacyLevel.ALLOW,
       ...configuration,

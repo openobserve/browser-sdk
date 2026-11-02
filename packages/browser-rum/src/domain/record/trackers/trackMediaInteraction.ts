@@ -1,4 +1,4 @@
-import { DOM_EVENT, addEventListeners } from '@openobserve/browser-core'
+import { DOM_EVENT, addEventListeners } from '@openobserve/js-core/dom'
 import { NodePrivacyLevel, getNodePrivacyLevel } from '@openobserve/browser-rum-core'
 import type { MediaInteractionData, BrowserIncrementalSnapshotRecord } from '../../../types'
 import { IncrementalSource, MediaInteractionType } from '../../../types'

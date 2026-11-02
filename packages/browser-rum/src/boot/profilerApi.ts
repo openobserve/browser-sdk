@@ -6,9 +6,9 @@ import {
   canUseEventBridge,
   correctedChildSampleRate,
   isSampled,
-  mockable,
-  monitorError,
 } from '@openobserve/browser-core'
+import { mockable } from '@openobserve/js-core/util'
+import { monitorError } from '@openobserve/js-core/monitor'
 import type { RUMProfiler } from '../domain/profiling/types'
 import { isProfilingSupported } from '../domain/profiling/profilingSupported'
 import { startProfilingContext } from '../domain/profiling/profilingContext'

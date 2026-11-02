@@ -1,15 +1,8 @@
 import type { ClocksState } from '@openobserve/js-core/time'
-import { ConsoleApiName, combine } from '@openobserve/js-core/util'
-import type { Context, RawError, BufferedData } from '@openobserve/browser-core'
-import {
-  BufferedDataType,
-  Observable,
-  ErrorSource,
-  generateUUID,
-  computeRawError,
-  ErrorHandling,
-  NonErrorPrefix,
-} from '@openobserve/browser-core'
+import { ConsoleApiName, combine, Observable, generateUUID } from '@openobserve/js-core/util'
+import type { RawError, BufferedData } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
+import { BufferedDataType, ErrorSource, computeRawError, ErrorHandling, NonErrorPrefix } from '@openobserve/browser-core'
 import type { RawRumErrorEvent } from '../../rawRumEvent.types'
 import { RumEventType } from '../../rawRumEvent.types'
 import type { LifeCycle, RawRumEventCollectedData } from '../lifeCycle'
@@ -83,6 +76,7 @@ function processError(error: RawError): RawRumEventCollectedData<RawRumErrorEven
       fingerprint: error.fingerprint,
       csp: error.csp,
     },
+    _o2: { debug_ids: error.debugIds },
     type: RumEventType.ERROR,
     context: error.context,
   }
@@ -92,9 +86,5 @@ function processError(error: RawError): RawRumEventCollectedData<RawRumErrorEven
     handlingStack: error.handlingStack,
   }
 
-  return {
-    rawRumEvent,
-    startClocks: error.startClocks,
-    domainContext,
-  }
+  return { rawRumEvent, startClocks: error.startClocks, domainContext }
 }

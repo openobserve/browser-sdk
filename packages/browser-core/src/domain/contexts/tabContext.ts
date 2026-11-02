@@ -1,5 +1,5 @@
 import type { Hook } from '@openobserve/js-core/assembly'
-import { generateUUID } from '../../tools/utils/stringUtils'
+import { generateUUID } from '@openobserve/js-core/util'
 
 export const TAB_ID_STORAGE_KEY = '_dd_tab_id'
 

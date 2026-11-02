@@ -1,8 +1,11 @@
-import type { RumInitConfiguration, RumPublicApi } from '@openobserve/browser-rum-core'
+import { globalObject } from '@openobserve/js-core/util'
+import type { RumInitConfiguration, RumPublicApi, RumPluginOnInitOptions } from '@openobserve/browser-rum-core'
 import { registerCleanupTask } from '../../../browser-core/test'
+import { appendElement } from '../../../browser-rum-core/test'
 import {
   nextjsPlugin,
   startNextjsView,
+  startAppRouterView,
   onRumInit,
   onRumStart,
   onRouterTransitionStart,
@@ -10,6 +13,10 @@ import {
 } from './nextjsPlugin'
 
 const INIT_CONFIGURATION = {} as RumInitConfiguration
+
+interface NextjsGlobalObject {
+  next?: { version?: string }
+}
 
 function createPublicApi() {
   const startViewSpy = jasmine.createSpy('startView')
@@ -19,14 +26,20 @@ function createPublicApi() {
 function initPlugin() {
   const { publicApi, startViewSpy } = createPublicApi()
   const plugin = nextjsPlugin()
-  plugin.onInit({ publicApi, initConfiguration: { ...INIT_CONFIGURATION } })
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
+  plugin.onInit({ publicApi, initConfiguration: { ...INIT_CONFIGURATION } } as RumPluginOnInitOptions)
   return { plugin, publicApi, startViewSpy }
 }
 
 describe('nextjsPlugin', () => {
   beforeEach(() => {
+    const nextjsGlobalObject = globalObject as NextjsGlobalObject
+    const originalNext = nextjsGlobalObject.next
+    nextjsGlobalObject.next = { version: '16.2.0' }
+
     registerCleanupTask(() => {
       resetNextjsPlugin()
+      nextjsGlobalObject.next = originalNext
     })
   })
 
@@ -38,6 +51,7 @@ describe('nextjsPlugin', () => {
         name: 'nextjs',
         onInit: jasmine.any(Function),
         onRumStart: jasmine.any(Function),
+        getConfigurationTelemetry: jasmine.any(Function),
       })
     )
   })
@@ -46,7 +60,8 @@ describe('nextjsPlugin', () => {
     const initConfiguration = { ...INIT_CONFIGURATION }
     const { publicApi } = createPublicApi()
 
-    nextjsPlugin().onInit({ publicApi, initConfiguration })
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
+    nextjsPlugin().onInit({ publicApi, initConfiguration } as RumPluginOnInitOptions)
 
     expect(initConfiguration.trackViewsManually).toBe(true)
   })
@@ -77,6 +92,45 @@ describe('nextjsPlugin', () => {
     })
   })
 
+  it('deduplicates successive App Router renders of the same pathname', () => {
+    const { startViewSpy } = initPlugin()
+
+    startAppRouterView('/user/42', '/user/[id]')
+    startAppRouterView('/user/42', '/user/[id]')
+
+    expect(startViewSpy).toHaveBeenCalledOnceWith({ name: '/user/[id]', url: undefined })
+  })
+
+  it('tracks different concrete pathnames and returning to a previous pathname', () => {
+    const { startViewSpy } = initPlugin()
+
+    startAppRouterView('/user/42', '/user/[id]')
+    startAppRouterView('/user/99', '/user/[id]')
+    startAppRouterView('/user/42', '/user/[id]')
+
+    expect(startViewSpy).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not deduplicate an App Router render that happened before init', () => {
+    startAppRouterView('/user/42', '/user/[id]')
+    const { startViewSpy } = initPlugin()
+
+    startAppRouterView('/user/42', '/user/[id]')
+
+    expect(startViewSpy).toHaveBeenCalledOnceWith({ name: '/user/[id]', url: undefined })
+  })
+
+  it('clears App Router deduplication when the plugin resets', () => {
+    initPlugin()
+    startAppRouterView('/user/42', '/user/[id]')
+    resetNextjsPlugin()
+    const { startViewSpy } = initPlugin()
+
+    startAppRouterView('/user/42', '/user/[id]')
+
+    expect(startViewSpy).toHaveBeenCalledOnceWith({ name: '/user/[id]', url: undefined })
+  })
+
   it('clears onRouterTransitionStart URL after startNextjsView consumes it', () => {
     const { startViewSpy } = initPlugin()
 
@@ -87,6 +141,32 @@ describe('nextjsPlugin', () => {
     expect(startViewSpy.calls.mostRecent().args[0]).toEqual({ name: '/other', url: undefined })
   })
 
+  it('reports app-router when no __NEXT_DATA__ script is present', () => {
+    const { plugin } = initPlugin()
+
+    expect(plugin.getConfigurationTelemetry()).toEqual({
+      router: true,
+      integrations: ['nextjs-v16', 'app-router'],
+    })
+  })
+
+  it('reports pages-router when a __NEXT_DATA__ script is present', () => {
+    appendElement('<script id="__NEXT_DATA__"></script>')
+
+    const { plugin } = initPlugin()
+
+    expect(plugin.getConfigurationTelemetry()).toEqual({
+      router: true,
+      integrations: ['nextjs-v16', 'pages-router'],
+    })
+  })
+
+  it('does not return the router integration before onInit is called', () => {
+    const plugin = nextjsPlugin()
+
+    expect(plugin.getConfigurationTelemetry()).toEqual({ router: true, integrations: ['nextjs-v16'] })
+  })
+
   describe('lifecycle subscribers', () => {
     it('calls onRumInit subscribers during onInit', () => {
       const callbackSpy = jasmine.createSpy()
@@ -95,10 +175,11 @@ describe('nextjsPlugin', () => {
 
       expect(callbackSpy).not.toHaveBeenCalled()
 
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
       nextjsPlugin().onInit({
         publicApi,
         initConfiguration: INIT_CONFIGURATION,
-      })
+      } as RumPluginOnInitOptions)
 
       expect(callbackSpy).toHaveBeenCalledTimes(1)
       expect(callbackSpy.calls.mostRecent().args[0]).toBe(publicApi)
@@ -108,10 +189,11 @@ describe('nextjsPlugin', () => {
       const callbackSpy = jasmine.createSpy()
       const { publicApi } = createPublicApi()
 
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
       nextjsPlugin().onInit({
         publicApi,
         initConfiguration: INIT_CONFIGURATION,
-      })
+      } as RumPluginOnInitOptions)
 
       onRumInit(callbackSpy)
 

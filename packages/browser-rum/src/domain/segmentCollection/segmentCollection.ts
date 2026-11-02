@@ -1,6 +1,8 @@
-import type { DeflateEncoder, HttpRequest, TimeoutId, SessionManager } from '@openobserve/browser-core'
+import type { DeflateEncoder, HttpRequest, SessionManager } from '@openobserve/browser-core'
 import { ONE_SECOND } from '@openobserve/js-core/time'
-import { isPageExitReason, clearTimeout, setTimeout } from '@openobserve/browser-core'
+import { isPageExitReason, PageExitReason } from '@openobserve/browser-core'
+import type { TimeoutId } from '@openobserve/js-core/util'
+import { clearTimeout, setTimeout } from '@openobserve/js-core/util'
 import type { LifeCycle, ViewHistory, RumConfiguration } from '@openobserve/browser-rum-core'
 import { LifeCycleEventType } from '@openobserve/browser-rum-core'
 import type { BrowserRecord, CreationReason, SegmentContext } from '../../types'
@@ -99,9 +101,12 @@ export function doStartSegmentCollection(
   })
 
   const { unsubscribe: unsubscribePageMayExit } = lifeCycle.subscribe(
-    LifeCycleEventType.PAGE_MAY_EXIT,
-    (pageMayExitEvent) => {
-      flushSegment(pageMayExitEvent.reason as FlushReason)
+    LifeCycleEventType.PREPARE_URGENT_FLUSH,
+    (reason) => {
+      if (reason === PageExitReason.PAGE_TERMINATED) {
+        return
+      }
+      flushSegment(reason)
     }
   )
 
@@ -110,7 +115,11 @@ export function doStartSegmentCollection(
       state.segment.flush((metadata, stats, encoderResult) => {
         const payload = buildReplayPayload(encoderResult.output, metadata, stats, encoderResult.rawBytesCount)
 
-        if (isPageExitReason(flushReason)) {
+        // sendOnExit() is less reliable than send() since it doesn't retry. If the page is
+        // *really* about to close, sendOnExit() is still better, since it uses a mechanism
+        // that outlives the page itself; for PageExitReason.HIDDEN, though, the page is
+        // probably not actually closing, so we prefer send().
+        if (isPageExitReason(flushReason) && flushReason !== PageExitReason.HIDDEN) {
           httpRequest.sendOnExit(payload)
         } else {
           httpRequest.send(payload)

@@ -1,0 +1,38 @@
+{
+  "name": "@openobserve/browser-rum-shopify",
+  "version": "0.4.3",
+  "license": "Apache-2.0",
+  "main": "cjs/entries/main.js",
+  "module": "esm/entries/main.mjs",
+  "types": "cjs/entries/main.d.ts",
+  "files": [
+    "bundle/**/*.js",
+    "cjs",
+    "esm",
+    "src",
+    "!src/**/*.spec.ts",
+    "!src/**/*.specHelper.ts"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build/build-package.ts --modules --worker-string --bundle openobserve-rum-shopify.js",
+    "build:bundle": "node ../../scripts/build/build-package.ts --worker-string --bundle openobserve-rum-shopify.js",
+    "prepack": "yarn build"
+  },
+  "dependencies": {
+    "@openobserve/browser-core": "workspace:*",
+    "@openobserve/browser-rum": "workspace:*",
+    "@openobserve/browser-rum-core": "workspace:*",
+    "@openobserve/js-core": "workspace:*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openobserve/browser-sdk.git",
+    "directory": "packages/browser-rum-shopify"
+  },
+  "volta": {
+    "extends": "../../package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

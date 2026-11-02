@@ -1,4 +1,4 @@
-import type { ContextValue, Context } from '@openobserve/browser-core'
+import type { ContextValue, Context } from '@openobserve/js-core/util'
 import { SESSION_TIME_OUT_DELAY, createValueHistory, isEmptyObject } from '@openobserve/browser-core'
 import { SKIPPED } from '@openobserve/js-core/assembly'
 import type { LifeCycle } from '../lifeCycle'

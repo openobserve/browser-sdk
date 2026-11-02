@@ -1,4 +1,5 @@
-import type { Observable } from '@openobserve/browser-core'
+import type { Observable } from '@openobserve/js-core/util'
+import type { MutationRecord } from '@openobserve/js-core/dom'
 import { toServerDuration } from '@openobserve/js-core/time'
 import type { Duration, ServerDuration } from '@openobserve/js-core/time'
 import { getTimeZone, isEmptyObject, mapValues } from '@openobserve/browser-core'
@@ -13,7 +14,6 @@ import type { LocationChange } from '../../browser/locationChangeObservable'
 import type { RumConfiguration } from '../configuration'
 import type { ViewHistory } from '../contexts/viewHistory'
 import type { DefaultRumEventAttributes, DefaultTelemetryEventAttributes, Hooks } from '../hooks'
-import type { RumMutationRecord } from '../../browser/domMutationObservable'
 import { trackViews } from './trackViews'
 import type { ViewEvent, ViewOptions } from './trackViews'
 import type { CommonViewMetrics } from './viewMetrics/trackCommonViewMetrics'
@@ -23,7 +23,7 @@ export function startViewCollection(
   lifeCycle: LifeCycle,
   hooks: Hooks,
   configuration: RumConfiguration,
-  domMutationObservable: Observable<RumMutationRecord[]>,
+  domMutationObservable: Observable<MutationRecord[]>,
   pageOpenObservable: Observable<void>,
   locationChangeObservable: Observable<LocationChange>,
   recorderApi: RecorderApi,
@@ -34,7 +34,7 @@ export function startViewCollection(
     lifeCycle.notify(LifeCycleEventType.RAW_RUM_EVENT_COLLECTED, processViewUpdate(view, configuration, recorderApi))
   )
 
-  hooks.assemble.register(({ startTime, eventType }): DefaultRumEventAttributes | DISCARDED => {
+  hooks.assembleEventDefaults.register(({ startTime, eventType }): DefaultRumEventAttributes | DISCARDED => {
     const view = viewHistory.findView(startTime)
 
     if (!view) {
@@ -53,13 +53,11 @@ export function startViewCollection(
     }
   })
 
-  hooks.assembleTelemetry.register(
-    ({ startTime }): DefaultTelemetryEventAttributes => ({
-      view: {
-        id: viewHistory.findView(startTime)?.id,
-      },
-    })
-  )
+  hooks.assembleTelemetry.register(({ startTime }): DefaultTelemetryEventAttributes => ({
+    view: {
+      id: viewHistory.findView(startTime)?.id,
+    },
+  }))
 
   return trackViews(
     lifeCycle,
@@ -90,6 +88,7 @@ function processViewUpdate(
         : undefined,
       configuration: {
         start_session_replay_recording_manually: configuration.startSessionReplayRecordingManually,
+        remote_configuration_id: configuration.remoteConfigurationId,
       },
     },
     date: view.startClocks.timeStamp,

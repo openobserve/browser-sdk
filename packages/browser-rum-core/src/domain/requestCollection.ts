@@ -7,10 +7,9 @@ import type {
   FetchResolveContext,
   ContextManager,
   SessionManager,
-  Observable,
   BufferedData,
-  Subscription,
 } from '@openobserve/browser-core'
+import type { Observable, Subscription } from '@openobserve/js-core/util'
 import {
   RequestType,
   ResponseBodyAction,

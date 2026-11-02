@@ -1,5 +1,5 @@
-import type { Payload } from '@openobserve/browser-core'
-import { createEndpointBuilder, RequestType, startBufferingData } from '@openobserve/browser-core'
+import { RequestType, startBufferingData } from '@openobserve/browser-core'
+import { createEndpointBuilder, type EndpointPayload } from '@openobserve/js-core/transport'
 import type { MockFetch, MockFetchManager } from '@openobserve/browser-core/test'
 import { registerCleanupTask, mockFetch, mockXhr, withXhr } from '@openobserve/browser-core/test'
 import { mockRumConfiguration } from '../../test'
@@ -10,7 +10,7 @@ import type { Tracer } from './tracing/tracer'
 import { clearTracingIfNeeded } from './tracing/tracer'
 import { createSpanIdentifier, createTraceIdentifier } from './tracing/identifier'
 
-const DEFAULT_PAYLOAD = {} as Payload
+const DEFAULT_PAYLOAD = {} as EndpointPayload
 
 describe('collect fetch', () => {
   const FAKE_URL = 'http://fake-url/'
@@ -43,6 +43,7 @@ describe('collect fetch', () => {
       bufferedDataObservable
     ))
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     fetch = window.fetch as MockFetch
 
     registerCleanupTask(() => {
@@ -365,6 +366,7 @@ describe('GraphQL response text collection', () => {
       stopBuffering()
     })
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     return { mockFetchManager, completeSpy, fetch: window.fetch as MockFetch }
   }
 

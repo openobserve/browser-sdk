@@ -1,4 +1,4 @@
-import { noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
 import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import type { Strategy } from './postStartStrategy'
 

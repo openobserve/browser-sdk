@@ -40,6 +40,7 @@ const APPS: AppConfig[] = [
   { name: 'react-router-app' },
   { name: 'tanstack-router-app' },
   { name: 'react-router-v6-app', builderFn: buildReactRouterV6App, deps: ['react-router-app'] },
+  { name: 'react-router-v7-app', builderFn: buildReactRouterV7App, deps: ['react-router-app'] },
 
   // Vue Router apps
   { name: 'vue-router-v4-app', builderFn: buildVueRouterV4App, deps: ['vue-router-app'] },
@@ -57,6 +58,15 @@ const APPS: AppConfig[] = [
     builderFn: buildExtension,
     options: { runAt: 'document_start' },
     deps: ['base-extension'],
+  },
+
+  // Salesforce apps
+  { name: 'sf-lwc-app', builderFn: buildSalesforceApp },
+  { name: 'sf-experience-app', builderFn: buildSalesforceApp },
+  {
+    name: 'sf-experience-headmarkup-app',
+    builderFn: buildExperienceHeadMarkupApp,
+    deps: ['sf-experience-app'],
   },
 ]
 
@@ -102,7 +112,7 @@ runMain(async () => {
         if ('builderFn' in app) {
           await app.builderFn(app.name, app.options)
         } else {
-          await buildApp(app.name)
+          await buildApp(app.name, { restorePackageFiles: true })
         }
       })()
       buildPromises.set(app.name, promise)
@@ -129,32 +139,91 @@ function showHelpAndExit() {
   process.exit(0)
 }
 
-async function buildApp(appName: string) {
-  const appPath = `test/apps/${appName}`
-  printLog(`Building app at ${appPath}...`)
-  await command`yarn install --no-immutable`.withCurrentWorkingDirectory(appPath).runAsync()
+async function buildApp(appName: string, { restorePackageFiles = false }: { restorePackageFiles?: boolean } = {}) {
+  try {
+    const appPath = `test/apps/${appName}`
+    printLog(`Building app at ${appPath}...`)
 
-  // install peer dependencies if any
-  // intent: renovate does not allow to generate local packages before install
-  // so local packages are marked as optional peer dependencies and only installed when we build the test apps
-  const packageJson = JSON.parse(fs.readFileSync(path.join(appPath, 'package.json'), 'utf-8'))
-  if (packageJson.peerDependencies) {
-    // For each peer dependency, install it
-    for (const [name] of Object.entries(packageJson.peerDependencies)) {
-      const resolution = packageJson.resolutions?.[name]
-      const specifier = resolution ? `${name}@${resolution}` : name
-      await command`yarn add -D ${specifier}`.withCurrentWorkingDirectory(appPath).runAsync()
+    await restoreFilesAfter(
+      restorePackageFiles ? ['package.json', 'yarn.lock'].map((fileName) => path.join(appPath, fileName)) : [],
+      async () => {
+        await command`yarn install --no-immutable`.withCurrentWorkingDirectory(appPath).runAsync()
+
+        // Renovate cannot generate local packages before install, so local packages are marked as optional peer dependencies.
+        // Install them only when building the test apps.
+        const packageJson = JSON.parse(fs.readFileSync(path.join(appPath, 'package.json'), 'utf-8'))
+        if (packageJson.peerDependencies) {
+          // For each peer dependency, install it
+          for (const [name] of Object.entries(packageJson.peerDependencies)) {
+            const resolution = packageJson.resolutions?.[name]
+            const specifier = resolution ? `${name}@${resolution}` : name
+            await command`yarn add -D ${specifier}`.withCurrentWorkingDirectory(appPath).runAsync()
+          }
+        }
+      }
+    )
+
+    await command`yarn build`.withCurrentWorkingDirectory(appPath).runAsync()
+  } catch (error) {
+    throw new Error(`Failed to build app '${appName}'`, { cause: error })
+  }
+}
+
+async function restoreFilesAfter<T>(filePaths: string[], action: () => Promise<T>): Promise<T> {
+  const restoreFiles = filePaths.map((filePath) => {
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath)
+      return () => fs.writeFileSync(filePath, content)
     }
-    // revert package.json & yarn.lock changes if they are versioned
-    const areFilesVersioned = await command`git ls-files package.json yarn.lock`
-      .withCurrentWorkingDirectory(appPath)
-      .runAsync()
-    if (areFilesVersioned) {
-      await command`git checkout package.json yarn.lock`.withCurrentWorkingDirectory(appPath).runAsync()
+    return () => fs.rmSync(filePath, { force: true })
+  })
+
+  try {
+    return await action()
+  } finally {
+    for (const restoreFile of restoreFiles) {
+      restoreFile()
     }
   }
+}
 
-  await command`yarn build`.withCurrentWorkingDirectory(appPath).runAsync()
+function buildSalesforceApp(appName: string) {
+  const sourceBundle = 'packages/browser-rum/bundle/openobserve-rum-salesforce.js'
+  const targetBundle = `test/apps/${appName}/force-app/main/default/staticresources/datadog_rum_salesforce.js`
+
+  printLog(`Building app at test/apps/${appName}...`)
+  fs.copyFileSync(sourceBundle, targetBundle)
+}
+
+async function buildExperienceHeadMarkupApp() {
+  await buildGeneratedSalesforceApp('sf-experience-app', 'sf-experience-headmarkup-app', async (appPath) => {
+    await modifyPackageJson(appPath, (packageJson) => {
+      packageJson.name = 'sf-experience-headmarkup-app'
+    })
+
+    // This app exercises the Experience Cloud head markup init path, so it doesn't need the
+    // static-resource-loaded init LWC used by sf-experience-app. Best-effort removal: if it's
+    // not there, there's nothing to do.
+    fs.rmSync(path.join(appPath, 'force-app/main/default/lwc/experienceDatadogInit'), {
+      recursive: true,
+      force: true,
+    })
+  })
+}
+
+async function buildGeneratedSalesforceApp(
+  baseAppName: string,
+  appName: string,
+  modifyApp: (appPath: string) => Promise<void>
+) {
+  const baseAppPath = `test/apps/${baseAppName}`
+  const appPath = `test/apps/${appName}`
+
+  fs.rmSync(appPath, { recursive: true, force: true })
+  fs.cpSync(baseAppPath, appPath, { recursive: true })
+
+  await modifyApp(appPath)
+  buildSalesforceApp(appName)
 }
 
 async function buildReactRouterV6App() {
@@ -167,7 +236,7 @@ async function buildReactRouterV6App() {
 
     await modifyFile(path.join(appPath, 'app.tsx'), (content: string) =>
       content
-        .replace('@openobserve/browser-rum-react/react-router-v7', '@openobserve/browser-rum-react/react-router-v6')
+        .replace('@openobserve/browser-rum-react/react-router', '@openobserve/browser-rum-react/react-router-v6')
         .replace("from 'react-router'", "from 'react-router-dom'")
         // Remove the v7-only onError prop
         .replace(
@@ -188,6 +257,26 @@ async function buildReactRouterV6App() {
       content
         .replace('react-router-app.js', 'react-router-v6-app.js')
         .replace('react-router-app.js', 'react-router-v6-app.js')
+    )
+  })
+}
+
+async function buildReactRouterV7App() {
+  await buildGeneratedApp('react-router-app', 'react-router-v7-app', async (appPath) => {
+    await modifyFile(path.join(appPath, 'package.json'), (content: string) =>
+      content
+        .replace(/"name": "react-router-app"/, '"name": "react-router-v7-app"')
+        .replace(/"react-router": "[^"]*"/, '"react-router": "7.18.1"')
+    )
+
+    await modifyFile(path.join(appPath, 'app.tsx'), (content: string) =>
+      content.replace('@openobserve/browser-rum-react/react-router', '@openobserve/browser-rum-react/react-router-v7')
+    )
+
+    await modifyFile(path.join(appPath, 'webpack.config.js'), (content: string) =>
+      content
+        .replace('react-router-app.js', 'react-router-v7-app.js')
+        .replace('react-router-app.js', 'react-router-v7-app.js')
     )
   })
 }

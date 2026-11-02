@@ -1,12 +1,10 @@
 import type { ClocksState } from '@openobserve/js-core/time'
 import { clocksNow } from '@openobserve/js-core/time'
+import { normalizeUrl, globalObject, Observable } from '@openobserve/js-core/util'
+import type { GlobalObject } from '@openobserve/js-core/util'
+import { monitorError } from '@openobserve/js-core/monitor'
 import type { InstrumentedMethodCall } from '../tools/instrumentMethod'
 import { instrumentMethod } from '../tools/instrumentMethod'
-import { monitorError } from '../tools/monitor'
-import { Observable } from '../tools/observable'
-import { normalizeUrl } from '../tools/utils/urlPolyfill'
-import type { GlobalObject } from '../tools/globalObject'
-import { globalObject } from '../tools/globalObject'
 import { readBytesFromStream } from '../tools/readBytesFromStream'
 import { tryToClone } from '../tools/utils/responseUtils'
 
@@ -108,9 +106,14 @@ function beforeSend(
 
   observable.notify(context)
 
-  // Those properties can be changed by observable subscribers
-  parameters[0] = context.input as RequestInfo | URL
-  parameters[1] = context.init
+  // Those properties can be changed by observable subscribers. Only write back the changed ones to
+  // keep the original call arity: `fetch(url)` must not become `fetch(url, undefined)`.
+  if (context.input !== input) {
+    parameters[0] = context.input as RequestInfo | URL
+  }
+  if (context.init !== init) {
+    parameters[1] = context.init
+  }
 
   onPostCall((responsePromise) => {
     afterSend(observable, responsePromise, context).catch(monitorError)

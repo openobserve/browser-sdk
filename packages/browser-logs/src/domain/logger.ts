@@ -1,4 +1,5 @@
-import type { Context, ContextManager } from '@openobserve/browser-core'
+import type { DebugIdEntry, ContextManager } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import { clocksNow } from '@openobserve/js-core/time'
 import { combine } from '@openobserve/js-core/util'
 import {
@@ -6,13 +7,13 @@ import {
   ErrorHandling,
   createContextManager,
   ErrorSource,
-  callMonitored,
   sanitize,
   NonErrorPrefix,
   createHandlingStack,
   buildTag,
   sanitizeTag,
 } from '@openobserve/browser-core'
+import { callMonitored } from '@openobserve/js-core/monitor'
 
 import { isAuthorized, StatusType } from './logger/isAuthorized'
 import { createErrorFieldFromRawError } from './createErrorFieldFromRawError'
@@ -21,6 +22,7 @@ export interface LogsMessage {
   message: string
   status: StatusType
   context?: Context
+  debugIds?: DebugIdEntry[]
 }
 
 export const HandlerType = {
@@ -65,6 +67,7 @@ export class Logger {
     callMonitored(() => {
       const sanitizedMessageContext = sanitize(messageContext) as Context
       let context: Context
+      let debugIds: DebugIdEntry[] | undefined
 
       if (error !== undefined && error !== null) {
         const rawError = computeRawError({
@@ -75,6 +78,7 @@ export class Logger {
           startClocks: clocksNow(),
         })
 
+        debugIds = rawError.debugIds
         context = combine(
           {
             error: createErrorFieldFromRawError(rawError, { includeMessage: true }),
@@ -91,6 +95,7 @@ export class Logger {
           message: sanitize(message)!,
           context,
           status,
+          ...(debugIds ? { debugIds } : {}),
         },
         this,
         handlingStack

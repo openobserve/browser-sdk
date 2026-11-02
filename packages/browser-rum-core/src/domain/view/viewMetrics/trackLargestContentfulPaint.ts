@@ -1,6 +1,7 @@
 import type { RelativeTime } from '@openobserve/js-core/time'
 import { ONE_MINUTE } from '@openobserve/js-core/time'
-import { DOM_EVENT, addEventListeners, findLast } from '@openobserve/browser-core'
+import { findLast } from '@openobserve/browser-core'
+import { DOM_EVENT, addEventListeners } from '@openobserve/js-core/dom'
 import type { RumConfiguration } from '../../configuration'
 import { createPerformanceObservable, RumPerformanceEntryType } from '../../../browser/performanceObservable'
 import { findLcpResourceEntry, getNavigationEntry, sanitizeFirstByte } from '../../../browser/performanceUtils'
@@ -73,7 +74,7 @@ export function trackLargestContentfulPaint(
       const resourceUrl = computeLcpEntryUrl(lcpEntry)
       const lcpValue = lcpEntry.startTime
 
-      const subParts = computeLcpSubParts(resourceUrl, lcpValue)
+      const subParts = computeLcpSubParts(resourceUrl, lcpValue, sanitizeFirstByte(getNavigationEntry()))
 
       callback({
         value: lcpValue,
@@ -99,15 +100,17 @@ function computeLcpEntryUrl(entry: RumLargestContentfulPaintTiming) {
 }
 
 /**
- * Compute the LCP sub-parts breakdown (loadDelay, loadTime, renderDelay).
- * Returns undefined if navigation timing data or TTFB is unavailable.
+ * Compute the LCP sub-parts breakdown (loadDelay, loadTime, renderDelay) relative to a baseline.
+ * For the initial view, the baseline is TTFB (first byte of the navigation response). For a
+ * soft-navigation route_change view, there's no equivalent request/response round trip, so the
+ * caller passes the soft-navigation start time instead, effectively treating TTFB as 0.
+ * Returns undefined if the baseline is unavailable.
  */
-function computeLcpSubParts(
+export function computeLcpSubParts(
   resourceUrl: string | undefined,
-  lcpValue: RelativeTime
+  lcpValue: RelativeTime,
+  firstByte: RelativeTime | undefined
 ): LargestContentfulPaint['subParts'] {
-  const firstByte = sanitizeFirstByte(getNavigationEntry())
-
   if (firstByte === undefined) {
     return undefined
   }

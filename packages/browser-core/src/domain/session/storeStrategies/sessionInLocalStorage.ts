@@ -1,6 +1,5 @@
-import { generateUUID } from '../../../tools/utils/stringUtils'
-import { Observable } from '../../../tools/observable'
-import { addEventListener } from '../../../browser/addEventListener'
+import { Observable, generateUUID } from '@openobserve/js-core/util'
+import { addEventListener } from '@openobserve/js-core/dom'
 import { SessionPersistence } from '../sessionConstants'
 import type { SessionState } from '../sessionState'
 import { isSessionInNotStartedState, toSessionString, toSessionState } from '../sessionState'

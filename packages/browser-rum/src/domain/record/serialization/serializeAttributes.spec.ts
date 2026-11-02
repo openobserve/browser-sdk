@@ -11,6 +11,7 @@ import {
 import { appendElement } from '@openobserve/browser-rum-core/test'
 import { createSerializationTransactionForTesting } from '../test/serialization.specHelper'
 import type { ScrollPositions } from '../elementsScrollPositions'
+import type { RoleAnnotatedAttributeAssignment } from '../encoding'
 import { getCssRulesString, serializeDOMAttributes, serializeVirtualAttributes } from './serializeAttributes'
 import type { SerializationTransaction } from './serializationTransaction'
 import { SerializationKind } from './serializationTransaction'
@@ -81,12 +82,10 @@ describe('serializeDOMAttributes', () => {
       { html: `<div ${PRIVACY_ATTR_NAME}="value">`, expectedBehavior: 'always-unmasked' },
 
       // Stable attributes should always be unmasked.
-      ...STABLE_ATTRIBUTES.map(
-        (attribute: string): TestCase => ({
-          html: `<div ${attribute}="value">`,
-          expectedBehavior: 'always-unmasked',
-        })
-      ),
+      ...STABLE_ATTRIBUTES.map((attribute: string): TestCase => ({
+        html: `<div ${attribute}="value">`,
+        expectedBehavior: 'always-unmasked',
+      })),
 
       // Most data attributes should be maskable.
       { html: '<div data-foo="value">', expectedBehavior: 'maskable' },
@@ -108,6 +107,9 @@ describe('serializeDOMAttributes', () => {
       { html: '<div aria-label="value">', expectedBehavior: 'maskable' },
       { html: '<input name="value">', expectedBehavior: 'maskable' },
       { html: '<div name="value">', expectedBehavior: 'maskable' },
+
+      // The name attribute of slots is structural shadow DOM metadata and should always be unmasked.
+      { html: '<slot name="value">', expectedBehavior: 'always-unmasked' },
 
       // Element/attribute combinations which may contain user-identifying ids and tokens
       // should be maskable. The same attributes should always be unmasked in other
@@ -241,7 +243,7 @@ describe('serializeDOMAttributes', () => {
 
       for (const privacyLevel of PRIVACY_LEVELS) {
         const attributes = serializeDOMAttributes(element, privacyLevel, transaction)
-        const actual = attributes[attribute.name] as boolean | string | undefined
+        const actual = valueOfAttribute(attributes, attribute.name) as boolean | string | undefined
         const expected = expectedValueForPrivacyLevel(testCase, element, attribute, privacyLevel)
         expect(actual).withContext(`${testCase.html} for ${privacyLevel}`).toEqual(expected)
       }
@@ -326,9 +328,15 @@ describe('serializeDOMAttributes', () => {
     // behavior; it shouldn't behave differently because Element#tagName is lowercase.
     ;(element as any).selected = true
     const attributes = serializeDOMAttributes(element, NodePrivacyLevel.ALLOW, transaction)
-    expect(attributes['selected']).toBe('')
+    expect(valueOfAttribute(attributes, 'selected')).toBe('')
   })
 })
+
+/** The value that was assigned to the named attribute, or undefined if it wasn't serialized. */
+function valueOfAttribute(attributes: RoleAnnotatedAttributeAssignment[], name: string): string | undefined {
+  const assignment = attributes.find(([attributeName]) => attributeName.string === name)
+  return assignment?.[1].string
+}
 
 describe('serializeVirtualAttributes', () => {
   let stats: SerializationStats
@@ -389,6 +397,45 @@ describe('serializeVirtualAttributes', () => {
     it('handles style element stylesheets', () => {
       const style = appendElement(`<style>${cssText}</style>`)
       expectVirtualAttributes(style, { _cssText: cssText }, checkStats)
+    })
+
+    it('handles link element stylesheets with a relative href after the base URL changed', async () => {
+      // A base URL whose directory is '/client/', and a relative href that climbs one level out
+      // of it to reach the stylesheet served at '/base/packages/...'.
+      const baseUrl = `${location.origin}/client/new-quote`
+      const relativeHref = '../base/packages/browser-rum/test/record/relativeStylesheet.css'
+
+      // Load the stylesheet for real, in an isolated iframe so that changing the base URL can't
+      // affect the rest of the test run.
+      const iframe = document.createElement('iframe')
+      registerCleanupTask(() => {
+        iframe.remove()
+      })
+
+      const loaded = new Promise((resolve) => iframe.addEventListener('load', resolve))
+      iframe.srcdoc = `
+        <base href="${baseUrl}">
+        <link rel="stylesheet" href="${relativeHref}">
+      `
+      document.body.appendChild(iframe)
+      await loaded
+
+      const iframeDocument = iframe.contentDocument!
+      const link = iframeDocument.querySelector('link')!
+      expect(link.sheet).withContext('the stylesheet should have loaded').not.toBeNull()
+
+      // Emulate a client-side navigation into a deeper directory. Only the document base URL
+      // changes; the stylesheet stays loaded and applied, as it does in the browser. `<base>` is
+      // used rather than `pushState`, which throws on a `srcdoc` document; both change
+      // `document.baseURI`, which is all `HTMLLinkElement#href` reads.
+      iframeDocument.querySelector('base')!.setAttribute('href', `${baseUrl}/personal-details`)
+
+      // HTMLLinkElement#href re-resolves the relative attribute against the new base URL, while
+      // CSSStyleSheet#href stays frozen at its load-time value. Matching the two is what used to
+      // lose the stylesheet (RUMS-6225).
+      expect(link.href).not.toBe(link.sheet!.href!)
+
+      expectVirtualAttributes(link, { _cssText: cssText }, checkStats)
     })
   })
 

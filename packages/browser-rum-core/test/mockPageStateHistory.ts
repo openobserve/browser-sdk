@@ -1,4 +1,4 @@
-import { noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
 import type { PageStateHistory } from '../src/domain/contexts/pageStateHistory'
 
 export function mockPageStateHistory(partialPageStateHistory?: Partial<PageStateHistory>): PageStateHistory {

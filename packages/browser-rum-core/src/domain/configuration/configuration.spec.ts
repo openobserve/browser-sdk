@@ -1,13 +1,25 @@
+import type { TimeStamp } from '@openobserve/js-core/time'
 import type { InitConfiguration } from '@openobserve/browser-core'
-import { DefaultPrivacyLevel, display, TraceContextInjection } from '@openobserve/browser-core'
+import {
+  addExperimentalFeatures,
+  DefaultPrivacyLevel,
+  display,
+  ExperimentalFeature,
+  TraceContextInjection,
+} from '@openobserve/browser-core'
 import type {
   ExtractTelemetryConfiguration,
   CamelToSnakeCase,
   MapInitConfigurationKey,
 } from '@openobserve/browser-core/test'
-import { EXHAUSTIVE_INIT_CONFIGURATION, SERIALIZED_EXHAUSTIVE_INIT_CONFIGURATION } from '@openobserve/browser-core/test'
+import {
+  EXHAUSTIVE_INIT_CONFIGURATION,
+  mockEventBridge,
+  SERIALIZED_EXHAUSTIVE_INIT_CONFIGURATION,
+} from '@openobserve/browser-core/test'
 import type { RumInitConfiguration } from './configuration'
 import {
+  CanvasRecordingQuality,
   DEFAULT_PROPAGATOR_TYPES,
   DEFAULT_TRACKED_RESOURCE_HEADERS,
   serializeRumConfiguration,
@@ -30,9 +42,45 @@ describe('validateAndBuildRumConfiguration', () => {
       expect(
         validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, applicationId: undefined as any })
       ).toBeUndefined()
-      expect(displayErrorSpy).toHaveBeenCalledOnceWith(
-        'Application ID is not configured, no RUM data will be collected.'
-      )
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('"applicationId" is required')
+    })
+  })
+
+  describe('service', () => {
+    it('defaults to the applicationId if the option is not provided', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, applicationId: 'my-app-id' })!.service
+      ).toBe('my-app-id')
+    })
+
+    it('is set to the provided value', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          applicationId: 'my-app-id',
+          service: 'my-service',
+        })!.service
+      ).toBe('my-service')
+    })
+
+    it('defaults to the applicationId if the option is null', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          applicationId: 'my-app-id',
+          service: null,
+        })!.service
+      ).toBe('my-app-id')
+    })
+
+    it('defaults to the applicationId if the option is an empty string', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          applicationId: 'my-app-id',
+          service: '',
+        })!.service
+      ).toBe('my-app-id')
     })
   })
 
@@ -52,18 +100,14 @@ describe('validateAndBuildRumConfiguration', () => {
       expect(
         validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, sessionReplaySampleRate: 'foo' as any })
       ).toBeUndefined()
-      expect(displayErrorSpy).toHaveBeenCalledOnceWith(
-        'Session Replay Sample Rate should be a number between 0 and 100'
-      )
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('"sessionReplaySampleRate" must be a number between 0 and 100')
 
       displayErrorSpy.calls.reset()
 
       expect(
         validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, sessionReplaySampleRate: 200 })
       ).toBeUndefined()
-      expect(displayErrorSpy).toHaveBeenCalledOnceWith(
-        'Session Replay Sample Rate should be a number between 0 and 100'
-      )
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('"sessionReplaySampleRate" must be a number between 0 and 100')
     })
   })
 
@@ -82,11 +126,11 @@ describe('validateAndBuildRumConfiguration', () => {
       expect(
         validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, traceSampleRate: 'foo' as any })
       ).toBeUndefined()
-      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Trace Sample Rate should be a number between 0 and 100')
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('"traceSampleRate" must be a number between 0 and 100')
 
       displayErrorSpy.calls.reset()
       expect(validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, traceSampleRate: 200 })).toBeUndefined()
-      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Trace Sample Rate should be a number between 0 and 100')
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('"traceSampleRate" must be a number between 0 and 100')
     })
   })
 
@@ -187,7 +231,7 @@ describe('validateAndBuildRumConfiguration', () => {
       ).toEqual([{ match: 'simple', propagatorTypes: DEFAULT_PROPAGATOR_TYPES }])
     })
 
-    it('should filter out unexpected parameter types', () => {
+    it('should filter out items where match is invalid, falling back to default propagatorTypes for invalid propagatorTypes', () => {
       expect(
         validateAndBuildRumConfiguration({
           ...DEFAULT_INIT_CONFIGURATION,
@@ -199,9 +243,7 @@ describe('validateAndBuildRumConfiguration', () => {
             { match: 'toto', propagatorTypes: 42 },
           ],
         })!.allowedTracingUrls
-      ).toEqual([])
-
-      expect(displayWarnSpy).toHaveBeenCalledTimes(4)
+      ).toEqual([{ match: 'toto', propagatorTypes: DEFAULT_PROPAGATOR_TYPES }])
     })
 
     it('does not validate the configuration if a value is provided and service is undefined', () => {
@@ -211,11 +253,11 @@ describe('validateAndBuildRumConfiguration', () => {
       expect(displayErrorSpy).toHaveBeenCalledOnceWith('Service needs to be configured when tracing is enabled')
     })
 
-    it('does not validate the configuration if an incorrect value is provided', () => {
+    it('does not validate the configuration if a single valid value is provided without service', () => {
       expect(
         validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, allowedTracingUrls: 'foo' as any })
       ).toBeUndefined()
-      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Allowed Tracing URLs should be an array')
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Service needs to be configured when tracing is enabled')
     })
   })
 
@@ -246,11 +288,11 @@ describe('validateAndBuildRumConfiguration', () => {
       ).toEqual([customUrlFunction])
     })
 
-    it('does not validate the configuration if an incorrect value is provided', () => {
+    it('normalizes a single valid value to an array', () => {
       expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, excludedActivityUrls: 'foo' as any })
-      ).toBeUndefined()
-      expect(displayErrorSpy).toHaveBeenCalledOnceWith('Excluded Activity Urls should be an array')
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, excludedActivityUrls: 'foo' as any })!
+          .excludedActivityUrls
+      ).toEqual(['foo'])
     })
   })
 
@@ -303,17 +345,9 @@ describe('validateAndBuildRumConfiguration', () => {
   })
 
   describe('startSessionReplayRecordingManually', () => {
-    it('defaults to true if sessionReplaySampleRate is 0', () => {
+    it('defaults to false', () => {
       expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, sessionReplaySampleRate: 0 })!
-          .startSessionReplayRecordingManually
-      ).toBeTrue()
-    })
-
-    it('defaults to false if sessionReplaySampleRate is not 0', () => {
-      expect(
-        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, sessionReplaySampleRate: 50 })!
-          .startSessionReplayRecordingManually
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION })!.startSessionReplayRecordingManually
       ).toBeFalse()
     })
 
@@ -335,6 +369,106 @@ describe('validateAndBuildRumConfiguration', () => {
           startSessionReplayRecordingManually: 'foo' as any,
         })!.startSessionReplayRecordingManually
       ).toBeTrue()
+    })
+  })
+
+  describe('canvas recording', () => {
+    it('is disabled by default', () => {
+      const configuration = validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!
+
+      expect(configuration.sessionReplayCanvasRecording).toBeUndefined()
+    })
+
+    it('stays disabled when requested without the experimental feature', () => {
+      const configuration = validateAndBuildRumConfiguration({
+        ...DEFAULT_INIT_CONFIGURATION,
+        sessionReplayCanvasRecording: { enable: true },
+      })!
+
+      expect(configuration.sessionReplayCanvasRecording).toBeUndefined()
+    })
+
+    describe('when the experimental feature is enabled', () => {
+      beforeEach(() => {
+        addExperimentalFeatures([ExperimentalFeature.SESSION_REPLAY_RECORD_CANVAS])
+      })
+
+      it('uses the medium quality preset by default when enabled', () => {
+        const configuration = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          sessionReplayCanvasRecording: { enable: true },
+        })!
+
+        expect(configuration.sessionReplayCanvasRecording).toEqual({
+          enable: true,
+          maxFramesPerSecond: 4,
+          hashingMaxDimension: 100,
+          maxImageDimension: 1000,
+          encodeQuality: 0.5,
+        })
+      })
+
+      it('uses the configured quality preset', () => {
+        const configuration = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          sessionReplayCanvasRecording: {
+            enable: true,
+            quality: CanvasRecordingQuality.LOW,
+          },
+        })!
+
+        expect(configuration.sessionReplayCanvasRecording).toEqual({
+          enable: true,
+          maxFramesPerSecond: 1,
+          hashingMaxDimension: 50,
+          maxImageDimension: 600,
+          encodeQuality: 0.3,
+        })
+      })
+
+      it('resolves to undefined when disabled regardless of the configured quality', () => {
+        const configuration = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          sessionReplayCanvasRecording: {
+            enable: false,
+            quality: CanvasRecordingQuality.HIGH,
+          },
+        })!
+
+        expect(configuration.sessionReplayCanvasRecording).toBeUndefined()
+      })
+
+      it('rejects an invalid quality preset', () => {
+        expect(
+          validateAndBuildRumConfiguration({
+            ...DEFAULT_INIT_CONFIGURATION,
+            sessionReplayCanvasRecording: { enable: true, quality: 'ultra' as any },
+          })
+        ).toBeUndefined()
+      })
+
+      it('rejects invalid canvas recording options', () => {
+        expect(
+          validateAndBuildRumConfiguration({
+            ...DEFAULT_INIT_CONFIGURATION,
+            sessionReplayCanvasRecording: true as any,
+          })
+        ).toBeUndefined()
+        expect(displayErrorSpy).toHaveBeenCalledOnceWith('"sessionReplayCanvasRecording" is not a valid object')
+      })
+
+      it('requires the enable option', () => {
+        expect(
+          validateAndBuildRumConfiguration({
+            ...DEFAULT_INIT_CONFIGURATION,
+            sessionReplayCanvasRecording: {} as any,
+          })
+        ).toBeUndefined()
+        expect(displayErrorSpy.calls.allArgs()).toEqual([
+          ['"enable" is required'],
+          ['"sessionReplayCanvasRecording" is not a valid object'],
+        ])
+      })
     })
   })
 
@@ -410,6 +544,107 @@ describe('validateAndBuildRumConfiguration', () => {
     })
   })
 
+  describe('betaTrackWebSockets', () => {
+    it('defaults to false', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.betaTrackWebSockets).toBeFalse()
+    })
+
+    it('is true when the option is enabled', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, betaTrackWebSockets: true })!
+          .betaTrackWebSockets
+      ).toBeTrue()
+    })
+  })
+
+  describe('betaEnableViewUpdates', () => {
+    // OpenObserve: the server has no handling for view_update, so the option is opt-in.
+    it('defaults to false without a proxy', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.betaEnableViewUpdates).toBeFalse()
+    })
+
+    it('defaults to false with a proxy', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, proxy: 'https://proxy.example.com' })!
+          .betaEnableViewUpdates
+      ).toBeFalse()
+    })
+
+    it('defaults to false with a proxy function', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, proxy: () => 'https://proxy.example.com' })!
+          .betaEnableViewUpdates
+      ).toBeFalse()
+    })
+
+    it('honors an explicit true without a proxy', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, betaEnableViewUpdates: true })!
+          .betaEnableViewUpdates
+      ).toBeTrue()
+    })
+
+    it('honors an explicit false without a proxy', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, betaEnableViewUpdates: false })!
+          .betaEnableViewUpdates
+      ).toBeFalse()
+    })
+
+    it('honors an explicit true with a proxy', () => {
+      expect(
+        validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          betaEnableViewUpdates: true,
+          proxy: 'https://proxy.example.com',
+        })!.betaEnableViewUpdates
+      ).toBeTrue()
+    })
+
+    it('is false when the event bridge is used', () => {
+      // The bridge replaces the batch transport, so no view_update can ever be created.
+      mockEventBridge()
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.betaEnableViewUpdates).toBeFalse()
+    })
+
+    it('is false when the event bridge is used, even if the option is explicitly enabled', () => {
+      mockEventBridge()
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, betaEnableViewUpdates: true })!
+          .betaEnableViewUpdates
+      ).toBeFalse()
+    })
+
+    it('defaults to false for the Salesforce bundle', () => {
+      // The Salesforce bundle is installed as a pinned static resource with no rollback path.
+      expect(
+        validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION, 'rum-salesforce')!.betaEnableViewUpdates
+      ).toBeFalse()
+    })
+
+    it('is true for the Salesforce bundle when the option is explicitly enabled', () => {
+      expect(
+        validateAndBuildRumConfiguration(
+          { ...DEFAULT_INIT_CONFIGURATION, betaEnableViewUpdates: true },
+          'rum-salesforce'
+        )!.betaEnableViewUpdates
+      ).toBeTrue()
+    })
+
+    it('defaults to false for other bundles', () => {
+      expect(
+        validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION, 'rum-shopify')!.betaEnableViewUpdates
+      ).toBeFalse()
+    })
+
+    it('does not validate the configuration if it is not a boolean', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, betaEnableViewUpdates: 'yes' as any })
+      ).toBeUndefined()
+      expect(displayErrorSpy).toHaveBeenCalledOnceWith('"betaEnableViewUpdates" must be a boolean')
+    })
+  })
+
   describe('trackResourceHeaders', () => {
     describe('disabled', () => {
       it('defaults to empty array', () => {
@@ -432,6 +667,42 @@ describe('validateAndBuildRumConfiguration', () => {
         })!.trackResourceHeaders
 
         expect(result).toEqual(DEFAULT_TRACKED_RESOURCE_HEADERS.map((name) => ({ name })))
+      })
+
+      it('accepts a MatchHeader without name for default headers', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{}],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([{}])
+      })
+
+      it('preserves location when name is absent', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ location: 'response' }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([{ location: 'response' }])
+      })
+
+      it('combines default header matcher with custom matchers in array order', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{}, { name: 'x-custom' }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([{}, { name: 'x-custom' }])
+      })
+
+      it('treats undefined name like absent name', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ name: undefined }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([{}])
       })
 
       it('accepts a MatchHeader with only name', () => {
@@ -521,21 +792,26 @@ describe('validateAndBuildRumConfiguration', () => {
         })!.trackResourceHeaders
 
         expect(result).toEqual([{ name: 'x-valid' }, { name: 'x-also-valid' }])
-        expect(displayWarnSpy).toHaveBeenCalledOnceWith(
-          "trackResourceHeaders[1] should be a MatchHeader object with a 'name' property"
-        )
+        expect(displayWarnSpy).toHaveBeenCalledOnceWith('trackResourceHeaders[1] should be a MatchHeader object')
       })
 
-      it('warns and skips item without name', () => {
+      it('accepts a MatchHeader without name', () => {
         const result = validateAndBuildRumConfiguration({
           ...DEFAULT_INIT_CONFIGURATION,
-          trackResourceHeaders: [{ url: 'https://example.com' } as any],
+          trackResourceHeaders: [{ url: 'https://example.com' }],
+        })!.trackResourceHeaders
+
+        expect(result).toEqual([{ url: 'https://example.com' }])
+      })
+
+      it('warns and skips item with invalid name', () => {
+        const result = validateAndBuildRumConfiguration({
+          ...DEFAULT_INIT_CONFIGURATION,
+          trackResourceHeaders: [{ name: 42 as any }],
         })!.trackResourceHeaders
 
         expect(result).toEqual([])
-        expect(displayWarnSpy).toHaveBeenCalledOnceWith(
-          "trackResourceHeaders[0] should be a MatchHeader object with a 'name' property"
-        )
+        expect(displayWarnSpy).toHaveBeenCalledOnceWith('trackResourceHeaders[0].name should be a MatchOption')
       })
 
       it('warns and skips item with invalid url', () => {
@@ -595,6 +871,33 @@ describe('validateAndBuildRumConfiguration', () => {
   })
 
   describe('serializeRumConfiguration', () => {
+    describe('remote configuration metadata serialization', () => {
+      it('should serialize the applied metadata', () => {
+        const serialized = serializeRumConfiguration(
+          { ...DEFAULT_INIT_CONFIGURATION, remoteConfigurationId: 'rc-id' },
+          undefined,
+          {
+            lastModified: 1500,
+            lastSynced: 2000 as TimeStamp,
+            firstApplied: 3000 as TimeStamp,
+            syncId: 'sync-id',
+          }
+        )
+
+        expect(serialized.remote_configuration).toEqual({
+          config_id: 'rc-id',
+          last_modified: 1500,
+          last_synced: 2000 as TimeStamp,
+          first_applied: 3000 as TimeStamp,
+          sync_id: 'sync-id',
+        })
+      })
+
+      it('should omit remote_configuration when no metadata was applied', () => {
+        expect(serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION).remote_configuration).toBeUndefined()
+      })
+    })
+
     describe('selected tracing propagators serialization', () => {
       it('should not return any propagator type', () => {
         expect(serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION).selected_tracing_propagators).toEqual([])
@@ -706,7 +1009,7 @@ describe('validateAndBuildRumConfiguration', () => {
         ...DEFAULT_INIT_CONFIGURATION,
         plugins: [plugin],
       })
-      expect(configuration!.plugins).toEqual([plugin])
+      expect(configuration!.plugins).toEqual([jasmine.objectContaining(plugin)])
     })
   })
   describe('trackFeatureFlagsForEvents', () => {
@@ -723,12 +1026,12 @@ describe('validateAndBuildRumConfiguration', () => {
       expect(configuration.trackFeatureFlagsForEvents).toEqual(['resource', 'long_task', 'vital'])
       expect(displayWarnSpy).not.toHaveBeenCalled()
     })
-    it('does not validate the configuration if an incorrect value is provided', () => {
-      validateAndBuildRumConfiguration({
+    it('falls back to default when an incorrect value is provided', () => {
+      const config = validateAndBuildRumConfiguration({
         ...DEFAULT_INIT_CONFIGURATION,
         trackFeatureFlagsForEvents: 123 as any,
       })!
-      expect(displayWarnSpy).toHaveBeenCalledOnceWith('trackFeatureFlagsForEvents should be an array')
+      expect(config.trackFeatureFlagsForEvents).toEqual([])
     })
   })
 
@@ -802,6 +1105,45 @@ describe('validateAndBuildRumConfiguration', () => {
 })
 
 describe('serializeRumConfiguration', () => {
+  describe('beta_enable_view_updates', () => {
+    it('reports the effective default without a proxy', () => {
+      expect(serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION).beta_enable_view_updates).toBeFalse()
+    })
+
+    it('reports the effective default with a proxy', () => {
+      expect(
+        serializeRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, proxy: 'https://proxy.example.com' })
+          .beta_enable_view_updates
+      ).toBeFalse()
+    })
+
+    it('reports an explicitly disabled option', () => {
+      expect(
+        serializeRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, betaEnableViewUpdates: false })
+          .beta_enable_view_updates
+      ).toBeFalse()
+    })
+
+    it('reports false when the event bridge is used', () => {
+      mockEventBridge()
+      expect(serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION).beta_enable_view_updates).toBeFalse()
+    })
+
+    it('reports false for the Salesforce bundle', () => {
+      expect(
+        serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION, 'rum-salesforce').beta_enable_view_updates
+      ).toBeFalse()
+    })
+
+    it('reports false when the event bridge is used, even if the option is explicitly enabled', () => {
+      mockEventBridge()
+      expect(
+        serializeRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, betaEnableViewUpdates: true })
+          .beta_enable_view_updates
+      ).toBeFalse()
+    })
+  })
+
   it('should serialize the configuration', () => {
     const exhaustiveRumInitConfiguration: Required<RumInitConfiguration> = {
       ...EXHAUSTIVE_INIT_CONFIGURATION,
@@ -832,6 +1174,9 @@ describe('serializeRumConfiguration', () => {
       profilingSampleRate: 42,
       propagateTraceBaggage: true,
       trackResourceHeaders: true,
+      betaEnableViewUpdates: true,
+      betaTrackWebSockets: false,
+      sessionReplayCanvasRecording: { enable: true, quality: CanvasRecordingQuality.HIGH },
     }
 
     type MapRumInitConfigurationKey<Key extends string> = Key extends keyof InitConfiguration
@@ -846,7 +1191,9 @@ describe('serializeRumConfiguration', () => {
         : Key extends 'trackLongTasks'
           ? 'track_long_task' // We forgot the s, keeping this for backward compatibility
           : // The following options are not reported as telemetry. Please avoid adding more of them.
-            // `remoteConfiguration` is covered by the legacy `remote_configuration_id` field.
+            // The `remoteConfiguration` init option is covered by the legacy `remote_configuration_id`
+            // field. The `remote_configuration` telemetry field is unrelated: it carries the sync
+            // metadata of the applied version, which does not come from the init configuration.
             Key extends 'applicationId' | 'subdomain' | 'remoteConfiguration'
             ? never
             : CamelToSnakeCase<Key>
@@ -857,6 +1204,8 @@ describe('serializeRumConfiguration', () => {
       | 'selected_tracing_propagators'
       | 'use_track_graph_ql_payload'
       | 'use_track_graph_ql_response_errors'
+      | 'session_replay_canvas_recording_quality'
+      | 'remote_configuration'
     > = serializeRumConfiguration(exhaustiveRumInitConfiguration)
 
     expect(serializedConfiguration).toEqual({
@@ -884,9 +1233,14 @@ describe('serializeRumConfiguration', () => {
       plugins: [{ name: 'foo', bar: true }],
       track_feature_flags_for_events: ['vital'],
       remote_configuration_id: '123',
+      remote_configuration: undefined,
       use_remote_configuration_proxy: true,
       profiling_sample_rate: 42,
       track_resource_headers: 'default_headers',
+      beta_enable_view_updates: true,
+      beta_track_web_sockets: false,
+      session_replay_canvas_recording: true,
+      session_replay_canvas_recording_quality: 'high',
     })
   })
 })

@@ -1,5 +1,5 @@
 import type { TimeStamp } from '@openobserve/js-core/time'
-import { noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
 import { RecordType, SnapshotFormat } from '../../../types'
 import type { BrowserFullSnapshotChangeRecord, BrowserRecord } from '../../../types'
 import type { RecordingScope } from '../recordingScope'

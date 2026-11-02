@@ -1,4 +1,6 @@
-import { fetch, setTimeout, clearTimeout, buildEndpointUrl } from '@openobserve/browser-core'
+import { setTimeout, clearTimeout } from '@openobserve/js-core/util'
+import { fetch } from '@openobserve/js-core/dom'
+import { buildEndpointUrl } from '@openobserve/js-core/transport'
 import type { RumConfiguration } from '@openobserve/browser-rum-core'
 
 // Reason strings surfaced on RUM events. Backend reasons backend_unavailable and

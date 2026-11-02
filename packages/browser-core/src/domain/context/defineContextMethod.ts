@@ -1,7 +1,7 @@
+import { monitor } from '@openobserve/js-core/monitor'
+import type { BufferedObservable } from '@openobserve/js-core/util'
 import type { RawTelemetryUsage, RawTelemetryUsageFeature } from '../telemetry'
 import { addTelemetryUsage } from '../telemetry'
-import { monitor } from '../../tools/monitor'
-import type { BufferedObservable } from '../../tools/observable'
 import type { ContextManager } from './contextManager'
 import type { ContextManagerMethod, CustomerContextKey } from './contextConstants'
 

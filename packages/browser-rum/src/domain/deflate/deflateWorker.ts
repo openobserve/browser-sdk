@@ -1,6 +1,8 @@
 import type { DeflateWorker, DeflateWorkerResponse } from '@openobserve/browser-core'
 import { ONE_SECOND } from '@openobserve/js-core/time'
-import { addTelemetryError, display, addEventListener, setTimeout, mockable } from '@openobserve/browser-core'
+import { addTelemetryError, display } from '@openobserve/browser-core'
+import { mockable, setTimeout } from '@openobserve/js-core/util'
+import { addEventListener } from '@openobserve/js-core/dom'
 import type { RumConfiguration } from '@openobserve/browser-rum-core'
 import { reportScriptLoadingError } from '../scriptLoadingError'
 

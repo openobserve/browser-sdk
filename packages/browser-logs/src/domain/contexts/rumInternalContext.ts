@@ -1,6 +1,7 @@
+import { globalObject } from '@openobserve/js-core/util'
 import type { RelativeTime } from '@openobserve/js-core/time'
 import type { RumInternalContext } from '@openobserve/browser-core'
-import { globalObject, willSyntheticsInjectRum } from '@openobserve/browser-core'
+import { willSyntheticsInjectRum } from '@openobserve/browser-core'
 import { SKIPPED } from '@openobserve/js-core/assembly'
 import type { Hooks } from '../hooks'
 
@@ -16,7 +17,7 @@ interface BrowserWindow {
 export function startRUMInternalContext(hooks: Hooks) {
   const browserWindow = globalObject as BrowserWindow
 
-  hooks.assemble.register(({ startTime }) => {
+  hooks.assembleEventDefaults.register(({ startTime }) => {
     const internalContext = getRUMInternalContext(startTime)
     if (!internalContext) {
       return SKIPPED
