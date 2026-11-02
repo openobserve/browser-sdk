@@ -1,0 +1,123 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MinaKaramApex <Mina.Karam@apexmedical.ai>
+Date: Mon, 2 Nov 2026 09:37:38 +0200
+Subject: [PATCH 4/7] feat(openobserve): partial view updates default off
+
+Upstream enables betaEnableViewUpdates by default unless a proxy is set (or
+the bundle is the Salesforce build). The OpenObserve server has no handling
+for the view_update event type, so the default is now false. An explicit
+`betaEnableViewUpdates: true` is still honoured (the event bridge still
+forces it off). Spec updated to match, serialized telemetry reports the
+effective value.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../configuration/configuration.spec.ts       | 18 ++++++++++++-----
+ .../src/domain/configuration/configuration.ts | 20 +++++++++----------
+ 2 files changed, 22 insertions(+), 16 deletions(-)
+
+diff --git a/packages/browser-rum-core/src/domain/configuration/configuration.spec.ts b/packages/browser-rum-core/src/domain/configuration/configuration.spec.ts
+index cef61db99..d107fcb95 100644
+--- a/packages/browser-rum-core/src/domain/configuration/configuration.spec.ts
++++ b/packages/browser-rum-core/src/domain/configuration/configuration.spec.ts
+@@ -558,8 +558,9 @@ describe('validateAndBuildRumConfiguration', () => {
+   })
+ 
+   describe('betaEnableViewUpdates', () => {
+-    it('defaults to true without a proxy', () => {
+-      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.betaEnableViewUpdates).toBeTrue()
++    // OpenObserve: the server has no handling for view_update, so the option is opt-in.
++    it('defaults to false without a proxy', () => {
++      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.betaEnableViewUpdates).toBeFalse()
+     })
+ 
+     it('defaults to false with a proxy', () => {
+@@ -576,6 +577,13 @@ describe('validateAndBuildRumConfiguration', () => {
+       ).toBeFalse()
+     })
+ 
++    it('honors an explicit true without a proxy', () => {
++      expect(
++        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, betaEnableViewUpdates: true })!
++          .betaEnableViewUpdates
++      ).toBeTrue()
++    })
++
+     it('honors an explicit false without a proxy', () => {
+       expect(
+         validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, betaEnableViewUpdates: false })!
+@@ -623,10 +631,10 @@ describe('validateAndBuildRumConfiguration', () => {
+       ).toBeTrue()
+     })
+ 
+-    it('defaults to true for other bundles', () => {
++    it('defaults to false for other bundles', () => {
+       expect(
+         validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION, 'rum-shopify')!.betaEnableViewUpdates
+-      ).toBeTrue()
++      ).toBeFalse()
+     })
+ 
+     it('does not validate the configuration if it is not a boolean', () => {
+@@ -1099,7 +1107,7 @@ describe('validateAndBuildRumConfiguration', () => {
+ describe('serializeRumConfiguration', () => {
+   describe('beta_enable_view_updates', () => {
+     it('reports the effective default without a proxy', () => {
+-      expect(serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION).beta_enable_view_updates).toBeTrue()
++      expect(serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION).beta_enable_view_updates).toBeFalse()
+     })
+ 
+     it('reports the effective default with a proxy', () => {
+diff --git a/packages/browser-rum-core/src/domain/configuration/configuration.ts b/packages/browser-rum-core/src/domain/configuration/configuration.ts
+index a502a08dc..3f8935477 100644
+--- a/packages/browser-rum-core/src/domain/configuration/configuration.ts
++++ b/packages/browser-rum-core/src/domain/configuration/configuration.ts
+@@ -365,8 +365,8 @@ export interface RumInitConfiguration extends InitConfiguration {
+    * Enable partial view updates, which reduces bandwidth by sending only changed
+    * fields instead of full view events on intermediate updates.
+    *
+-   * Enabled by default unless a `proxy` is configured, because a proxy may not forward the
+-   * `view_update` event type.
++   * Disabled by default in the OpenObserve SDK, because the OpenObserve server does not handle the
++   * `view_update` event type. Set to `true` to opt in explicitly.
+    *
+    * @category Beta
+    */
+@@ -593,16 +593,17 @@ export type RumConfiguration = Omit<
+ 
+ /**
+  * Resolves whether partial view updates are enabled. Never enabled when the event bridge is used.
+- * Otherwise an explicit `betaEnableViewUpdates` takes precedence, and it defaults to true unless a
+- * `proxy` is configured (a proxy may not forward the `view_update` event type yet) or the bundle is
+- * the Salesforce build, which customers install as a pinned static resource with no rollback path.
++ * Otherwise an explicit `betaEnableViewUpdates` takes precedence, and it defaults to false:
++ * OpenObserve: the OpenObserve server has no handling for the `view_update` event type, so the
++ * upstream default (true unless a `proxy` is configured or the bundle is the Salesforce build) is
++ * replaced by an opt-in. `proxy` and `sdkName` are kept so the signature matches upstream.
+  *
+  * TODO next major: remove the option.
+  */
+ function isViewUpdatesEnabled(
+   explicit: boolean | undefined,
+-  proxy: InitConfiguration['proxy'],
+-  sdkName: SdkName | undefined
++  _proxy: InitConfiguration['proxy'],
++  _sdkName: SdkName | undefined
+ ): boolean {
+   if (canUseEventBridge()) {
+     // The bridge replaces the batch transport, and `view_update` events are only created by the
+@@ -611,10 +612,7 @@ function isViewUpdatesEnabled(
+     return false
+   }
+ 
+-  // The Salesforce bundle is installed as a static resource pinned by the customer, so publishing
+-  // a new bundle does not roll those deployments back. Keep them out of the default, they can
+-  // still opt in explicitly.
+-  return explicit ?? (!proxy && sdkName !== 'rum-salesforce')
++  return explicit ?? false
+ }
+ 
+ export function validateAndBuildRumConfiguration(
+-- 
+2.54.0 (Apple Git-157)
+

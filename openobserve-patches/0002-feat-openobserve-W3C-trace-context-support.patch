@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bhargav <BJP232004@GMAIL.COM>
 Date: Mon, 6 Jul 2026 13:07:29 +0530
-Subject: [PATCH 2/4] feat(openobserve): W3C trace context support
+Subject: [PATCH 2/7] feat(openobserve): W3C trace context support
 
 - 128-bit UUIDv7-shaped trace identifiers (inline generation, no new
   dependency), span identifiers unchanged
@@ -15,18 +15,18 @@ Subject: [PATCH 2/4] feat(openobserve): W3C trace context support
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
 ---
  .../domain/telemetry/telemetryEvent.types.ts  |   2 +-
- .../src/domain/configuration/configuration.ts |   2 +-
+ .../src/domain/configuration/configuration.ts |   4 +-
  .../src/domain/resource/resourceCollection.ts |   6 +-
  .../src/domain/tracing/identifier.ts          |  52 ++++++-
  .../src/domain/tracing/tracer.ts              | 130 ++++++++++++++++--
  .../src/domain/tracing/tracer.types.ts        |   3 +-
- 6 files changed, 174 insertions(+), 21 deletions(-)
+ 6 files changed, 175 insertions(+), 22 deletions(-)
 
 diff --git a/packages/browser-core/src/domain/telemetry/telemetryEvent.types.ts b/packages/browser-core/src/domain/telemetry/telemetryEvent.types.ts
-index db2f6990d..868e56105 100644
+index 97b2915e7..31e2e146b 100644
 --- a/packages/browser-core/src/domain/telemetry/telemetryEvent.types.ts
 +++ b/packages/browser-core/src/domain/telemetry/telemetryEvent.types.ts
-@@ -223,7 +223,7 @@ export type TelemetryConfigurationEvent = CommonTelemetryProperties & {
+@@ -228,7 +228,7 @@ export type TelemetryConfigurationEvent = CommonTelemetryProperties & {
        /**
         * A list of selected tracing propagators
         */
@@ -36,23 +36,32 @@ index db2f6990d..868e56105 100644
         * Session replay default privacy level
         */
 diff --git a/packages/browser-rum-core/src/domain/configuration/configuration.ts b/packages/browser-rum-core/src/domain/configuration/configuration.ts
-index ebb5ef1b7..51dbb73db 100644
+index d0993388a..a502a08dc 100644
 --- a/packages/browser-rum-core/src/domain/configuration/configuration.ts
 +++ b/packages/browser-rum-core/src/domain/configuration/configuration.ts
-@@ -18,7 +18,7 @@ import type { RumPlugin } from '../plugins'
- import type { PropagatorType, TracingOption } from '../tracing/tracer.types'
+@@ -23,7 +23,7 @@ import type { PropagatorType, TracingOption } from '../tracing/tracer.types'
  import { getRemoteConfigurationId } from './remoteConfiguration'
+ import type { RemoteConfigurationMetadata } from './remoteConfigurationCache'
  
 -export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext', 'datadog']
 +export const DEFAULT_PROPAGATOR_TYPES: PropagatorType[] = ['tracecontext']
  
  /**
   * Default list of headers collected on resource events when {@link RumInitConfiguration.trackResourceHeaders | trackResourceHeaders}
+@@ -544,7 +544,7 @@ export const RUM_SCHEMA = {
+           match: { type: 'match-option', required: true },
+           propagatorTypes: {
+             type: 'enum',
+-            values: ['datadog', 'b3', 'b3multi', 'tracecontext'] as const,
++            values: ['datadog', 'openobserve', 'b3', 'b3multi', 'tracecontext'] as const,
+             multiple: true,
+             strict: false,
+             default: DEFAULT_PROPAGATOR_TYPES,
 diff --git a/packages/browser-rum-core/src/domain/resource/resourceCollection.ts b/packages/browser-rum-core/src/domain/resource/resourceCollection.ts
-index c9c9ab4ad..33b999e55 100644
+index 176cf3e72..f779ba060 100644
 --- a/packages/browser-rum-core/src/domain/resource/resourceCollection.ts
 +++ b/packages/browser-rum-core/src/domain/resource/resourceCollection.ts
-@@ -216,8 +216,8 @@ function computeRequestTracingInfo(request: RequestCompleteEvent, configuration:
+@@ -208,8 +208,8 @@ function computeRequestTracingInfo(request: RequestCompleteEvent, configuration:
    }
    return {
      _o2: {
@@ -63,7 +72,7 @@ index c9c9ab4ad..33b999e55 100644
        rule_psr: configuration.rulePsr,
      },
    }
-@@ -234,7 +234,7 @@ function computeResourceEntryTracingInfo(entry: ResourceLikeEntry, configuration
+@@ -226,7 +226,7 @@ function computeResourceEntryTracingInfo(entry: ResourceLikeEntry, configuration
    return {
      _o2: {
        trace_id: traceId,
@@ -359,5 +368,5 @@ index 382868051..5612ebf9c 100644
    match: MatchOption
    propagatorTypes: PropagatorType[]
 -- 
-2.39.5 (Apple Git-154)
+2.54.0 (Apple Git-157)
 

@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bhargav <BJP232004@GMAIL.COM>
 Date: Mon, 6 Jul 2026 13:07:29 +0530
-Subject: [PATCH 1/4] feat(openobserve): OpenObserve intake endpoint
+Subject: [PATCH 1/7] feat(openobserve): OpenObserve intake endpoint
 
 - new init options: apiVersion (default 'v1'), organizationIdentifier
   (default 'default'), insecureHTTP
@@ -14,16 +14,17 @@ Subject: [PATCH 1/4] feat(openobserve): OpenObserve intake endpoint
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
 ---
- .../src/domain/configuration/configuration.ts | 39 ++++++++++++++-----
- .../domain/configuration/endpointBuilder.ts   | 20 +++++-----
+ .../src/domain/configuration/configuration.ts | 33 ++++++++++++++++++-
  .../browser-core/test/coreConfiguration.ts    |  7 ++++
- 3 files changed, 48 insertions(+), 18 deletions(-)
+ packages/js-core/api/transport.api.md         |  2 ++
+ .../js-core/src/transport/endpointBuilder.ts  | 20 ++++++-----
+ 4 files changed, 52 insertions(+), 10 deletions(-)
 
 diff --git a/packages/browser-core/src/domain/configuration/configuration.ts b/packages/browser-core/src/domain/configuration/configuration.ts
-index 096595f44..a3a7d39f1 100644
+index 82a6e7d3b..562ca32ea 100644
 --- a/packages/browser-core/src/domain/configuration/configuration.ts
 +++ b/packages/browser-core/src/domain/configuration/configuration.ts
-@@ -142,6 +142,30 @@ export interface InitConfiguration {
+@@ -135,6 +135,30 @@ export interface InitConfiguration {
     */
    site?: Site | undefined
  
@@ -54,110 +55,24 @@ index 096595f44..a3a7d39f1 100644
    // tag and context options
    /**
     * The service name for your application. Follows the [tag syntax requirements](https://docs.datadoghq.com/getting_started/tagging/#define-tags).
-@@ -288,6 +312,9 @@ export interface Configuration {
-   datacenter: string | undefined
-   proxy: string | ProxyFn | undefined
-   site: Site
-+  apiVersion: string
-+  organizationIdentifier: string
-+  insecureHTTP: boolean | undefined
-   source: SdkSource
-   beforeSend: GenericBeforeSendCallback | undefined
-   cookieOptions: CookieOptions | undefined
-@@ -318,14 +345,6 @@ function isString(tag: unknown, tagName: string): tag is string | undefined | nu
-   return true
- }
+@@ -279,7 +303,14 @@ export const BROWSER_CORE_SCHEMA = {
+   version: { type: 'string' },
  
--function isDatadogSite(site: unknown) {
--  if (site && typeof site === 'string' && !/(datadog|ddog|datad0g|dd0g)/.test(site)) {
--    display.error(`Site should be a valid Datadog site. ${MORE_DETAILS} ${DOCS_ORIGIN}/getting_started/site/.`)
--    return false
--  }
--  return true
--}
--
- export function isSampleRate(sampleRate: unknown, name: string) {
-   if (sampleRate !== undefined && !isPercentage(sampleRate)) {
-     display.error(`${name} Sample Rate should be a number between 0 and 100`)
-@@ -352,7 +371,6 @@ export function validateAndBuildConfiguration(
-   }
- 
-   if (
--    !isDatadogSite(initConfiguration.site) ||
-     !isSampleRate(initConfiguration.sessionSampleRate, 'Session') ||
-     !isSampleRate(initConfiguration.telemetrySampleRate, 'Telemetry') ||
-     !isSampleRate(initConfiguration.telemetryConfigurationSampleRate, 'Telemetry Configuration') ||
-@@ -377,6 +395,9 @@ export function validateAndBuildConfiguration(
-     clientToken: initConfiguration.clientToken,
-     proxy: initConfiguration.proxy,
-     site: initConfiguration.site || INTAKE_SITE_US1,
-+    apiVersion: initConfiguration.apiVersion ?? 'v1',
-+    organizationIdentifier: initConfiguration.organizationIdentifier ?? 'default',
-+    insecureHTTP: initConfiguration.insecureHTTP,
-     source: validateSource(initConfiguration.source),
-     beforeSend:
-       initConfiguration.beforeSend && catchUserErrors(initConfiguration.beforeSend, 'beforeSend threw an error:'),
-diff --git a/packages/browser-core/src/domain/configuration/endpointBuilder.ts b/packages/browser-core/src/domain/configuration/endpointBuilder.ts
-index f543a71e2..6cd9c758a 100644
---- a/packages/browser-core/src/domain/configuration/endpointBuilder.ts
-+++ b/packages/browser-core/src/domain/configuration/endpointBuilder.ts
-@@ -31,6 +31,9 @@ interface EndpointBuilderConfiguration {
-   proxy?: string | ProxyFn
-   site?: Site
-   source?: TransportSource
-+  apiVersion?: string
-+  organizationIdentifier?: string
-+  insecureHTTP?: boolean
- }
- 
- export type EndpointBuilder = ReturnType<typeof createEndpointBuilder>
-@@ -45,7 +48,8 @@ export function createEndpointBuilder(
-       return buildEndpointUrl({
-         proxy: configuration.proxy,
-         site: configuration.site,
--        path: `/api/v2/${trackType}`,
-+        insecureHTTP: configuration.insecureHTTP,
-+        path: `/rum/${configuration.apiVersion ?? 'v1'}/${configuration.organizationIdentifier ?? 'default'}/${trackType}`,
-         parameters: buildEndpointParameters(configuration, trackType, api, payload, extraParameters),
-       })
-     },
-@@ -81,6 +85,7 @@ export interface BuildEndpointUrlOptions {
-   subdomain?: string
-   path: string
-   parameters?: string
-+  insecureHTTP?: boolean
- }
- 
- export function buildEndpointUrl({
-@@ -89,6 +94,7 @@ export function buildEndpointUrl({
-   path,
-   parameters = '',
-   subdomain,
-+  insecureHTTP,
- }: BuildEndpointUrlOptions): string {
-   let pathAndParameters = path
-   if (parameters) {
-@@ -107,14 +113,10 @@ export function buildEndpointUrl({
-     return proxy({ path, parameters, subdomain })
-   }
- 
--  const domainParts = site.split('.')
--  const extension = domainParts.pop()
--  let domain = `browser-intake-${domainParts.join('-')}.${extension!}`
--  if (subdomain) {
--    domain = `${subdomain}.${domain}`
--  }
--
--  return `https://${domain}${pathAndParameters}`
-+  // OpenObserve: the configured `site` is used verbatim as the intake host, without the
-+  // Datadog `browser-intake-` domain construction or subdomain prefixes.
-+  const protocol = insecureHTTP ? 'http' : 'https'
-+  return `${protocol}://${site}${pathAndParameters}`
- }
- 
- /**
+   // Transport
+-  site: { type: 'site', default: INTAKE_SITE_US1 },
++  // OpenObserve: `site` is the intake host, used verbatim. Plain `string` instead of upstream's
++  // `site` field type, which rejects anything that does not look like a Datadog site.
++  site: { type: 'string', default: INTAKE_SITE_US1 },
++  // OpenObserve: intake path is `/rum/{apiVersion}/{organizationIdentifier}/{trackType}`. `strict: false`
++  // so an invalid value falls back to the default instead of aborting SDK initialization.
++  apiVersion: { type: 'string', default: 'v1', strict: false },
++  organizationIdentifier: { type: 'string', default: 'default', strict: false },
++  insecureHTTP: { type: 'boolean', strict: false },
+   proxy: {
+     type: 'union',
+     variants: [{ type: 'string' }, { type: 'function', signature: undefined as ProxyFn | undefined }],
 diff --git a/packages/browser-core/test/coreConfiguration.ts b/packages/browser-core/test/coreConfiguration.ts
-index 944271132..2e5bf20cc 100644
+index f3ac62492..ec6a68deb 100644
 --- a/packages/browser-core/test/coreConfiguration.ts
 +++ b/packages/browser-core/test/coreConfiguration.ts
 @@ -11,6 +11,9 @@ import type { CamelToSnakeCase, RemoveIndex } from './typeUtils'
@@ -181,6 +96,78 @@ index 944271132..2e5bf20cc 100644
        ? never
        : // Other keys are simply snake cased
          CamelToSnakeCase<Key>
+diff --git a/packages/js-core/api/transport.api.md b/packages/js-core/api/transport.api.md
+index 5a20602ab..7e8e56261 100644
+--- a/packages/js-core/api/transport.api.md
++++ b/packages/js-core/api/transport.api.md
+@@ -9,6 +9,8 @@ export function buildEndpointUrl(input: BuildEndpointUrlOptions): string;
+ 
+ // @public
+ export interface BuildEndpointUrlOptions {
++    // (undocumented)
++    insecureHTTP?: boolean;
+     parameters?: string;
+     path: string;
+     proxy?: string | ProxyFn;
+diff --git a/packages/js-core/src/transport/endpointBuilder.ts b/packages/js-core/src/transport/endpointBuilder.ts
+index e279ae3a5..2970be7ea 100644
+--- a/packages/js-core/src/transport/endpointBuilder.ts
++++ b/packages/js-core/src/transport/endpointBuilder.ts
+@@ -50,6 +50,9 @@ interface EndpointBuilderConfiguration {
+   proxy?: string | ProxyFn
+   site?: Site
+   source?: TransportSource
++  apiVersion?: string
++  organizationIdentifier?: string
++  insecureHTTP?: boolean
+ }
+ 
+ interface ReplicaConfiguration {
+@@ -82,7 +85,8 @@ export function createEndpointBuilder(
+       return buildEndpointUrl({
+         proxy: configuration.proxy,
+         site: configuration.site,
+-        path: `/api/v2/${trackType}`,
++        insecureHTTP: configuration.insecureHTTP,
++        path: `/rum/${configuration.apiVersion ?? 'v1'}/${configuration.organizationIdentifier ?? 'default'}/${trackType}`,
+         parameters: buildEndpointParameters(configuration, trackType, api, payload, extraParameters),
+       })
+     },
+@@ -127,6 +131,7 @@ export interface BuildEndpointUrlOptions {
+   path: string
+   /** Pre-built query string appended to the URL, without a leading `?`. */
+   parameters?: string
++  insecureHTTP?: boolean
+ }
+ 
+ /** Builds a Datadog intake URL from the given options. */
+@@ -136,6 +141,7 @@ export function buildEndpointUrl({
+   path,
+   parameters = '',
+   subdomain,
++  insecureHTTP,
+ }: BuildEndpointUrlOptions): string {
+   let pathAndParameters = path
+   if (parameters) {
+@@ -154,14 +160,10 @@ export function buildEndpointUrl({
+     return proxy({ path, parameters, subdomain })
+   }
+ 
+-  const domainParts = site.split('.')
+-  const extension = domainParts.pop()
+-  let domain = `browser-intake-${domainParts.join('-')}.${extension!}`
+-  if (subdomain) {
+-    domain = `${subdomain}.${domain}`
+-  }
+-
+-  return `https://${domain}${pathAndParameters}`
++  // OpenObserve: the configured `site` is used verbatim as the intake host, without the
++  // Datadog `browser-intake-` domain construction or subdomain prefixes.
++  const protocol = insecureHTTP ? 'http' : 'https'
++  return `${protocol}://${site}${pathAndParameters}`
+ }
+ 
+ /**
 -- 
-2.39.5 (Apple Git-154)
+2.54.0 (Apple Git-157)
 

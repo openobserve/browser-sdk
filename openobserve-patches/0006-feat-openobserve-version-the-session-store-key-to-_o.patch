@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: MinaKaramApex <Mina.Karam@apexmedical.ai>
+Date: Mon, 2 Nov 2026 09:56:58 +0200
+Subject: [PATCH 6/7] feat(openobserve): version the session store key to
+ _o2_s_v3
+
+Carries over openobserve/browser-sdk commit a3e6f40a7 (o2-enterprise#2724),
+made directly on the openobserve branch and so not in the patch series.
+SESSION_STORE_KEY is _o2_s_v3 and LEGACY_SESSION_STORE_KEY is _oo_s_v2, so the
+existing one-hop migration on first read carries active sessions across.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../domain/session/storeStrategies/sessionStoreStrategy.ts | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/packages/browser-core/src/domain/session/storeStrategies/sessionStoreStrategy.ts b/packages/browser-core/src/domain/session/storeStrategies/sessionStoreStrategy.ts
+index 507660b90..063511690 100644
+--- a/packages/browser-core/src/domain/session/storeStrategies/sessionStoreStrategy.ts
++++ b/packages/browser-core/src/domain/session/storeStrategies/sessionStoreStrategy.ts
+@@ -3,8 +3,11 @@ import type { CookieOptions } from '../../../browser/cookie'
+ import type { SessionPersistence } from '../sessionConstants'
+ import type { SessionState } from '../sessionState'
+ 
+-export const SESSION_STORE_KEY = '_oo_s_v2'
+-export const LEGACY_SESSION_STORE_KEY = '_oo_s'
++export const SESSION_STORE_KEY = '_o2_s_v3'
++// One hop of migration only: a session that was still on the pre-rebrand
++// `_oo_s` (v1) key has already fallen back once before reaching `_oo_s_v2`,
++// so it is safe to let it expire naturally rather than chaining a second hop.
++export const LEGACY_SESSION_STORE_KEY = '_oo_s_v2'
+ 
+ export const enum CookieApi {
+   DOCUMENT_COOKIE,
+-- 
+2.54.0 (Apple Git-157)
+
