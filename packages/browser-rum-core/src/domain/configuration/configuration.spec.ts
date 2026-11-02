@@ -558,8 +558,9 @@ describe('validateAndBuildRumConfiguration', () => {
   })
 
   describe('betaEnableViewUpdates', () => {
-    it('defaults to true without a proxy', () => {
-      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.betaEnableViewUpdates).toBeTrue()
+    // OpenObserve: the server has no handling for view_update, so the option is opt-in.
+    it('defaults to false without a proxy', () => {
+      expect(validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION)!.betaEnableViewUpdates).toBeFalse()
     })
 
     it('defaults to false with a proxy', () => {
@@ -574,6 +575,13 @@ describe('validateAndBuildRumConfiguration', () => {
         validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, proxy: () => 'https://proxy.example.com' })!
           .betaEnableViewUpdates
       ).toBeFalse()
+    })
+
+    it('honors an explicit true without a proxy', () => {
+      expect(
+        validateAndBuildRumConfiguration({ ...DEFAULT_INIT_CONFIGURATION, betaEnableViewUpdates: true })!
+          .betaEnableViewUpdates
+      ).toBeTrue()
     })
 
     it('honors an explicit false without a proxy', () => {
@@ -623,10 +631,10 @@ describe('validateAndBuildRumConfiguration', () => {
       ).toBeTrue()
     })
 
-    it('defaults to true for other bundles', () => {
+    it('defaults to false for other bundles', () => {
       expect(
         validateAndBuildRumConfiguration(DEFAULT_INIT_CONFIGURATION, 'rum-shopify')!.betaEnableViewUpdates
-      ).toBeTrue()
+      ).toBeFalse()
     })
 
     it('does not validate the configuration if it is not a boolean', () => {
@@ -1099,7 +1107,7 @@ describe('validateAndBuildRumConfiguration', () => {
 describe('serializeRumConfiguration', () => {
   describe('beta_enable_view_updates', () => {
     it('reports the effective default without a proxy', () => {
-      expect(serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION).beta_enable_view_updates).toBeTrue()
+      expect(serializeRumConfiguration(DEFAULT_INIT_CONFIGURATION).beta_enable_view_updates).toBeFalse()
     })
 
     it('reports the effective default with a proxy', () => {

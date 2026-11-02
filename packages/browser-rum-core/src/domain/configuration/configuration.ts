@@ -365,8 +365,8 @@ export interface RumInitConfiguration extends InitConfiguration {
    * Enable partial view updates, which reduces bandwidth by sending only changed
    * fields instead of full view events on intermediate updates.
    *
-   * Enabled by default unless a `proxy` is configured, because a proxy may not forward the
-   * `view_update` event type.
+   * Disabled by default in the OpenObserve SDK, because the OpenObserve server does not handle the
+   * `view_update` event type. Set to `true` to opt in explicitly.
    *
    * @category Beta
    */
@@ -593,16 +593,17 @@ export type RumConfiguration = Omit<
 
 /**
  * Resolves whether partial view updates are enabled. Never enabled when the event bridge is used.
- * Otherwise an explicit `betaEnableViewUpdates` takes precedence, and it defaults to true unless a
- * `proxy` is configured (a proxy may not forward the `view_update` event type yet) or the bundle is
- * the Salesforce build, which customers install as a pinned static resource with no rollback path.
+ * Otherwise an explicit `betaEnableViewUpdates` takes precedence, and it defaults to false:
+ * OpenObserve: the OpenObserve server has no handling for the `view_update` event type, so the
+ * upstream default (true unless a `proxy` is configured or the bundle is the Salesforce build) is
+ * replaced by an opt-in. `proxy` and `sdkName` are kept so the signature matches upstream.
  *
  * TODO next major: remove the option.
  */
 function isViewUpdatesEnabled(
   explicit: boolean | undefined,
-  proxy: InitConfiguration['proxy'],
-  sdkName: SdkName | undefined
+  _proxy: InitConfiguration['proxy'],
+  _sdkName: SdkName | undefined
 ): boolean {
   if (canUseEventBridge()) {
     // The bridge replaces the batch transport, and `view_update` events are only created by the
@@ -611,10 +612,7 @@ function isViewUpdatesEnabled(
     return false
   }
 
-  // The Salesforce bundle is installed as a static resource pinned by the customer, so publishing
-  // a new bundle does not roll those deployments back. Keep them out of the default, they can
-  // still opt in explicitly.
-  return explicit ?? (!proxy && sdkName !== 'rum-salesforce')
+  return explicit ?? false
 }
 
 export function validateAndBuildRumConfiguration(
