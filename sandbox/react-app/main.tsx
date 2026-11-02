@@ -1,8 +1,8 @@
-import { Link, Outlet, RouterProvider, useParams } from 'react-router-dom'
+import { Link, Outlet, RouterProvider, useParams } from 'react-router'
 import React, { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { openobserveRum } from '@openobserve/browser-rum'
-import { createBrowserRouter } from '@openobserve/browser-rum-react/react-router-v7'
+import { createBrowserRouter } from '@openobserve/browser-rum-react/react-router-v8'
 import { reactPlugin, ErrorBoundary, UNSTABLE_ReactComponentTracker } from '@openobserve/browser-rum-react'
 
 openobserveRum.init({

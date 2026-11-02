@@ -1,14 +1,21 @@
-import { buildUrl } from '@openobserve/browser-core'
+import { buildUrl, globalObject, mockable } from '@openobserve/js-core/util'
+import { toIntegrations, toMajorVersionIntegration } from '@openobserve/browser-core'
 import type { RumPlugin, RumPublicApi, StartRumResult } from '@openobserve/browser-rum-core'
 
-export type NextjsPlugin = Pick<Required<RumPlugin>, 'name' | 'onInit' | 'onRumStart'>
+export type NextjsPlugin = Pick<Required<RumPlugin>, 'name' | 'onInit' | 'onRumStart' | 'getConfigurationTelemetry'>
 
+type NextjsRouterType = 'app-router' | 'pages-router'
+interface NextjsGlobalObject {
+  next?: { version?: string }
+}
 type InitSubscriber = (rumPublicApi: RumPublicApi) => void
 type StartSubscriber = (addError: StartRumResult['addError']) => void
 
 let globalPublicApi: RumPublicApi | undefined
 let globalAddError: StartRumResult['addError'] | undefined
 let lastNavigationUrl: string | undefined
+let lastStartedAppRouterPathname: string | undefined
+let routerType: NextjsRouterType | undefined
 
 const onRumInitSubscribers: InitSubscriber[] = []
 const onRumStartSubscribers: StartSubscriber[] = []
@@ -19,6 +26,7 @@ export function nextjsPlugin(): NextjsPlugin {
     onInit({ publicApi, initConfiguration }) {
       globalPublicApi = publicApi
       initConfiguration.trackViewsManually = true
+      routerType = mockable(detectNextjsRouterType)()
 
       for (const subscriber of onRumInitSubscribers) {
         subscriber(publicApi)
@@ -32,7 +40,30 @@ export function nextjsPlugin(): NextjsPlugin {
         }
       }
     },
+    getConfigurationTelemetry() {
+      const nextjsVersion = (globalObject as NextjsGlobalObject).next?.version
+      return {
+        router: true,
+        integrations: toIntegrations(nextjsVersion && toMajorVersionIntegration('nextjs', nextjsVersion), routerType),
+      }
+    },
   } satisfies RumPlugin
+}
+
+// The App Router doesn't hydrate from a `__NEXT_DATA__` payload (it streams RSC data instead),
+// so its absence is used as a best-effort signal that the app router is in use.
+function detectNextjsRouterType(): NextjsRouterType {
+  return document.getElementById('__NEXT_DATA__') ? 'pages-router' : 'app-router'
+}
+
+export function startAppRouterView(pathname: string, viewName: string) {
+  if (!globalPublicApi || pathname === lastStartedAppRouterPathname) {
+    return
+  }
+
+  // Keep the guard outside React so discarded mount renders do not reset it.
+  lastStartedAppRouterPathname = pathname
+  startNextjsView(viewName)
 }
 
 export function startNextjsView(viewName: string) {
@@ -71,4 +102,6 @@ export function resetNextjsPlugin() {
   onRumInitSubscribers.length = 0
   onRumStartSubscribers.length = 0
   lastNavigationUrl = undefined
+  lastStartedAppRouterPathname = undefined
+  routerType = undefined
 }

@@ -1,5 +1,6 @@
 import type { ClocksState, RelativeTime } from '@openobserve/js-core/time'
-import { addEventListeners, DOM_EVENT, noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
+import { addEventListeners, DOM_EVENT } from '@openobserve/js-core/dom'
 import { supportPerformanceTimingEvent, RumPerformanceEntryType } from '../../../browser/performanceObservable'
 
 export type FirstHidden = ReturnType<typeof trackFirstHidden>

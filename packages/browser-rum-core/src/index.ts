@@ -18,10 +18,12 @@ export type {
   RumErrorEventDomainContext,
   RumManualResourceEventDomainContext,
   RumResourceEventDomainContext,
+  RumWebSocketResourceEventDomainContext,
   RumActionEventDomainContext,
   RumViewEventDomainContext,
   RumEventDomainContext,
   RumVitalEventDomainContext,
+  RumWebSocketVitalEventDomainContext,
 } from './domainContext.types'
 export type { ReplayStats, RawRumActionEvent, RawRumEvent } from './rawRumEvent.types'
 export { ActionType, RumEventType, FrustrationType, RumLongTaskEntryType, VitalType } from './rawRumEvent.types'
@@ -32,13 +34,6 @@ export type { ViewCreatedEvent, ViewOptions } from './domain/view/trackViews'
 export type { ViewHistoryEntry, ViewHistory } from './domain/contexts/viewHistory'
 export { startViewHistory } from './domain/contexts/viewHistory'
 export type { SessionManager } from '@openobserve/browser-core'
-export { getMutationObserverConstructor } from './browser/domMutationObservable'
-export type {
-  RumMutationRecord,
-  RumAttributesMutationRecord,
-  RumChildListMutationRecord,
-  RumCharacterDataMutationRecord,
-} from './browser/domMutationObservable'
 export type { ViewportDimension } from './browser/viewportObservable'
 export { initViewportObservable, getViewportDimension } from './browser/viewportObservable'
 export { getScrollX, getScrollY } from './browser/scroll'
@@ -50,7 +45,7 @@ export type {
   RemoteConfiguration,
   MatchHeader,
 } from './domain/configuration'
-export { DEFAULT_TRACKED_RESOURCE_HEADERS } from './domain/configuration'
+export { DEFAULT_TRACKED_RESOURCE_HEADERS, CanvasRecordingQuality } from './domain/configuration'
 export { DEFAULT_PROGRAMMATIC_ACTION_NAME_ATTRIBUTE } from './domain/action/actionNameConstants'
 export { STABLE_ATTRIBUTES } from './domain/getSelectorFromElement'
 export * from './browser/htmlDomUtils'
@@ -59,7 +54,7 @@ export { sanitizeIfLongDataUrl } from './domain/resource/resourceUtils'
 export * from './domain/privacy'
 export * from './domain/privacyConstants'
 export { SessionReplayState, computeSessionReplayState } from './domain/sessionReplayState'
-export type { RumPlugin, OnRumStartOptions } from './domain/plugins'
+export type { RumPlugin, OnRumStartOptions, RumPluginOnInitOptions } from './domain/plugins'
 export type { MouseEventOnElement } from './domain/action/listenActionEvents'
 export { supportPerformanceTimingEvent } from './browser/performanceObservable'
 export { RumPerformanceEntryType } from './browser/performanceObservable'

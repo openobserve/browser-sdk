@@ -1,13 +1,8 @@
 import { elapsed, toServerDuration } from '@openobserve/js-core/time'
 import type { Duration, RelativeTime } from '@openobserve/js-core/time'
-import {
-  getPathName,
-  isValidUrl,
-  ResourceType,
-  isIntakeUrl,
-  isExperimentalFeatureEnabled,
-  ExperimentalFeature,
-} from '@openobserve/browser-core'
+import { ResourceType, isExperimentalFeatureEnabled, ExperimentalFeature } from '@openobserve/browser-core'
+import { getPathName, isValidUrl } from '@openobserve/js-core/util'
+import { isIntakeUrl } from '@openobserve/js-core/transport'
 
 import type { RumPerformanceNavigationTiming, RumPerformanceResourceTiming } from '../../browser/performanceObservable'
 

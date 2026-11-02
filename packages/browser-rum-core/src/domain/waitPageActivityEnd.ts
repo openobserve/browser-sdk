@@ -1,9 +1,11 @@
-import type { Subscription, TimeoutId } from '@openobserve/browser-core'
+import type { Subscription, TimeoutId } from '@openobserve/js-core/util'
+import type { MutationRecord } from '@openobserve/js-core/dom'
 import { timeStampNow } from '@openobserve/js-core/time'
 import type { TimeStamp } from '@openobserve/js-core/time'
-import { matchList, monitor, Observable, setTimeout, clearTimeout, mockable } from '@openobserve/browser-core'
+import { monitor } from '@openobserve/js-core/monitor'
+import { matchList } from '@openobserve/browser-core'
+import { mockable, setTimeout, clearTimeout, Observable } from '@openobserve/js-core/util'
 import { createPerformanceObservable, RumPerformanceEntryType } from '../browser/performanceObservable'
-import type { RumMutationRecord } from '../browser/domMutationObservable'
 import { isElementNode } from '../browser/htmlDomUtils'
 import type { RumConfiguration } from './configuration'
 import type { LifeCycle } from './lifeCycle'
@@ -54,7 +56,7 @@ export type PageActivityEndEvent = { hadActivity: true; end: TimeStamp } | { had
  */
 export function waitPageActivityEnd(
   lifeCycle: LifeCycle,
-  domMutationObservable: Observable<RumMutationRecord[]>,
+  domMutationObservable: Observable<MutationRecord[]>,
   windowOpenObservable: Observable<void>,
   configuration: RumConfiguration,
   pageActivityEndCallback: (event: PageActivityEndEvent) => void,
@@ -114,7 +116,7 @@ export function waitPageActivityEnd(
 
 export function createPageActivityObservable(
   lifeCycle: LifeCycle,
-  domMutationObservable: Observable<RumMutationRecord[]>,
+  domMutationObservable: Observable<MutationRecord[]>,
   windowOpenObservable: Observable<void>,
   configuration: RumConfiguration
 ): Observable<PageActivityEvent> {
@@ -173,7 +175,7 @@ function isExcludedUrl(configuration: RumConfiguration, requestUrl: string): boo
   return matchList(configuration.excludedActivityUrls, requestUrl)
 }
 
-function isExcludedMutation(mutation: RumMutationRecord): boolean {
+function isExcludedMutation(mutation: MutationRecord): boolean {
   const targetElement = mutation.type === 'characterData' ? mutation.target.parentElement : mutation.target
 
   return Boolean(

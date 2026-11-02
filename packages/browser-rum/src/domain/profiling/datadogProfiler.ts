@@ -1,18 +1,10 @@
+import { globalObject, mockable, clearTimeout, setTimeout } from '@openobserve/js-core/util'
+import { addEventListener, DOM_EVENT } from '@openobserve/js-core/dom'
+import type { Profiler } from '@openobserve/js-core/util'
 import { elapsed, clocksOrigin, clocksNow } from '@openobserve/js-core/time'
-import type { SessionManager, Profiler, DeflateEncoderStreamId, Encoder } from '@openobserve/browser-core'
-import {
-  addEventListener,
-  canUseEventBridge,
-  clearTimeout,
-  setTimeout,
-  DOM_EVENT,
-  monitorError,
-  display,
-  globalObject,
-  mockable,
-  isSampled,
-  correctedChildSampleRate,
-} from '@openobserve/browser-core'
+import type { SessionManager, DeflateEncoderStreamId, Encoder } from '@openobserve/browser-core'
+import { canUseEventBridge, display, isSampled, correctedChildSampleRate } from '@openobserve/browser-core'
+import { monitorError } from '@openobserve/js-core/monitor'
 
 import type { LifeCycle, RumConfiguration, ViewHistory } from '@openobserve/browser-rum-core'
 import { LifeCycleEventType } from '@openobserve/browser-rum-core'
@@ -35,6 +27,7 @@ import { createActionHistory } from './actionHistory'
 import { createVitalHistory } from './vitalHistory'
 import { checkProfilingQuota } from './quotaCheck'
 import type { QuotaReason } from './quotaCheck'
+import { buildProfilerDebugIds } from './profilerDebugIds'
 
 export const DEFAULT_RUM_PROFILER_CONFIGURATION: RUMProfilerConfiguration = {
   sampleIntervalMs: 10, // Sample stack trace every 10ms
@@ -259,12 +252,14 @@ export function createRumProfiler(
     collectViewEntry(lastViewEntry)
 
     // Add event handler case we overflow the buffer
+    // eslint-disable-next-line local-rules/disallow-zone-js-patched-values -- FIXME use the `addEventListener` helper
     profiler.addEventListener('samplebufferfull', handleSampleBufferFull)
   }
 
   function collectProfilerInstance(runningInstance: RumProfilerRunningInstance) {
     // Cleanup instance
     clearTimeout(runningInstance.timeoutId)
+    // eslint-disable-next-line local-rules/disallow-zone-js-patched-values -- FIXME use the `addEventListener` helper
     runningInstance.profiler.removeEventListener('samplebufferfull', handleSampleBufferFull)
 
     // Store instance data snapshot in local variables to use in async callback
@@ -302,6 +297,7 @@ export function createRumProfiler(
             vitals,
             views,
             sampleInterval: profilerConfiguration.sampleIntervalMs,
+            debugIds: buildProfilerDebugIds(trace.resources),
           }),
           sessionId
         )
@@ -336,6 +332,7 @@ export function createRumProfiler(
     if (stateReason === 'quota_ko') {
       // Discard data — quota denied means we should not send anything
       clearTimeout(runningInstance.timeoutId)
+      // eslint-disable-next-line local-rules/disallow-zone-js-patched-values -- FIXME use the `addEventListener` helper
       runningInstance.profiler.removeEventListener('samplebufferfull', handleSampleBufferFull)
       void runningInstance.profiler.stop().catch(monitorError)
     } else {

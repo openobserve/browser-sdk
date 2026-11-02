@@ -1,4 +1,5 @@
-import { round, noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
+import { round } from '@openobserve/browser-core'
 import { ONE_SECOND, elapsed } from '@openobserve/js-core/time'
 import type { Duration, RelativeTime } from '@openobserve/js-core/time'
 import type { WeakRef, WeakRefConstructor } from '@openobserve/browser-core'

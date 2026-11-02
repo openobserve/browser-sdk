@@ -1,5 +1,4 @@
-import type { ProfilerTrace } from '@openobserve/browser-core'
-
+import type { ProfilerTrace } from '@openobserve/js-core/util'
 const generateFiftyRandomSamples = () => {
   const samples = []
   for (let i = 0; i < 50; i++) {

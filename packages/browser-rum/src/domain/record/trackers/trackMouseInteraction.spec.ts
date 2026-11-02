@@ -1,4 +1,4 @@
-import { DOM_EVENT } from '@openobserve/browser-core'
+import { DOM_EVENT } from '@openobserve/js-core/dom'
 import { createNewEvent, registerCleanupTask } from '@openobserve/browser-core/test'
 import { appendElement } from '../../../../../browser-rum-core/test'
 import { IncrementalSource, MouseInteractionType, RecordType } from '../../../types'

@@ -3,7 +3,7 @@
  * Adapted from dd-trace-js/packages/dd-trace/test/debugger/devtools_client/condition-test-cases.js
  */
 
-import { globalObject } from '@openobserve/browser-core'
+import { globalObject } from '@openobserve/js-core/util'
 import type { ExpressionNode } from '../src/domain/expression'
 
 export type VariableBindings = Record<string, unknown>

@@ -1,14 +1,23 @@
 import { ONE_MINUTE, relativeToClocks } from '@openobserve/js-core/time'
 import type { TimeStamp, ClocksState, RelativeTime } from '@openobserve/js-core/time'
+import { SKIPPED } from '@openobserve/js-core/assembly'
 import type { SessionManager } from '@openobserve/browser-core'
-import { ErrorSource, display, startGlobalContext, startTabContext } from '@openobserve/browser-core'
+import { display, startGlobalContext, startTabContext } from '@openobserve/browser-core'
 import type { Clock } from '@openobserve/browser-core/test'
 import { registerCleanupTask, mockClock, createSessionManagerMock } from '@openobserve/browser-core/test'
 import { createRawRumEvent, mockRumConfiguration, mockViewHistory, noopRecorderApi } from '../../test'
 import type { RumEventDomainContext } from '../domainContext.types'
 import type { RawRumEvent } from '../rawRumEvent.types'
-import { RumEventType } from '../rawRumEvent.types'
-import type { RumErrorEvent, RumEvent, RumResourceEvent } from '../rumEvent.types'
+import { RumEventType, VitalType, WebSocketTrackingEndReason, WebSocketVitalName } from '../rawRumEvent.types'
+import type {
+  RumErrorEvent,
+  RumEvent,
+  RumResourceEvent,
+  RumVitalEvent,
+  RumVitalWebsocketClosedEvent,
+  RumVitalWebsocketConnectingEvent,
+  RumVitalWebsocketOpenEvent,
+} from '../rumEvent.types'
 import { startRumAssembly } from './assembly'
 import type { RawRumEventCollectedData } from './lifeCycle'
 import { LifeCycle, LifeCycleEventType } from './lifeCycle'
@@ -226,6 +235,194 @@ describe('rum assembly', () => {
         })
       })
 
+      describe('_o2.debug_ids', () => {
+        const url = 'http://path/to/redact/app.js'
+
+        const redactDebugIdUrls = (debugIds: Array<{ url: string; id: string }>) => {
+          debugIds.forEach((entry) => {
+            if (entry.url.includes('path/to/redact')) {
+              entry.url = 'redacted-url'
+            }
+          })
+        }
+
+        it('should allow redaction of the url in _o2.debug_ids on error events', () => {
+          const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
+            partialConfiguration: {
+              beforeSend: (event) => {
+                redactDebugIdUrls(event._o2.debug_ids)
+              },
+            },
+          })
+
+          notifyRawRumEvent(lifeCycle, {
+            rawRumEvent: createRawRumEvent(RumEventType.ERROR, {
+              _o2: { debug_ids: [{ url, id: 'debug-id' }] },
+            }),
+          })
+
+          expect((serverRumEvents[0] as any)._o2.debug_ids).toEqual([{ url: 'redacted-url', id: 'debug-id' }])
+        })
+
+        it('should allow redaction of the url in _o2.debug_ids on long task events', () => {
+          const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
+            partialConfiguration: {
+              beforeSend: (event) => {
+                redactDebugIdUrls(event._o2.debug_ids)
+              },
+            },
+          })
+
+          notifyRawRumEvent(lifeCycle, {
+            rawRumEvent: createRawRumEvent(RumEventType.LONG_TASK, {
+              _o2: { debug_ids: [{ url, id: 'debug-id' }] },
+            }),
+          })
+
+          expect((serverRumEvents[0] as any)._o2.debug_ids).toEqual([{ url: 'redacted-url', id: 'debug-id' }])
+        })
+      })
+
+      describe('websocket vital fields', () => {
+        it('should allow replacing the requested protocols of a websocket vital', () => {
+          const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
+            partialConfiguration: {
+              beforeSend: (event) => {
+                // Match on the name: vital.type is 'websocket' for all four WebSocket vitals, and only the connecting
+                // vital carries requested_protocols. Setting it on the others would add a field they never report.
+                if (event.vital.name === 'websocket_connecting') {
+                  event.vital.websocket.requested_protocols = ['REDACTED']
+                }
+              },
+            },
+          })
+
+          notifyRawRumEvent(lifeCycle, {
+            rawRumEvent: createRawRumEvent(RumEventType.VITAL, {
+              vital: {
+                type: VitalType.WEBSOCKET,
+                name: WebSocketVitalName.CONNECTING,
+                websocket: { requested_protocols: ['auth-token', 'chat.v1'] },
+              },
+            }),
+          })
+
+          expect((serverRumEvents[0] as RumVitalWebsocketConnectingEvent).vital.websocket.requested_protocols).toEqual([
+            'REDACTED',
+          ])
+        })
+
+        it('should allow redacting the url of a websocket vital', () => {
+          const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
+            partialConfiguration: {
+              beforeSend: (event) => {
+                // Match on the name: vital.type is 'websocket' for all four WebSocket vitals. The connecting
+                // and closed vitals carry url. Setting it on the others would add a field they never report.
+                if (event.vital.name === 'websocket_connecting') {
+                  event.vital.websocket.url = 'wss://example.com/users/REDACTED/feed'
+                }
+              },
+            },
+          })
+
+          notifyRawRumEvent(lifeCycle, {
+            rawRumEvent: createRawRumEvent(RumEventType.VITAL, {
+              vital: {
+                type: VitalType.WEBSOCKET,
+                name: WebSocketVitalName.CONNECTING,
+                websocket: { url: 'wss://example.com/users/1234/feed' },
+              },
+            }),
+          })
+
+          expect((serverRumEvents[0] as RumVitalWebsocketConnectingEvent).vital.websocket.url).toBe(
+            'wss://example.com/users/REDACTED/feed'
+          )
+        })
+
+        it('should allow redacting the url of a closed websocket vital', () => {
+          const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
+            partialConfiguration: {
+              beforeSend: (event) => {
+                if (event.vital.name === 'websocket_closed') {
+                  event.vital.websocket.url = 'wss://example.com/users/REDACTED/feed'
+                }
+              },
+            },
+          })
+
+          notifyRawRumEvent(lifeCycle, {
+            rawRumEvent: createRawRumEvent(RumEventType.VITAL, {
+              vital: {
+                type: VitalType.WEBSOCKET,
+                name: WebSocketVitalName.CLOSED,
+                websocket: { url: 'wss://example.com/users/1234/feed' },
+              },
+            }),
+          })
+
+          expect((serverRumEvents[0] as RumVitalWebsocketClosedEvent).vital.websocket.url).toBe(
+            'wss://example.com/users/REDACTED/feed'
+          )
+        })
+
+        it('should allow redacting the selected protocol of a websocket vital', () => {
+          const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
+            partialConfiguration: {
+              beforeSend: (event) => {
+                // Match on the name: vital.type is 'websocket' for all four WebSocket vitals, and only the open vital
+                // carries selected_protocol. Setting it on the others would add a field they never report.
+                if (event.vital.name === 'websocket_open') {
+                  event.vital.websocket.selected_protocol = 'REDACTED'
+                }
+              },
+            },
+          })
+
+          notifyRawRumEvent(lifeCycle, {
+            rawRumEvent: createRawRumEvent(RumEventType.VITAL, {
+              vital: {
+                type: VitalType.WEBSOCKET,
+                name: WebSocketVitalName.OPEN,
+                websocket: { selected_protocol: 'auth-token' },
+              },
+            }),
+          })
+
+          expect((serverRumEvents[0] as RumVitalWebsocketOpenEvent).vital.websocket.selected_protocol).toBe('REDACTED')
+        })
+
+        it('should allow redacting the close reason of a websocket vital', () => {
+          const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
+            partialConfiguration: {
+              beforeSend: (event) => {
+                // Match on the name: vital.type is 'websocket' for all four WebSocket vitals, and only the closed vital
+                // carries close_reason. Setting it on the others would add a field they never report.
+                if (event.vital.name === 'websocket_closed') {
+                  event.vital.websocket.close_reason = 'REDACTED'
+                }
+              },
+            },
+          })
+
+          notifyRawRumEvent(lifeCycle, {
+            rawRumEvent: createRawRumEvent(RumEventType.VITAL, {
+              vital: {
+                type: VitalType.WEBSOCKET,
+                name: WebSocketVitalName.CLOSED,
+                websocket: {
+                  tracking_end_reason: WebSocketTrackingEndReason.CLOSE_EVENT,
+                  close_code: 1000,
+                  close_reason: 'user 1234 logged out',
+                },
+              },
+            }),
+          })
+
+          expect((serverRumEvents[0] as RumVitalWebsocketClosedEvent).vital.websocket.close_reason).toBe('REDACTED')
+        })
+      })
+
       describe('field resource.graphql on Resource events', () => {
         it('should allow modification of resource.graphql.variables property', () => {
           const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
@@ -392,6 +589,55 @@ describe('rum assembly', () => {
         expect(serverRumEvents[0].view.id).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')
         expect(displaySpy).toHaveBeenCalledWith("Can't dismiss view events using beforeSend!")
       })
+
+      it('should not allow dismissing WebSocket vital events', () => {
+        // WebSocket vitals cannot be dismissed one by one: the backend derives each connection from the whole stream,
+        // so a partial stream corrupts it. To collect none, keep betaTrackWebSockets set to false (the default).
+        const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
+          partialConfiguration: {
+            beforeSend: () => false,
+          },
+        })
+
+        const displaySpy = spyOn(display, 'warn')
+        const webSocketVitalNames = [
+          WebSocketVitalName.CONNECTING,
+          WebSocketVitalName.OPEN,
+          WebSocketVitalName.CLOSING,
+          WebSocketVitalName.CLOSED,
+        ]
+        webSocketVitalNames.forEach((name) => {
+          notifyRawRumEvent(lifeCycle, {
+            rawRumEvent: createRawRumEvent(RumEventType.VITAL, {
+              vital: { type: VitalType.WEBSOCKET, name },
+            }),
+          })
+        })
+
+        expect((serverRumEvents as RumVitalEvent[]).map((event) => event.vital?.name)).toEqual(webSocketVitalNames)
+        expect(displaySpy).toHaveBeenCalledTimes(webSocketVitalNames.length)
+        expect(displaySpy).toHaveBeenCalledWith("Can't dismiss WebSocket vital events using beforeSend!")
+      })
+
+      it('should allow dismissing vital events other than WebSocket vitals', () => {
+        const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
+          partialConfiguration: {
+            beforeSend: () => false,
+          },
+        })
+
+        notifyRawRumEvent(lifeCycle, {
+          rawRumEvent: createRawRumEvent(RumEventType.VITAL),
+        })
+
+        notifyRawRumEvent(lifeCycle, {
+          rawRumEvent: createRawRumEvent(RumEventType.VITAL, {
+            vital: { type: VitalType.OPERATION_STEP },
+          }),
+        })
+
+        expect(serverRumEvents.length).toBe(0)
+      })
     })
 
     it('should not dismiss when true is returned', () => {
@@ -472,7 +718,7 @@ describe('rum assembly', () => {
         partialConfiguration: { service: 'default-service', version: 'default-version' },
       })
 
-      hooks.assemble.register(({ eventType }) => ({
+      hooks.assembleEventDefaults.register(({ eventType }) => ({
         type: eventType,
         service: 'new service',
         version: 'new version',
@@ -490,7 +736,7 @@ describe('rum assembly', () => {
     it('should not override customer context', () => {
       const { lifeCycle, hooks, serverRumEvents } = setupAssemblyTestWithDefaults()
 
-      hooks.assemble.register(({ eventType }) => ({
+      hooks.assembleEventDefaults.register(({ eventType }) => ({
         type: eventType,
         context: { foo: 'bar' },
       }))
@@ -504,13 +750,44 @@ describe('rum assembly', () => {
     it('should include tab.id from tabContext', () => {
       const { lifeCycle, hooks, serverRumEvents } = setupAssemblyTestWithDefaults()
 
-      startTabContext(hooks.assemble)
+      startTabContext(hooks.assembleEventDefaults)
 
       notifyRawRumEvent(lifeCycle, {
         rawRumEvent: createRawRumEvent(RumEventType.VIEW),
       })
 
       expect((serverRumEvents[0] as any).tab.id).toEqual(jasmine.any(String))
+    })
+  })
+
+  describe('assembleEvent override hook', () => {
+    it('lets an assembleEvent hook override fields set on the raw event', () => {
+      const { lifeCycle, hooks, serverRumEvents } = setupAssemblyTestWithDefaults()
+
+      hooks.assembleEvent.register(({ eventType }) =>
+        eventType === RumEventType.ERROR
+          ? { type: eventType, error: { fingerprint: 'overridden-fingerprint' } }
+          : SKIPPED
+      )
+
+      notifyRawRumEvent(lifeCycle, {
+        rawRumEvent: createRawRumEvent(RumEventType.ERROR, {
+          error: {
+            id: 'error-id',
+            source: 'source',
+            message: 'boom',
+            stack: 'Error: boom\n  at foo (https://example.com/app.js:1:1)',
+            source_type: 'browser',
+            handling: 'unhandled',
+            fingerprint: 'original-fingerprint',
+          },
+        }),
+      })
+
+      const errorEvent = serverRumEvents[0] as RumErrorEvent
+      expect(errorEvent.error.fingerprint).toBe('overridden-fingerprint')
+      // Raw event fields not overridden by the hook are preserved.
+      expect(errorEvent.error.message).toBe('boom')
     })
   })
 
@@ -575,13 +852,7 @@ describe('rum assembly', () => {
 
         expect(serverRumEvents.length).toBe(1)
         expect(serverRumEvents[0].date).toBe(100)
-        expect(reportErrorSpy).toHaveBeenCalledTimes(1)
-        expect(reportErrorSpy.calls.argsFor(0)[0]).toEqual(
-          jasmine.objectContaining({
-            message,
-            source: ErrorSource.AGENT,
-          })
-        )
+        expect(reportErrorSpy).toHaveBeenCalledWith(message)
       })
 
       it(`does not take discarded ${eventType} events into account`, () => {
@@ -682,9 +953,9 @@ function setupAssemblyTestWithDefaults({
   const recorderApi = noopRecorderApi
   const viewHistory = { ...mockViewHistory(), findView: () => findView() }
   const configuration = mockRumConfiguration(partialConfiguration)
-  startGlobalContext(hooks.assemble, configuration, 'rum', true)
-  startSessionContext(hooks.assemble, configuration, rumSessionManager, recorderApi, viewHistory)
-  startRumAssembly(configuration, lifeCycle, hooks.assemble, reportErrorSpy, eventRateLimit)
+  startGlobalContext(hooks.assembleEventDefaults, configuration, 'rum', true)
+  startSessionContext(hooks.assembleEventDefaults, configuration, rumSessionManager, recorderApi, viewHistory)
+  startRumAssembly(configuration, lifeCycle, hooks, reportErrorSpy, eventRateLimit)
 
   registerCleanupTask(() => {
     subscription.unsubscribe()

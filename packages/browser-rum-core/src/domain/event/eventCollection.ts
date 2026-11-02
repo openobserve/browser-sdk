@@ -1,6 +1,6 @@
 import { relativeToClocks } from '@openobserve/js-core/time'
 import type { Duration, RelativeTime } from '@openobserve/js-core/time'
-import type { Context } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import type { RumEventDomainContext } from '../../domainContext.types'
 import type { LifeCycle } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'

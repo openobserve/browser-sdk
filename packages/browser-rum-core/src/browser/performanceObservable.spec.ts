@@ -1,4 +1,4 @@
-import type { Subscription } from '@openobserve/browser-core'
+import type { Subscription } from '@openobserve/js-core/util'
 import type { Duration } from '@openobserve/js-core/time'
 import type { Clock } from '@openobserve/browser-core/test'
 import { mockClock } from '@openobserve/browser-core/test'
@@ -66,5 +66,37 @@ describe('performanceObservable', () => {
     expect(observableCallback).not.toHaveBeenCalled()
     clock.tick(0)
     expect(observableCallback).toHaveBeenCalledWith([jasmine.objectContaining({ name: allowedUrl })])
+  })
+
+  it('should notify soft navigation entries', () => {
+    const { notifyPerformanceEntries } = mockPerformanceObserver()
+    const softNavigationObservable = createPerformanceObservable({
+      type: RumPerformanceEntryType.SOFT_NAVIGATION,
+    })
+    performanceSubscription = softNavigationObservable.subscribe(observableCallback)
+
+    notifyPerformanceEntries([createPerformanceEntry(RumPerformanceEntryType.SOFT_NAVIGATION)])
+    expect(observableCallback).toHaveBeenCalledWith([
+      jasmine.objectContaining({ entryType: RumPerformanceEntryType.SOFT_NAVIGATION, interactionId: 42 }),
+    ])
+  })
+
+  it('should notify interaction contentful paint entries', () => {
+    const { notifyPerformanceEntries } = mockPerformanceObserver()
+    const icpObservable = createPerformanceObservable({
+      type: RumPerformanceEntryType.INTERACTION_CONTENTFUL_PAINT,
+    })
+    performanceSubscription = icpObservable.subscribe(observableCallback)
+
+    notifyPerformanceEntries([createPerformanceEntry(RumPerformanceEntryType.INTERACTION_CONTENTFUL_PAINT)])
+    expect(observableCallback).toHaveBeenCalledWith([
+      jasmine.objectContaining({
+        entryType: RumPerformanceEntryType.INTERACTION_CONTENTFUL_PAINT,
+        interactionId: 42,
+        largestContentfulPaint: jasmine.objectContaining({
+          entryType: RumPerformanceEntryType.LARGEST_CONTENTFUL_PAINT,
+        }),
+      }),
+    ])
   })
 })

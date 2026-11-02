@@ -1,5 +1,6 @@
+import { noop } from '@openobserve/js-core/util'
 import { type RelativeTime } from '@openobserve/js-core/time'
-import { noop, type SessionManager } from '@openobserve/browser-core'
+import { type SessionManager } from '@openobserve/browser-core'
 import { buildLocation, createSessionManagerMock } from '@openobserve/browser-core/test'
 import type { ActionContexts } from '../action/actionCollection'
 import { startInternalContext } from './internalContext'

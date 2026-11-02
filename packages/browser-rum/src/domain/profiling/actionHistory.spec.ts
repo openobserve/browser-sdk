@@ -1,5 +1,5 @@
+import { noop } from '@openobserve/js-core/util'
 import { type Duration, relativeToClocks, type RelativeTime } from '@openobserve/js-core/time'
-import { noop } from '@openobserve/browser-core'
 import { LifeCycle, LifeCycleEventType, RumEventType } from '@openobserve/browser-rum-core'
 import { createRawRumEvent } from '@openobserve/browser-rum-core/test'
 import { createActionHistory } from './actionHistory'

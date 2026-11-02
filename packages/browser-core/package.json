@@ -23,11 +23,10 @@
     "directory": "packages/browser-core"
   },
   "dependencies": {
-    "@openobserve/js-core": "0.4.3"
+    "@openobserve/js-core": "workspace:*"
   },
   "devDependencies": {
-    "@types/pako": "2.0.4",
-    "pako": "2.1.0"
+    "pako": "3.0.2"
   },
   "volta": {
     "extends": "../../package.json"

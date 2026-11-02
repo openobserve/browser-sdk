@@ -1,5 +1,5 @@
-import type { EndpointBuilder } from '@openobserve/browser-core'
-import { createEndpointBuilder } from '../../../../../../packages/browser-core/src/domain/configuration'
+import type { EndpointBuilder } from '@openobserve/js-core/transport'
+import { createEndpointBuilder } from '@openobserve/js-core/transport'
 import { copy } from '../../../copy'
 import type { SdkInfos } from '../../../hooks/useSdkInfos'
 import type { SdkEvent } from '../../../sdkEvent'
@@ -89,6 +89,6 @@ export function getIntakeUrlForEvent(sdkInfos: SdkInfos, event: SdkEvent) {
   }
 
   return builder
-    .build('manual', { data: 'a', bytesCount: 1 })
+    .build('manual', {})
     .replace(/o2-evp-origin-version=[^&]+/g, `o2-evp-origin-version=${encodeURIComponent(version)}`)
 }

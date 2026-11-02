@@ -1,5 +1,10 @@
-import type { RumInitConfiguration, RumPublicApi, StartRumResult } from '@openobserve/browser-rum-core'
-import { noop } from '@openobserve/browser-core'
+import type {
+  RumInitConfiguration,
+  RumPublicApi,
+  StartRumResult,
+  RumPluginOnInitOptions,
+} from '@openobserve/browser-rum-core'
+import { noop } from '@openobserve/js-core/util'
 import { nextjsPlugin, resetNextjsPlugin } from '../src/domain/nextjsPlugin'
 import { registerCleanupTask } from '../../browser-core/test'
 
@@ -15,10 +20,11 @@ export function initializeNextjsPlugin({
   resetNextjsPlugin()
   const plugin = nextjsPlugin()
 
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
   plugin.onInit({
     publicApi: publicApi as RumPublicApi,
     initConfiguration: initConfiguration as RumInitConfiguration,
-  })
+  } as RumPluginOnInitOptions)
   plugin.onRumStart({
     addError,
   })

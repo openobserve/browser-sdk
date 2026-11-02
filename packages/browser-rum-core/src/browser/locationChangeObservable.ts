@@ -1,12 +1,6 @@
-import {
-  addEventListener,
-  DOM_EVENT,
-  globalObject,
-  instrumentMethod,
-  mockable,
-  Observable,
-  shallowClone,
-} from '@openobserve/browser-core'
+import { globalObject, mockable, Observable } from '@openobserve/js-core/util'
+import { addEventListener, DOM_EVENT } from '@openobserve/js-core/dom'
+import { instrumentMethod, shallowClone } from '@openobserve/browser-core'
 
 export interface LocationChange {
   oldLocation: Readonly<Location>

@@ -1,6 +1,5 @@
-import { setTimeout } from './timer'
-import { callMonitored } from './monitor'
-import { noop } from './utils/functionUtils'
+import { callMonitored } from '@openobserve/js-core/monitor'
+import { setTimeout, noop } from '@openobserve/js-core/util'
 import { createHandlingStack } from './stackTrace/handlingStack'
 
 /**
@@ -116,13 +115,14 @@ export function instrumentMethod<TARGET extends { [key: string]: any }, METHOD e
 
   let stopped = false
 
-  const instrumentation = function (this: TARGET): ReturnType<TARGET[METHOD]> {
+  const instrumentation = function (
+    this: TARGET,
+    ...parameters: Parameters<TARGET[METHOD]>
+  ): ReturnType<TARGET[METHOD]> {
     if (stopped) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
-      return original.apply(this, arguments)
+      return original.apply(this, parameters)
     }
-
-    const parameters = Array.from(arguments) as Parameters<TARGET[METHOD]>
 
     return notifyInstrumentation<InstrumentedMethodCall<TARGET, METHOD>, ReturnType<TARGET[METHOD]>>(
       onPreCall,
@@ -179,18 +179,22 @@ export function instrumentConstructor<CONTAINER extends { [key: string]: any }, 
 ) {
   const original = container[constructor]
 
-  if (typeof original !== 'function') {
+  // Skip before preserveConstructorShape can modify the shared prototype.
+  if (typeof original !== 'function' || isReadOnly(container, constructor)) {
     return { stop: noop }
   }
 
   let stopped = false
 
-  const instrumentation = function (this: unknown): ConstructorInstanceOf<CONTAINER[CONSTRUCTOR]> {
+  const instrumentation = function (
+    this: unknown,
+    ...parameters: ConstructorParametersOf<CONTAINER[CONSTRUCTOR]>
+  ): ConstructorInstanceOf<CONTAINER[CONSTRUCTOR]> {
     // Bare `[[Call]]` (no `new`): delegate through `[[Call]]` and skip `onPreCall`. Otherwise we
     // would notify instrumentation before the original rejects or returns, unlike the native
     // constructor (e.g. `WebSocket(url)` or `class {}()` without `new`).
     if (!new.target) {
-      return Reflect.apply(original, this, Array.from(arguments)) as ConstructorInstanceOf<CONTAINER[CONSTRUCTOR]>
+      return Reflect.apply(original, this, parameters) as ConstructorInstanceOf<CONTAINER[CONSTRUCTOR]>
     }
 
     // When `new` is used on this instrumented property, `new.target` is this wrapper. Passing
@@ -201,14 +205,8 @@ export function instrumentConstructor<CONTAINER extends { [key: string]: any }, 
 
     if (stopped) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return Reflect.construct(
-        original,
-        arguments as unknown as ConstructorParametersOf<CONTAINER[CONSTRUCTOR]>,
-        newTarget
-      )
+      return Reflect.construct(original, parameters, newTarget)
     }
-
-    const parameters = Array.from(arguments) as ConstructorParametersOf<CONTAINER[CONSTRUCTOR]>
 
     return notifyInstrumentation<
       InstrumentedConstructorCall<CONTAINER[CONSTRUCTOR]>,
@@ -247,6 +245,10 @@ function replaceWithInstrumentation<TARGET extends { [key: string]: any }, METHO
   original: TARGET[METHOD],
   instrumentation: TARGET[METHOD]
 ) {
+  if (isReadOnly(targetPrototype, method)) {
+    return { stop: noop }
+  }
+
   targetPrototype[method] = instrumentation
 
   return {
@@ -257,6 +259,11 @@ function replaceWithInstrumentation<TARGET extends { [key: string]: any }, METHO
       }
     },
   }
+}
+
+function isReadOnly(target: object, property: PropertyKey): boolean {
+  const descriptor = Object.getOwnPropertyDescriptor(target, property)
+  return !!descriptor && !descriptor.writable && !descriptor.set
 }
 
 /**

@@ -1,18 +1,26 @@
-import type { RawError, HttpRequest, DeflateEncoder, Telemetry, SessionManager } from '@openobserve/browser-core'
+import type { HttpRequest, DeflateEncoder, Telemetry, SessionManager } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
 import {
   createHttpRequest,
   addTelemetryDebug,
   canUseEventBridge,
-  noop,
-  createEndpointBuilder,
+  ErrorSource,
+  PageExitReason,
 } from '@openobserve/browser-core'
+import { clocksNow } from '@openobserve/js-core/time'
+import { createEndpointBuilder } from '@openobserve/js-core/transport'
 import type { LifeCycle, ViewHistory, RumConfiguration } from '@openobserve/browser-rum-core'
 import { LifeCycleEventType } from '@openobserve/browser-rum-core'
 
-import type { SerializationStats } from '../domain/record'
+import type { EmitResourceCallback, SerializationStats } from '../domain/record'
 import { record } from '../domain/record'
-import type { ReplayPayload } from '../domain/segmentCollection'
-import { startSegmentCollection, SEGMENT_BYTES_LIMIT, startSegmentTelemetry } from '../domain/segmentCollection'
+import type { ReplayPayload, ResourcePayload } from '../domain/segmentCollection'
+import {
+  startSegmentCollection,
+  SEGMENT_BYTES_LIMIT,
+  startSegmentTelemetry,
+  startReplayResourceCollection,
+} from '../domain/segmentCollection'
 import type { BrowserRecord } from '../types'
 import { startRecordBridge } from '../domain/startRecordBridge'
 
@@ -23,21 +31,42 @@ export function startRecording(
   viewHistory: ViewHistory,
   encoder: DeflateEncoder,
   telemetry: Telemetry,
-  httpRequest?: HttpRequest<ReplayPayload>
+  segmentHttpRequest?: HttpRequest<ReplayPayload>,
+  resourceHttpRequest?: HttpRequest<ResourcePayload>
 ) {
   const cleanupTasks: Array<() => void> = []
 
-  const reportError = (error: RawError) => {
-    lifeCycle.notify(LifeCycleEventType.RAW_ERROR_COLLECTED, { error })
+  const reportError = (message: string) => {
+    lifeCycle.notify(LifeCycleEventType.RAW_ERROR_COLLECTED, {
+      error: { message, source: ErrorSource.AGENT, startClocks: clocksNow() },
+    })
     // monitor-until: forever, to keep an eye on the errors reported to customers
-    addTelemetryDebug('Error reported to customer', { 'error.message': error.message })
+    addTelemetryDebug('Error reported to customer', { 'error.message': message })
   }
 
   const replayRequest =
-    httpRequest || createHttpRequest([createEndpointBuilder(configuration, 'replay')], reportError, SEGMENT_BYTES_LIMIT)
+    segmentHttpRequest ||
+    createHttpRequest([createEndpointBuilder(configuration, 'replay')], reportError, SEGMENT_BYTES_LIMIT)
+
+  const resourceRequest =
+    resourceHttpRequest ||
+    createHttpRequest<ResourcePayload>([createEndpointBuilder(configuration, 'replay')], reportError, 0)
 
   let addRecord: (record: BrowserRecord) => void
   let addStats: (stats: SerializationStats) => void
+  let emitResource: EmitResourceCallback = noop
+  let flushMutations = noop
+
+  // This must be registered before the segment and resource collectors so an urgent exit includes queued canvas changes.
+  const { unsubscribe: unsubscribeMutationFlush } = lifeCycle.subscribe(
+    LifeCycleEventType.PREPARE_URGENT_FLUSH,
+    (reason) => {
+      if (reason !== PageExitReason.PAGE_TERMINATED) {
+        flushMutations()
+      }
+    }
+  )
+  cleanupTasks.push(unsubscribeMutationFlush)
 
   if (!canUseEventBridge()) {
     const segmentCollection = startSegmentCollection(
@@ -54,22 +83,33 @@ export function startRecording(
 
     const segmentTelemetry = startSegmentTelemetry(telemetry, replayRequest.observable)
     cleanupTasks.push(segmentTelemetry.stop)
+
+    const replayResourceCollection = startReplayResourceCollection(
+      configuration.applicationId,
+      lifeCycle,
+      resourceRequest
+    )
+    emitResource = replayResourceCollection.emitResource
+    cleanupTasks.push(replayResourceCollection.stop)
   } else {
     ;({ addRecord } = startRecordBridge(viewHistory))
     addStats = noop
   }
 
-  const { stop: stopRecording } = record({
+  const recording = record({
     emitRecord: addRecord,
+    emitResource,
     emitStats: addStats,
     configuration,
     lifeCycle,
     viewHistory,
   })
-  cleanupTasks.push(stopRecording)
+  flushMutations = recording.flushMutations
 
   return {
     stop: () => {
+      recording.flushMutations()
+      recording.stop()
       cleanupTasks.forEach((task) => task())
     },
   }

@@ -1,5 +1,5 @@
 import type { ClocksState } from '@openobserve/js-core/time'
-import type { Context } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import { timeStampNow } from '@openobserve/js-core/time'
 import { ErrorSource, getFileFromStackTraceString, initReportObservable } from '@openobserve/browser-core'
 import type { LogsConfiguration } from '../configuration'
@@ -33,8 +33,10 @@ export function startReportCollection(configuration: LogsConfiguration, lifeCycl
         message,
         origin: ErrorSource.REPORT,
         error,
+        _o2: { debug_ids: rawError.debugIds },
         status,
       },
+      domainContext: { report: rawError.originalError },
     })
   })
 

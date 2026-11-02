@@ -1,11 +1,9 @@
 import { clocksNow } from '@openobserve/js-core/time'
-import { ConsoleApiName } from '@openobserve/js-core/util'
+import { ConsoleApiName, Observable, noop } from '@openobserve/js-core/util'
 import type { MockFetch } from '../../test'
 import { collectAsyncCalls, mockFetch, mockXhr, registerCleanupTask, replaceMockable, withXhr } from '../../test'
-import { Observable } from '../tools/observable'
 import { resetFetchObservable } from '../browser/fetchObservable'
 import { resetXhrObservable } from '../browser/xhrObservable'
-import { noop } from '../tools/utils/functionUtils'
 import { resetConsoleObservable } from './console/consoleObservable'
 import type { BufferedData } from './bufferedData'
 import { BufferedDataType, startBufferingData } from './bufferedData'
@@ -44,6 +42,7 @@ describe('startBufferingData', () => {
   it('collects fetch requests', async () => {
     mockFetch()
     const { observable, stop } = startBufferingData()
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     const fetch = window.fetch as MockFetch
     const collected: BufferedData[] = []
     const bufferedDataCollectedSpy = jasmine.createSpy()

@@ -1,5 +1,5 @@
-import type { Uint8ArrayBuffer } from './utils/byteUtils'
-import { computeBytesCount } from './utils/byteUtils'
+import type { Uint8ArrayBuffer } from '@openobserve/js-core/util'
+import { computeBytesCount } from '@openobserve/js-core/util'
 
 export interface Encoder<Output extends string | Uint8ArrayBuffer = string | Uint8ArrayBuffer> {
   /**

@@ -5,25 +5,50 @@
 ```ts
 
 // @public
+export class BufferedObservable<T> extends Observable<T> {
+    constructor(maxBufferSize: number, onDrop?: ((count: number) => void) | undefined);
+    notify(data: T): void;
+    subscribe(observer: Observer<T>): Subscription;
+    unbuffer(): void;
+}
+
+// @public
+export function buildUrl(url: string, base?: string): URL;
+
+// @public
+function clearInterval_2(timeoutId: TimeoutId | undefined): void;
+export { clearInterval_2 as clearInterval }
+
+// @public
+function clearTimeout_2(timeoutId: TimeoutId | undefined): void;
+export { clearTimeout_2 as clearTimeout }
+
+// @public
 export function combine<A, B>(a: A, b: B): Combined<A, B>;
 
-// @public (undocumented)
+// @public
 export function combine<A, B, C>(a: A, b: B, c: C): Combined<Combined<A, B>, C>;
 
-// @public (undocumented)
+// @public
 export function combine<A, B, C, D>(a: A, b: B, c: C, d: D): Combined<Combined<Combined<A, B>, C>, D>;
 
-// @public (undocumented)
+// @public
 export function combine<A, B, C, D, E>(a: A, b: B, c: C, d: D, e: E): Combined<Combined<Combined<Combined<A, B>, C>, D>, E>;
 
-// @public (undocumented)
+// @public
 export function combine<A, B, C, D, E, F>(a: A, b: B, c: C, d: D, e: E, f: F): Combined<Combined<Combined<Combined<Combined<A, B>, C>, D>, E>, F>;
 
-// @public (undocumented)
+// @public
 export function combine<A, B, C, D, E, F, G>(a: A, b: B, c: C, d: D, e: E, f: F, g: G): Combined<Combined<Combined<Combined<Combined<Combined<A, B>, C>, D>, E>, F>, G>;
 
-// @public (undocumented)
+// @public
 export function combine<A, B, C, D, E, F, G, H>(a: A, b: B, c: C, d: D, e: E, f: F, g: G, h: H): Combined<Combined<Combined<Combined<Combined<Combined<Combined<A, B>, C>, D>, E>, F>, G>, H>;
+
+// @public
+export function computeBytesCount(candidate: string): number;
+
+// @public
+export function concatBuffers(buffers: Uint8ArrayBuffer[]): Uint8ArrayBuffer;
 
 // @public
 export const ConsoleApiName: {
@@ -38,27 +63,107 @@ export const ConsoleApiName: {
 export type ConsoleApiName = (typeof ConsoleApiName)[keyof typeof ConsoleApiName];
 
 // @public
+export interface Context {
+    [x: string]: ContextValue;
+}
+
+// @public
+export interface ContextArray extends Array<ContextValue> {
+}
+
+// @public
+export type ContextValue = string | number | boolean | Context | ContextArray | undefined | null;
+
+// @public
+type CookieChangeEvent_2 = Event & {
+    changed: CookieChangeItem[];
+    deleted: CookieChangeItem[];
+};
+export { CookieChangeEvent_2 as CookieChangeEvent }
+
+// @public
+export interface CookieChangeItem {
+    name: string;
+    value: string | undefined;
+}
+
+// @public
+interface CookieStore_2 extends EventTarget {
+    addEventListener<K extends keyof CookieStoreEventMap_2>(type: K, listener: (ev: CookieStoreEventMap_2[K]) => any, options?: boolean | AddEventListenerOptions): void;
+    addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+    delete(options: {
+        name: string;
+        domain?: string;
+        path?: string;
+        partitioned?: boolean;
+    }): Promise<void>;
+    get(name: string): Promise<CookieStoreItem | null>;
+    getAll(name?: string): Promise<CookieStoreItem[]>;
+    removeEventListener<K extends keyof CookieStoreEventMap_2>(type: K, listener: (ev: CookieStoreEventMap_2[K]) => any, options?: boolean | EventListenerOptions): void;
+    removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    set(options: {
+        name: string;
+        value: string;
+        expires?: number | Date;
+        domain?: string;
+        path?: string;
+        secure?: boolean;
+        sameSite?: 'strict' | 'lax' | 'none';
+        partitioned?: boolean;
+    }): Promise<void>;
+}
+export { CookieStore_2 as CookieStore }
+
+// @internal
+interface CookieStoreEventMap_2 {
+    change: CookieChangeEvent_2;
+}
+export { CookieStoreEventMap_2 as CookieStoreEventMap }
+
+// @public
+export interface CookieStoreItem {
+    domain?: string;
+    expires?: number;
+    name: string;
+    partitioned?: boolean;
+    path?: string;
+    sameSite?: 'strict' | 'lax' | 'none';
+    secure?: boolean;
+    value: string;
+}
+
+// @public
 export function createDisplay(prefix: string): Display;
 
 // @public
 export function deepClone<T>(value: T): T;
 
 // @public
+export function detachToJsonMethod(value: object): () => void;
+
+// @public
 export interface Display {
-    // (undocumented)
     debug: typeof console.debug;
-    // (undocumented)
     error: typeof console.error;
-    // (undocumented)
     info: typeof console.info;
-    // (undocumented)
     log: typeof console.log;
-    // (undocumented)
     warn: typeof console.warn;
 }
 
 // @public
+export const DOCS_ORIGIN = "https://docs.datadoghq.com";
+
+// @public
+export function generateUUID(): string;
+
+// @public
 export function getDebugMode(): boolean;
+
+// @public
+export function getPathName(url: string): string;
+
+// @public
+export function getPristineWindow(): Pick<Window & typeof globalThis, "URL">;
 
 // @public
 export function getType(value: unknown): "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function" | "null" | "array";
@@ -67,13 +172,156 @@ export function getType(value: unknown): "string" | "number" | "bigint" | "boole
 export const globalConsole: Console;
 
 // @public
+export interface GlobalObject extends Omit<typeof globalThis, 'navigator' | 'queueMicrotask' | 'cookieStore' | 'Profiler' | 'window'> {
+    cookieStore?: CookieStore_2;
+    navigator?: Navigator_2;
+    Profiler?: ProfilerConstructor;
+    queueMicrotask?: typeof queueMicrotask;
+    window?: Window;
+}
+
+// @public
+export const globalObject: GlobalObject;
+
+// @public
 export function isIndexableObject(value: unknown): value is Record<any, unknown>;
+
+// @public
+export function isMatchOption(value: unknown): value is string | RegExp | ((value: string) => boolean);
+
+// @public
+export function isPercentage(value: unknown): value is number;
+
+// @public
+export function isValidUrl(url: string): boolean;
+
+// @public
+export const isWorkerEnvironment: boolean;
+
+// @public
+export function jsonStringify(value: unknown, replacer?: Array<string | number>, space?: string | number): string | undefined;
 
 // @public
 export function mergeInto<D, S>(destination: D, source: S): Merged<D, S>;
 
 // @public
+export function mergeObservables<T>(...observables: Array<Observable<T>>): Observable<T>;
+
+// @public
+export function mockable<T>(value: T): T;
+
+// @public
+export const mockableReplacements: Map<unknown, unknown>;
+
+// @public
+export const MORE_DETAILS = "More details:";
+
+// @public
+interface Navigator_2 {
+    connection?: NetworkInformation;
+    onLine: boolean;
+}
+export { Navigator_2 as Navigator }
+
+// @public
+export type NetworkEffectiveType = 'slow-2g' | '2g' | '3g' | '4g';
+
+// @public
+export interface NetworkInformation {
+    effectiveType?: NetworkEffectiveType;
+    saveData: boolean;
+    type?: NetworkInterface;
+}
+
+// @public
+export type NetworkInterface = 'bluetooth' | 'cellular' | 'ethernet' | 'none' | 'wifi' | 'wimax' | 'other' | 'unknown';
+
+// @public
+export function noop(): void;
+
+// @public
+export function normalizeUrl(url: string): string;
+
+// @public
+export interface ObjectWithToJsonMethod {
+    toJSON?: () => unknown;
+}
+
+// @public
+export class Observable<T> {
+    constructor(onFirstSubscribe?: ((observable: Observable<T>) => (() => void) | void) | undefined);
+    protected addObserver(observer: Observer<T>): void;
+    notify(data: T): void;
+    protected observers: Array<Observer<T>>;
+    protected removeObserver(observer: Observer<T>): void;
+    subscribe(observer: Observer<T>): Subscription;
+}
+
+// @public
+export const ONE_KIBI_BYTE = 1024;
+
+// @public
+export const ONE_MEBI_BYTE: number;
+
+// @public
 export const originalConsoleMethods: Display;
+
+// @public
+export interface Profiler extends EventTarget {
+    addEventListener<K extends keyof ProfilerEventMap>(type: K, listener: (ev: ProfilerEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+    addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+    removeEventListener<K extends keyof ProfilerEventMap>(type: K, listener: (ev: ProfilerEventMap[K]) => any, options?: boolean | EventListenerOptions): void;
+    removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void;
+    readonly sampleInterval: number;
+    stop(): Promise<ProfilerTrace>;
+    readonly stopped: boolean;
+}
+
+// @public
+export interface ProfilerConstructor {
+    new (options: ProfilerInitOptions): Profiler;
+}
+
+// @public
+export interface ProfilerFrame {
+    readonly column?: number;
+    readonly line?: number;
+    readonly name: string;
+    readonly resourceId?: number;
+}
+
+// @public
+export interface ProfilerInitOptions {
+    readonly maxBufferSize: number;
+    readonly sampleInterval: number;
+}
+
+// @public
+export type ProfilerResource = string;
+
+// @public
+export interface ProfilerSample {
+    readonly stackId?: number;
+    readonly timestamp: number;
+}
+
+// @public
+export interface ProfilerStack {
+    readonly frameId: number;
+    readonly parentId?: number;
+}
+
+// @public
+export interface ProfilerTrace {
+    readonly frames: ProfilerFrame[];
+    readonly resources: ProfilerResource[];
+    readonly samples: ProfilerSample[];
+    readonly stacks: ProfilerStack[];
+}
+
+// @public
+function queueMicrotask_2(callback: () => void): void;
+export { queueMicrotask_2 as queueMicrotask }
 
 // @public
 export type RecursivePartial<T> = {
@@ -81,7 +329,43 @@ export type RecursivePartial<T> = {
 };
 
 // @public
+export interface SampleBufferFullEvent extends Event {
+    readonly target: Profiler;
+}
+
+// @public
 export function setDebugMode(newDebugMode: boolean): void;
+
+// @public
+function setInterval_2(callback: () => void, delay?: number): TimeoutId;
+export { setInterval_2 as setInterval }
+
+// @public
+function setTimeout_2(callback: () => void, delay?: number): TimeoutId;
+export { setTimeout_2 as setTimeout }
+
+// @public
+export interface Subscription {
+    unsubscribe: () => void;
+}
+
+// @public
+export function throttle<T extends (...args: any[]) => void>(fn: T, wait: number, options?: {
+    leading?: boolean;
+    trailing?: boolean;
+}): {
+    throttled: (...parameters: Parameters<T>) => void;
+    cancel: () => void;
+};
+
+// @public
+export type TimeoutId = ReturnType<GlobalObject['setTimeout']>;
+
+// @public
+export interface Uint8ArrayBuffer extends Uint8Array {
+    readonly buffer: ArrayBuffer;
+    subarray(begin?: number, end?: number): Uint8ArrayBuffer;
+}
 
 // (No @packageDocumentation comment for this package)
 

@@ -1,24 +1,20 @@
 import { ONE_MINUTE } from '@openobserve/js-core/time'
-import {
-  DefaultPrivacyLevel,
-  INTAKE_SITE_US1,
-  display,
-  setCookie,
-  deleteCookie,
-  createContextManager,
-} from '@openobserve/browser-core'
+import type { TimeStamp } from '@openobserve/js-core/time'
+import { DefaultPrivacyLevel, display, setCookie, deleteCookie, createContextManager } from '@openobserve/browser-core'
+import { INTAKE_SITE_US1 } from '@openobserve/js-core/transport'
 import { interceptRequests, registerCleanupTask } from '@openobserve/browser-core/test'
 import { appendElement } from '../../../test'
 import type { RumInitConfiguration } from './configuration'
 import {
   type RumRemoteConfiguration,
+  type RemoteConfiguration,
   initMetrics,
   applyRemoteConfiguration,
   buildEndpoint,
   fetchRemoteConfiguration,
   getRemoteConfiguration,
 } from './remoteConfiguration'
-import { buildCacheKey } from './remoteConfigurationCache'
+import { buildCacheKey, CACHE_VERSION } from './remoteConfigurationCache'
 
 const DEFAULT_INIT_CONFIGURATION: RumInitConfiguration = {
   clientToken: 'xxx',
@@ -88,11 +84,14 @@ describe('remoteConfiguration', () => {
       expect(fetchResult).toEqual({
         ok: true,
         value: {
-          applicationId: 'xxx',
-          sessionSampleRate: 50,
-          sessionReplaySampleRate: 50,
-          defaultPrivacyLevel: DefaultPrivacyLevel.ALLOW,
+          rum: {
+            applicationId: 'xxx',
+            sessionSampleRate: 50,
+            sessionReplaySampleRate: 50,
+            defaultPrivacyLevel: DefaultPrivacyLevel.ALLOW,
+          },
         },
+        lastModified: undefined,
       })
     })
 
@@ -120,7 +119,59 @@ describe('remoteConfiguration', () => {
       })
     })
 
-    it('should throw an error if the remote config does not contain rum config', async () => {
+    it('should succeed if the remote config contains only a profiling section', async () => {
+      interceptor.withFetch(() =>
+        Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ profiling: { sampleRate: 10 } }),
+        })
+      )
+
+      const fetchResult = await fetchRemoteConfiguration(configuration)
+      expect(fetchResult).toEqual({ ok: true, value: { profiling: { sampleRate: 10 } }, lastModified: undefined })
+    })
+
+    describe('last-modified header', () => {
+      function withFetchReturningHeaders(headers: Record<string, string>) {
+        interceptor.withFetch(() =>
+          Promise.resolve({
+            ok: true,
+            headers: new Headers(headers),
+            json: () => Promise.resolve({ profiling: { sampleRate: 10 } }),
+          })
+        )
+      }
+
+      it('should expose the publish time as epoch milliseconds', async () => {
+        withFetchReturningHeaders({ 'last-modified': 'Wed, 21 Oct 2015 07:28:00 GMT' })
+
+        const fetchResult = await fetchRemoteConfiguration(configuration)
+
+        expect(fetchResult).toEqual({
+          ok: true,
+          value: { profiling: { sampleRate: 10 } },
+          lastModified: 1445412480000,
+        })
+      })
+
+      it('should be undefined when the header is absent', async () => {
+        withFetchReturningHeaders({})
+
+        const fetchResult = await fetchRemoteConfiguration(configuration)
+
+        expect((fetchResult as { lastModified?: number }).lastModified).toBeUndefined()
+      })
+
+      it('should be undefined when the header is not a valid date', async () => {
+        withFetchReturningHeaders({ 'last-modified': 'not-a-date' })
+
+        const fetchResult = await fetchRemoteConfiguration(configuration)
+
+        expect((fetchResult as { lastModified?: number }).lastModified).toBeUndefined()
+      })
+    })
+
+    it('should return an error if the remote config does not contain rum or profiling', async () => {
       interceptor.withFetch(() =>
         Promise.resolve({
           ok: true,
@@ -156,7 +207,12 @@ describe('remoteConfiguration', () => {
         ...actual,
       }
       expect(
-        applyRemoteConfiguration(DEFAULT_INIT_CONFIGURATION, rumRemoteConfiguration, supportedContextManagers, metrics)
+        applyRemoteConfiguration(
+          DEFAULT_INIT_CONFIGURATION,
+          { rum: rumRemoteConfiguration },
+          supportedContextManagers,
+          metrics
+        )
       ).toEqual({
         ...DEFAULT_INIT_CONFIGURATION,
         applicationId: 'yyy',
@@ -194,7 +250,12 @@ describe('remoteConfiguration', () => {
         defaultPrivacyLevel: DefaultPrivacyLevel.ALLOW,
       }
       expect(
-        applyRemoteConfiguration(DEFAULT_INIT_CONFIGURATION, rumRemoteConfiguration, supportedContextManagers, metrics)
+        applyRemoteConfiguration(
+          DEFAULT_INIT_CONFIGURATION,
+          { rum: rumRemoteConfiguration },
+          supportedContextManagers,
+          metrics
+        )
       ).toEqual({
         applicationId: 'yyy',
         clientToken: 'xxx',
@@ -737,6 +798,38 @@ describe('remoteConfiguration', () => {
         )
       })
     })
+
+    it('should apply telemetrySampleRate, trackResources, trackLongTasks, and actionNameAttribute from the rum section', () => {
+      const result = applyRemoteConfiguration(
+        DEFAULT_INIT_CONFIGURATION,
+        {
+          rum: {
+            applicationId: 'xxx',
+            trackResources: false,
+            trackLongTasks: false,
+            telemetrySampleRate: 10,
+            actionNameAttribute: 'data-label',
+          },
+        },
+        supportedContextManagers,
+        metrics
+      )
+      expect(result.trackResources).toBeFalse()
+      expect(result.trackLongTasks).toBeFalse()
+      expect(result.telemetrySampleRate).toBe(10)
+      expect(result.actionNameAttribute).toBe('data-label')
+    })
+
+    it('should apply profiling.sampleRate and skip rum fields when only profiling is present', () => {
+      const result = applyRemoteConfiguration(
+        DEFAULT_INIT_CONFIGURATION,
+        { profiling: { sampleRate: 25 } },
+        supportedContextManagers,
+        metrics
+      )
+      expect(result.profilingSampleRate).toBe(25)
+      expect(result.sessionSampleRate).toBe(DEFAULT_INIT_CONFIGURATION.sessionSampleRate)
+    })
   })
 
   describe('buildEndpoint', () => {
@@ -755,8 +848,8 @@ describe('remoteConfiguration', () => {
   describe('async loading (getRemoteConfiguration)', () => {
     const REMOTE_CONFIGURATION_ID = 'rc-test-id'
     const CACHE_KEY = buildCacheKey(REMOTE_CONFIGURATION_ID)
-    const FRESH_RUM_CONFIG: RumRemoteConfiguration = { applicationId: 'fresh-app' }
-    const CACHED_RUM_CONFIG: RumRemoteConfiguration = { applicationId: 'cached-app' }
+    const FRESH_RUM_CONFIG: RemoteConfiguration = { rum: { applicationId: 'fresh-app' } }
+    const CACHED_RUM_CONFIG: RemoteConfiguration = { rum: { applicationId: 'cached-app' } }
 
     let initConfiguration: RumInitConfiguration
     let supportedContextManagers: {
@@ -766,12 +859,15 @@ describe('remoteConfiguration', () => {
     let interceptor: ReturnType<typeof interceptRequests>
     let displaySpy: jasmine.Spy
 
-    function withCachedEntry(config: RumRemoteConfiguration) {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ version: 1, config, fetchedAt: 1000 }))
+    function withCachedEntry(config: RemoteConfiguration) {
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ version: CACHE_VERSION, config, metadata: { lastSynced: 1000, syncId: 'sync-id' } })
+      )
     }
 
-    function withFetchSuccess(config: RumRemoteConfiguration = FRESH_RUM_CONFIG) {
-      interceptor.withFetch(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ rum: config }) }))
+    function withFetchSuccess(config: RemoteConfiguration = FRESH_RUM_CONFIG) {
+      interceptor.withFetch(() => Promise.resolve({ ok: true, json: () => Promise.resolve(config) }))
     }
 
     function withFetchFailure() {
@@ -803,7 +899,7 @@ describe('remoteConfiguration', () => {
 
       const result = getRemoteConfiguration(initConfiguration, supportedContextManagers)
 
-      expect(result).toBe(initConfiguration)
+      expect(result!.initConfiguration).toBe(initConfiguration)
       await flushBackgroundSync()
     })
 
@@ -814,8 +910,30 @@ describe('remoteConfiguration', () => {
       const result = getRemoteConfiguration(initConfiguration, supportedContextManagers)
 
       expect(result).toBeDefined()
-      expect(result!.applicationId).toBe('cached-app')
-      expect(result!.clientToken).toBe('xxx')
+      expect(result!.initConfiguration.applicationId).toBe('cached-app')
+      expect(result!.initConfiguration.clientToken).toBe('xxx')
+      await flushBackgroundSync()
+    })
+
+    it('should return the applied metadata on cache hit', async () => {
+      withCachedEntry(CACHED_RUM_CONFIG)
+      withFetchSuccess()
+
+      const result = getRemoteConfiguration(initConfiguration, supportedContextManagers)
+
+      expect(result!.metadata!.lastSynced).toEqual(1000 as TimeStamp)
+      expect(result!.metadata!.syncId).toBe('sync-id')
+      // exact stamping behaviour is covered in remoteConfigurationCache.spec.ts
+      expect(result!.metadata!.firstApplied!).toBeGreaterThan(0)
+      await flushBackgroundSync()
+    })
+
+    it('should not return metadata on cache miss', async () => {
+      withFetchSuccess()
+
+      const result = getRemoteConfiguration(initConfiguration, supportedContextManagers)
+
+      expect(result!.metadata).toBeUndefined()
       await flushBackgroundSync()
     })
 
@@ -825,7 +943,7 @@ describe('remoteConfiguration', () => {
 
       const result = getRemoteConfiguration(initConfiguration, supportedContextManagers)
 
-      expect(result).toBe(initConfiguration)
+      expect(result!.initConfiguration).toBe(initConfiguration)
       expect(localStorage.getItem(CACHE_KEY)).toBeNull()
       await flushBackgroundSync()
     })
@@ -838,7 +956,23 @@ describe('remoteConfiguration', () => {
 
       const stored = JSON.parse(localStorage.getItem(CACHE_KEY)!)
       expect(stored.config).toEqual(FRESH_RUM_CONFIG)
-      expect(stored.version).toBe(1)
+      expect(stored.version).toBe(CACHE_VERSION)
+    })
+
+    it('should store the publish time from the background fetch response', async () => {
+      interceptor.withFetch(() =>
+        Promise.resolve({
+          ok: true,
+          headers: new Headers({ 'last-modified': 'Wed, 21 Oct 2015 07:28:00 GMT' }),
+          json: () => Promise.resolve(FRESH_RUM_CONFIG),
+        })
+      )
+
+      getRemoteConfiguration(initConfiguration, supportedContextManagers)
+      await flushBackgroundSync()
+
+      const stored = JSON.parse(localStorage.getItem(CACHE_KEY)!)
+      expect(stored.metadata.lastModified).toBe(1445412480000)
     })
 
     it('should not overwrite cache when background fetch fails', async () => {
@@ -863,9 +997,7 @@ describe('remoteConfiguration', () => {
       expect(fetchSpy).toHaveBeenCalledTimes(1)
 
       function withFetchSuccessReturningSpy() {
-        return interceptor.withFetch(() =>
-          Promise.resolve({ ok: true, json: () => Promise.resolve({ rum: FRESH_RUM_CONFIG }) })
-        )
+        return interceptor.withFetch(() => Promise.resolve({ ok: true, json: () => Promise.resolve(FRESH_RUM_CONFIG) }))
       }
     })
 
@@ -884,7 +1016,7 @@ describe('remoteConfiguration', () => {
         const result = getRemoteConfiguration(initConfiguration, supportedContextManagers)
 
         expect(result).toBeDefined()
-        expect(result!.applicationId).toBe('cached-app')
+        expect(result!.initConfiguration.applicationId).toBe('cached-app')
         await flushBackgroundSync()
       })
 

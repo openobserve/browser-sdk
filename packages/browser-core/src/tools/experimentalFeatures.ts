@@ -14,8 +14,10 @@ import { objectHasValue } from './utils/objectUtils'
 
 // eslint-disable-next-line no-restricted-syntax
 export enum ExperimentalFeature {
+  SESSION_REPLAY_RECORD_CANVAS = 'session_replay_record_canvas',
   TRACK_INTAKE_REQUESTS = 'track_intake_requests',
-  PARTIAL_VIEW_UPDATES = 'partial_view_updates',
+  TRACK_WEBSOCKETS = 'track_websockets',
+  SOFT_NAVIGATION = 'soft_navigation',
 }
 
 const enabledExperimentalFeatures: Set<ExperimentalFeature> = new Set()

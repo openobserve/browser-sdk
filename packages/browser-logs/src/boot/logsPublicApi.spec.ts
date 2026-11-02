@@ -1,12 +1,6 @@
 import type { ContextManager } from '@openobserve/browser-core'
-import {
-  monitor,
-  display,
-  createContextManager,
-  TrackingConsent,
-  startTelemetry,
-  startSessionManager,
-} from '@openobserve/browser-core'
+import { createContextManager, TrackingConsent, startTelemetry, startSessionManager } from '@openobserve/browser-core'
+import { getDebugMode } from '@openobserve/js-core/util'
 import {
   collectAsyncCalls,
   createFakeTelemetryObject,
@@ -28,23 +22,15 @@ const getInternalContext = () => ({ session_id: mockSessionId })
 
 describe('logs entry', () => {
   it('should add a `_setDebug` that works', () => {
-    const displaySpy = spyOn(display, 'error')
     const { logsPublicApi } = makeLogsPublicApiWithDefaults()
     const setDebug: (debug: boolean) => void = (logsPublicApi as any)._setDebug
     expect(!!setDebug).toEqual(true)
 
-    monitor(() => {
-      throw new Error()
-    })()
-    expect(displaySpy).toHaveBeenCalledTimes(0)
-
     setDebug(true)
-    monitor(() => {
-      throw new Error()
-    })()
-    expect(displaySpy).toHaveBeenCalledTimes(1)
+    expect(getDebugMode()).toBeTrue()
 
     setDebug(false)
+    expect(getDebugMode()).toBeFalse()
   })
 
   it('should define the public API with init', () => {
@@ -56,6 +42,15 @@ describe('logs entry', () => {
   it('should provide sdk version', () => {
     const { logsPublicApi } = makeLogsPublicApiWithDefaults()
     expect(logsPublicApi.version).toBe('test')
+  })
+
+  it('should pass the sdk name to telemetry', async () => {
+    const { logsPublicApi, startTelemetrySpy } = makeLogsPublicApiWithDefaults({ sdkName: 'logs' })
+
+    logsPublicApi.init(DEFAULT_INIT_CONFIGURATION)
+    await collectAsyncCalls(startTelemetrySpy, 1)
+
+    expect(startTelemetrySpy.calls.argsFor(0)[3]).toBe('logs')
   })
 
   describe('common context', () => {
@@ -250,8 +245,10 @@ describe('logs entry', () => {
 
 function makeLogsPublicApiWithDefaults({
   startLogsResult,
+  sdkName,
 }: {
   startLogsResult?: Partial<StartLogsResult>
+  sdkName?: string
 } = {}) {
   const handleLogSpy = jasmine.createSpy<StartLogsResult['handleLog']>()
   const startLogsSpy = replaceMockableWithSpy(startLogs).and.callFake(() => ({
@@ -269,13 +266,14 @@ function makeLogsPublicApiWithDefaults({
     return { message, logger, savedCommonContext, savedDate }
   }
 
-  replaceMockable(startTelemetry, createFakeTelemetryObject)
+  const startTelemetrySpy = replaceMockableWithSpy(startTelemetry).and.callFake(createFakeTelemetryObject)
   replaceMockable(startSessionManager, createStartSessionManagerMock())
 
   return {
     startLogsSpy,
+    startTelemetrySpy,
     handleLogSpy,
-    logsPublicApi: makeLogsPublicApi(),
+    logsPublicApi: makeLogsPublicApi({ sdkName }),
     getLoggedMessage,
   }
 }

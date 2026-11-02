@@ -1,6 +1,7 @@
-import type { TimeoutId } from '@openobserve/browser-core'
+import type { TimeoutId } from '@openobserve/js-core/util'
 import type { Duration } from '@openobserve/js-core/time'
-import { setTimeout, runOnReadyState, clearTimeout, mockable } from '@openobserve/browser-core'
+import { runOnReadyState } from '@openobserve/browser-core'
+import { mockable, setTimeout, clearTimeout } from '@openobserve/js-core/util'
 import type { RumPerformanceNavigationTiming } from '../../../browser/performanceObservable'
 import { getNavigationEntry, sanitizeFirstByte } from '../../../browser/performanceUtils'
 

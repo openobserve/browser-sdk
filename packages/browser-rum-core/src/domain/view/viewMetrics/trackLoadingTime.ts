@@ -1,11 +1,11 @@
 import type { ClocksState, Duration } from '@openobserve/js-core/time'
-import type { Observable } from '@openobserve/browser-core'
+import type { Observable } from '@openobserve/js-core/util'
+import type { MutationRecord } from '@openobserve/js-core/dom'
 import { elapsed } from '@openobserve/js-core/time'
 import { waitPageActivityEnd } from '../../waitPageActivityEnd'
 import type { RumConfiguration } from '../../configuration'
 import type { LifeCycle } from '../../lifeCycle'
 import { ViewLoadingType } from '../../../rawRumEvent.types'
-import type { RumMutationRecord } from '../../../browser/domMutationObservable'
 import { trackFirstHidden } from './trackFirstHidden'
 
 /**
@@ -16,7 +16,7 @@ import { trackFirstHidden } from './trackFirstHidden'
 
 export function trackLoadingTime(
   lifeCycle: LifeCycle,
-  domMutationObservable: Observable<RumMutationRecord[]>,
+  domMutationObservable: Observable<MutationRecord[]>,
   windowOpenObservable: Observable<void>,
   configuration: RumConfiguration,
   loadType: ViewLoadingType,

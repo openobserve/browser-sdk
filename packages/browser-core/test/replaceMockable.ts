@@ -1,4 +1,4 @@
-import { mockableReplacements } from '../src/tools/mockable'
+import { mockableReplacements } from '@openobserve/js-core/util'
 import { registerCleanupTask } from './registerCleanupTask'
 
 /**

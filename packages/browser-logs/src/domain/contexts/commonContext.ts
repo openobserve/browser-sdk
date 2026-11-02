@@ -1,4 +1,4 @@
-import { isWorkerEnvironment } from '@openobserve/browser-core'
+import { isWorkerEnvironment } from '@openobserve/js-core/util'
 import type { CommonContext } from '../../rawLogsEvent.types'
 
 export function buildCommonContext(): CommonContext {

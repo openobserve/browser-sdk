@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { useRouter } from 'next/router'
-import { mockable } from '@openobserve/browser-core'
+import { mockable } from '@openobserve/js-core/util'
 import { startNextjsView } from '../nextjsPlugin'
 
 export function DatadogPagesRouter() {

@@ -1,4 +1,4 @@
-import { addEventListener, DOM_EVENT } from '@openobserve/browser-core'
+import { addEventListener, DOM_EVENT } from '@openobserve/js-core/dom'
 import type { RelativeTime } from '@openobserve/js-core/time'
 
 export interface ExtraPointerEventFields {

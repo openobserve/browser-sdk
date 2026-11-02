@@ -1,4 +1,5 @@
-import { addTelemetryError, display, DOCS_ORIGIN } from '@openobserve/browser-core'
+import { DOCS_ORIGIN } from '@openobserve/js-core/util'
+import { addTelemetryError, display } from '@openobserve/browser-core'
 
 export function reportScriptLoadingError({
   configuredUrl,

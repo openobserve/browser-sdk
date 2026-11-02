@@ -1,7 +1,8 @@
 import type { Router } from 'vue-router'
 import { createRouter, createMemoryHistory } from 'vue-router'
-import type { RumInitConfiguration, RumPublicApi } from '@openobserve/browser-rum-core'
+import type { RumInitConfiguration, RumPluginOnInitOptions, RumPublicApi } from '@openobserve/browser-rum-core'
 import { registerCleanupTask } from '../../../browser-core/test'
+import type { NuxtApp } from './error/setupNuxtErrorHandling'
 import { nuxtRumPlugin, resetNuxtPlugin } from './nuxtPlugin'
 
 const PUBLIC_API = { startView: jasmine.createSpy() } as unknown as RumPublicApi
@@ -23,12 +24,28 @@ describe('nuxtRumPlugin', () => {
   it('sets trackViewsManually to true', () => {
     const initConfiguration = { ...INIT_CONFIGURATION }
 
-    nuxtRumPlugin({ router: makeRouter() }).onInit({ publicApi: PUBLIC_API, initConfiguration })
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
+    nuxtRumPlugin({ router: makeRouter() }).onInit({
+      publicApi: PUBLIC_API,
+      initConfiguration,
+    } as RumPluginOnInitOptions)
 
     expect(initConfiguration.trackViewsManually).toBe(true)
   })
 
   it('returns configuration telemetry', () => {
-    expect(nuxtRumPlugin({ router: makeRouter() }).getConfigurationTelemetry()).toEqual({ router: true, nuxt: true })
+    const nuxtApp = { versions: { nuxt: '4.2.0' } } as NuxtApp
+
+    expect(nuxtRumPlugin({ router: makeRouter(), nuxtApp }).getConfigurationTelemetry()).toEqual({
+      router: true,
+      integrations: ['nuxt-v4', 'nuxt-router'],
+    })
+  })
+
+  it('does not return a Nuxt version when the Nuxt app is not provided', () => {
+    expect(nuxtRumPlugin({ router: makeRouter() }).getConfigurationTelemetry()).toEqual({
+      router: true,
+      integrations: ['nuxt', 'nuxt-router'],
+    })
   })
 })

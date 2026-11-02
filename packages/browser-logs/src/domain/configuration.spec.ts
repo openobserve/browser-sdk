@@ -1,5 +1,4 @@
 import type { InitConfiguration } from '@openobserve/browser-core'
-import { display } from '@openobserve/browser-core'
 import {
   EXHAUSTIVE_INIT_CONFIGURATION,
   type CamelToSnakeCase,
@@ -8,11 +7,7 @@ import {
   SERIALIZED_EXHAUSTIVE_INIT_CONFIGURATION,
 } from '../../../browser-core/test'
 import type { LogsInitConfiguration } from './configuration'
-import {
-  serializeLogsConfiguration,
-  validateAndBuildForwardOption,
-  validateAndBuildLogsConfiguration,
-} from './configuration'
+import { serializeLogsConfiguration, validateAndBuildLogsConfiguration } from './configuration'
 
 const DEFAULT_INIT_CONFIGURATION = { clientToken: 'xxx' }
 
@@ -40,17 +35,9 @@ describe('validateAndBuildLogsConfiguration', () => {
       ).toBeTrue()
     })
 
-    it('is set to true for falsy values other than `false`', () => {
+    it('defaults to true when null is provided', () => {
       expect(
         validateAndBuildLogsConfiguration({ ...DEFAULT_INIT_CONFIGURATION, forwardErrorsToLogs: null as any })!
-          .forwardErrorsToLogs
-      ).toBeTrue()
-      expect(
-        validateAndBuildLogsConfiguration({ ...DEFAULT_INIT_CONFIGURATION, forwardErrorsToLogs: '' as any })!
-          .forwardErrorsToLogs
-      ).toBeTrue()
-      expect(
-        validateAndBuildLogsConfiguration({ ...DEFAULT_INIT_CONFIGURATION, forwardErrorsToLogs: 0 as any })!
           .forwardErrorsToLogs
       ).toBeTrue()
     })
@@ -81,41 +68,6 @@ describe('validateAndBuildLogsConfiguration', () => {
   })
 })
 
-describe('validateAndBuildForwardOption', () => {
-  let displaySpy: jasmine.Spy<typeof display.error>
-  const allowedValues = ['foo', 'bar']
-  const label = 'Label'
-  const errorMessage = 'Label should be "all" or an array with allowed values "foo", "bar"'
-
-  beforeEach(() => {
-    displaySpy = spyOn(display, 'error')
-  })
-
-  it('does not validate the configuration if an incorrect string is provided', () => {
-    validateAndBuildForwardOption('foo' as any, allowedValues, label)
-
-    expect(displaySpy).toHaveBeenCalledOnceWith(errorMessage)
-  })
-
-  it('does not validate the configuration if an incorrect api is provided', () => {
-    validateAndBuildForwardOption(['dir'], allowedValues, label)
-
-    expect(displaySpy).toHaveBeenCalledOnceWith(errorMessage)
-  })
-
-  it('defaults to an empty array', () => {
-    expect(validateAndBuildForwardOption(undefined, allowedValues, label)).toEqual([])
-  })
-
-  it('is set to provided value', () => {
-    expect(validateAndBuildForwardOption(['foo'], allowedValues, label)).toEqual(['foo'])
-  })
-
-  it('contains all options when "all" is provided', () => {
-    expect(validateAndBuildForwardOption('all', allowedValues, label)).toEqual(allowedValues)
-  })
-})
-
 describe('serializeLogsConfiguration', () => {
   it('should serialize the configuration', () => {
     const exhaustiveLogsInitConfiguration: Required<LogsInitConfiguration> = {
@@ -124,6 +76,7 @@ describe('serializeLogsConfiguration', () => {
       forwardErrorsToLogs: true,
       forwardConsoleLogs: 'all',
       forwardReports: 'all',
+      plugins: [{ name: 'foo', getConfigurationTelemetry: () => ({ bar: true }) }],
     }
 
     type MapLogsInitConfigurationKey<Key extends string> = Key extends keyof InitConfiguration
@@ -141,6 +94,7 @@ describe('serializeLogsConfiguration', () => {
       forward_errors_to_logs: true,
       forward_console_logs: 'all',
       forward_reports: 'all',
+      plugins: [{ name: 'foo', bar: true }],
     })
   })
 })

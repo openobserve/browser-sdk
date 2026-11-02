@@ -1,7 +1,8 @@
 import type { RelativeTime, Duration } from '@openobserve/js-core/time'
-import type { Observable } from '@openobserve/browser-core'
+import type { Observable } from '@openobserve/js-core/util'
+import type { MutationRecord } from '@openobserve/js-core/dom'
+import { noop } from '@openobserve/js-core/util'
 import { toServerDuration, addDuration } from '@openobserve/js-core/time'
-import { noop } from '@openobserve/browser-core'
 import { SKIPPED } from '@openobserve/js-core/assembly'
 import { discardNegativeDuration } from '../discardNegativeDuration'
 import type { RawRumActionEvent } from '../../rawRumEvent.types'
@@ -10,7 +11,6 @@ import type { LifeCycle, RawRumEventCollectedData } from '../lifeCycle'
 import { LifeCycleEventType } from '../lifeCycle'
 import type { RumConfiguration } from '../configuration'
 import type { DefaultRumEventAttributes, DefaultTelemetryEventAttributes, Hooks } from '../hooks'
-import type { RumMutationRecord } from '../../browser/domMutationObservable'
 import { trackClickActions } from './trackClickActions'
 import type { ClickAction } from './trackClickActions'
 import { trackManualActions } from './trackManualActions'
@@ -27,7 +27,7 @@ export const LONG_TASK_START_TIME_CORRECTION = 1 as Duration
 export function startActionCollection(
   lifeCycle: LifeCycle,
   hooks: Hooks,
-  domMutationObservable: Observable<RumMutationRecord[]>,
+  domMutationObservable: Observable<MutationRecord[]>,
   windowOpenObservable: Observable<void>,
   configuration: RumConfiguration
 ) {
@@ -57,7 +57,7 @@ export function startActionCollection(
     },
   }
 
-  hooks.assemble.register(({ startTime, eventType }): DefaultRumEventAttributes | SKIPPED => {
+  hooks.assembleEventDefaults.register(({ startTime, eventType }): DefaultRumEventAttributes | SKIPPED => {
     if (
       eventType !== RumEventType.ERROR &&
       eventType !== RumEventType.RESOURCE &&
@@ -86,12 +86,10 @@ export function startActionCollection(
     }
   })
 
-  hooks.assembleTelemetry.register(
-    ({ startTime }): DefaultTelemetryEventAttributes => ({
-      // todo: fix telemetry event type
-      action: { id: actionContexts.findActionId(startTime) as unknown as string },
-    })
-  )
+  hooks.assembleTelemetry.register(({ startTime }): DefaultTelemetryEventAttributes => ({
+    // todo: fix telemetry event type
+    action: { id: actionContexts.findActionId(startTime) as unknown as string },
+  }))
 
   return {
     addAction: manualActions.addAction,

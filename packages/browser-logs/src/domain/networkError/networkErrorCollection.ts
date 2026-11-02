@@ -1,4 +1,5 @@
-import type { FetchResolveContext, XhrCompleteContext, Observable, BufferedData } from '@openobserve/browser-core'
+import type { FetchResolveContext, XhrCompleteContext, BufferedData } from '@openobserve/browser-core'
+import type { Observable } from '@openobserve/js-core/util'
 import {
   BufferedDataType,
   ErrorSource,
@@ -6,13 +7,18 @@ import {
   initFetchObservable,
   computeStackTrace,
   toStackTraceString,
-  noop,
   isServerError,
-  isIntakeUrl,
   ResponseBodyAction,
   safeTruncate,
+  buildDebugIdByUrl,
+  getStackTraceUrls,
 } from '@openobserve/browser-core'
+import { ONE_KIBI_BYTE, noop } from '@openobserve/js-core/util'
+import { isIntakeUrl } from '@openobserve/js-core/transport'
 import type { LogsConfiguration } from '../configuration'
+
+/** arbitrary value, byte precision not needed */
+export const DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT = 32 * ONE_KIBI_BYTE
 import type { LifeCycle } from '../lifeCycle'
 import type { LogsEventDomainContext } from '../../domainContext.types'
 import { LifeCycleEventType } from '../lifeCycle'
@@ -48,11 +54,9 @@ export function startNetworkErrorCollection(
     if (!isNetworkError(request)) {
       return
     }
-
-    const stack =
-      'error' in request && request.error
-        ? toStackTraceString(computeStackTrace(request.error))
-        : request.responseBody || 'Failed to load'
+    const stackTrace = 'error' in request && request.error ? computeStackTrace(request.error) : undefined
+    const stack = stackTrace ? toStackTraceString(stackTrace) : request.responseBody || 'Failed to load'
+    const debugIds = stackTrace ? buildDebugIdByUrl(getStackTraceUrls(stackTrace)) : undefined
 
     const domainContext: LogsEventDomainContext<typeof ErrorSource.NETWORK> = {
       handlingStack: request.handlingStack,
@@ -63,10 +67,11 @@ export function startNetworkErrorCollection(
         message: `${format(type)} error ${request.method} ${request.url}`,
         date: request.startClocks.timeStamp,
         error: {
-          stack: safeTruncate(stack, configuration.requestErrorResponseLengthLimit, '...'),
+          stack: safeTruncate(stack, DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT, '...'),
           // We don't know if the error was handled or not, so we set it to undefined
           handling: undefined,
         },
+        _o2: { debug_ids: debugIds },
         http: {
           method: request.method as any, // Cast resource method because of case mismatch cf issue RUMF-1152
           status_code: request.status,

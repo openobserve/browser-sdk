@@ -12,33 +12,12 @@ export interface SpanIdentifier extends BaseIdentifier {
   __brand: 'spanIdentifier'
 }
 
-/**
- * OpenObserve: trace identifiers are 128-bit UUIDv7-shaped values (timestamp-ordered), so they
- * can be correlated with OpenObserve traces and stay unique across sessions. Span identifiers
- * remain 63-bit like upstream.
- */
 export function createTraceIdentifier() {
-  return createUuidV7Identifier() as TraceIdentifier
+  return createIdentifier(64) as TraceIdentifier
 }
 
 export function createSpanIdentifier() {
   return createIdentifier(63) as SpanIdentifier
-}
-
-/**
- * Creates a TraceIdentifier from a 32-character hex string (e.g. from an existing W3C
- * traceparent header).
- */
-export function createTraceIdentifierFromHex(hexString: string): TraceIdentifier {
-  return BigInt(`0x${hexString}`) as unknown as TraceIdentifier
-}
-
-/**
- * Creates a SpanIdentifier from a 16-character hex string (e.g. from an existing W3C
- * traceparent header).
- */
-export function createSpanIdentifierFromHex(hexString: string): SpanIdentifier {
-  return BigInt(`0x${hexString}`) as unknown as SpanIdentifier
 }
 
 function createIdentifier(bits: 63 | 64): BaseIdentifier {
@@ -54,53 +33,6 @@ function createIdentifier(bits: 63 | 64): BaseIdentifier {
   return value
 }
 
-/**
- * Builds a 128-bit identifier following the UUIDv7 layout:
- * 48-bit unix timestamp (ms) | 4-bit version (7) | 12-bit random | 2-bit variant (0b10) | 62-bit random
- *
- * See https://www.rfc-editor.org/rfc/rfc9562#name-uuid-version-7
- */
-function createUuidV7Identifier(): BaseIdentifier {
-  const buffer = crypto.getRandomValues(new Uint32Array(3))
-  const timestamp = BigInt(Date.now())
-  /* eslint-disable no-bitwise */
-  const randA = BigInt(buffer[0] & 0x0fff) // 12 bits
-  const randB = (BigInt(buffer[1]) << 32n) | BigInt(buffer[2]) // 64 bits, truncated to 62 below
-  return (
-    (timestamp << 80n) | // unix_ts_ms
-    (0x7n << 76n) | // version 7
-    (randA << 64n) | // rand_a
-    (0x2n << 62n) | // variant 0b10
-    (randB & 0x3fffffffffffffffn) // rand_b
-  )
-  /* eslint-enable no-bitwise */
-}
-
-/**
- * Pads an identifier to its canonical hex length: 16 characters for 64-bit identifiers, 32
- * characters for 128-bit (trace) identifiers.
- *
- * NOTE: this guesses the width from the value and misjudges trace ids whose upper half is
- * zero (64-bit-style ids reused from an external traceparent) — they serialize to 16 chars
- * instead of 32. Kept only for the b3 propagators, which inherited this behavior from
- * upstream. New call sites must use the fixed-width helpers below.
- */
 export function toPaddedHexadecimalString(id: BaseIdentifier) {
-  const hexString = id.toString(16)
-  return hexString.padStart(hexString.length > 16 ? 32 : 16, '0')
-}
-
-/**
- * Canonical W3C hex forms. Fixed widths — never guess the width from the value: BigInt
- * `toString(16)` drops leading zeros, UUIDv7 trace ids always start with a zero nibble
- * (48-bit ms timestamp in the top bits), and a reused 64-bit-style trace id (zero upper
- * half) has ≤16 hex chars but must still serialize to 32. Unpadded serialization is the
- * regression that broke RUM↔trace correlation in 0.4.0-beta.7..0.4.2-beta.2.
- */
-export function toPaddedTraceIdHex(id: TraceIdentifier): string {
-  return id.toString(16).padStart(32, '0')
-}
-
-export function toPaddedSpanIdHex(id: SpanIdentifier): string {
   return id.toString(16).padStart(16, '0')
 }

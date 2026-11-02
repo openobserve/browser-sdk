@@ -1,7 +1,7 @@
 import type { BufferedData, ConsoleLog, RawError } from '@openobserve/browser-core'
 import { clocksNow } from '@openobserve/js-core/time'
-import { ConsoleApiName } from '@openobserve/js-core/util'
-import { BufferedDataType, ErrorHandling, ErrorSource, Observable, noop, objectEntries } from '@openobserve/browser-core'
+import { ConsoleApiName, Observable, noop } from '@openobserve/js-core/util'
+import { BufferedDataType, ErrorHandling, ErrorSource, objectEntries } from '@openobserve/browser-core'
 import type { RawConsoleLogsEvent } from '../../rawLogsEvent.types'
 import { validateAndBuildLogsConfiguration } from '../configuration'
 import type { RawLogsEventCollectedData } from '../lifeCycle'
@@ -69,6 +69,7 @@ describe('console collection', () => {
         status,
         origin: ErrorSource.CONSOLE,
         error: whatever(),
+        _o2: undefined,
       })
 
       expect(rawLogsEvents[0].domainContext).toEqual({
@@ -118,6 +119,24 @@ describe('console collection', () => {
     })
   })
 
+  it('console error should attach debug_ids from the raw error', () => {
+    ;({ stop: stopConsoleCollection } = startConsoleCollection(
+      validateAndBuildLogsConfiguration({ ...initConfiguration, forwardConsoleLogs: ['error'] })!,
+      lifeCycle,
+      bufferedDataObservable
+    ))
+
+    const debugIds = [{ url: 'http://path/to/debug-id.js', id: '01234567-89ab-cdef-0123-456789abcdef' }]
+    notifyConsole({
+      api: ConsoleApiName.error,
+      message: 'foo bar',
+      handlingStack: '',
+      error: makeRawError({ debugIds }),
+    })
+
+    expect(rawLogsEvents[0].rawLogsEvent._o2).toEqual({ debug_ids: debugIds })
+  })
+
   it('should use error context as message context', () => {
     ;({ stop: stopConsoleCollection } = startConsoleCollection(
       validateAndBuildLogsConfiguration({ ...initConfiguration, forwardConsoleLogs: ['error'] })!,
@@ -132,7 +151,7 @@ describe('console collection', () => {
       error: makeRawError({ context: { foo: 'bar' } }),
     })
 
-    expect(rawLogsEvents[0].messageContext).toEqual({ foo: 'bar' })
+    expect(rawLogsEvents[0].rawLogsEvent).toEqual(jasmine.objectContaining({ foo: 'bar' }))
   })
 })
 

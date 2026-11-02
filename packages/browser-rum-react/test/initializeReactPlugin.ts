@@ -1,5 +1,10 @@
-import type { RumInitConfiguration, RumPublicApi, StartRumResult } from '@openobserve/browser-rum-core'
-import { noop } from '@openobserve/browser-core'
+import type {
+  RumInitConfiguration,
+  RumPluginOnInitOptions,
+  RumPublicApi,
+  StartRumResult,
+} from '@openobserve/browser-rum-core'
+import { noop } from '@openobserve/js-core/util'
 import type { ReactPluginConfiguration } from '../src/domain/reactPlugin'
 import { reactPlugin, resetReactPlugin } from '../src/domain/reactPlugin'
 import { registerCleanupTask } from '../../browser-core/test'
@@ -18,10 +23,11 @@ export function initializeReactPlugin({
   resetReactPlugin()
   const plugin = reactPlugin(configuration)
 
+  // eslint-disable-next-line @typescript-eslint/no-floating-promises -- onInit never returns a promise for this plugin
   plugin.onInit({
     publicApi: publicApi as RumPublicApi,
     initConfiguration: initConfiguration as RumInitConfiguration,
-  })
+  } as RumPluginOnInitOptions)
   plugin.onRumStart({
     addError,
   })

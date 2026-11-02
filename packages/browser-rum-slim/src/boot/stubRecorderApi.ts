@@ -1,5 +1,5 @@
-import { noop } from '@openobserve/browser-core'
 import type { LifeCycle, RumConfiguration } from '@openobserve/browser-rum-core'
+import { noop } from '@openobserve/js-core/util'
 import { getSessionReplayLink } from '../domain/getSessionReplayLink'
 
 export function makeRecorderApiStub() {

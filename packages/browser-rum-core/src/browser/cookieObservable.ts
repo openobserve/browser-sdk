@@ -1,14 +1,7 @@
+import { globalObject, setInterval, clearInterval, Observable } from '@openobserve/js-core/util'
+import { addEventListener, DOM_EVENT } from '@openobserve/js-core/dom'
 import { ONE_SECOND } from '@openobserve/js-core/time'
-import {
-  setInterval,
-  clearInterval,
-  Observable,
-  addEventListener,
-  DOM_EVENT,
-  getCookie,
-  globalObject,
-  isCookieStoreSupported,
-} from '@openobserve/browser-core'
+import { getCookie, isCookieStoreSupported } from '@openobserve/browser-core'
 
 export type CookieObservable = ReturnType<typeof createCookieObservable>
 

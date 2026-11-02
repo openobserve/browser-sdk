@@ -1,4 +1,4 @@
-import { noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
 import type { ProfilerApi } from '@openobserve/browser-rum-core'
 
 export const noopProfilerApi: ProfilerApi = {

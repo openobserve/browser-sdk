@@ -1,4 +1,5 @@
-import type { Payload, Uint8ArrayBuffer } from '@openobserve/browser-core'
+import type { Payload } from '@openobserve/browser-core'
+import type { Uint8ArrayBuffer } from '@openobserve/js-core/util'
 import type { BrowserSegmentMetadata } from '../../types'
 import type { SerializationMetric, SerializationStats } from '../record'
 

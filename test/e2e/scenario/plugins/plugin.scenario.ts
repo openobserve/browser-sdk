@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test'
 import type { RumPlugin, AllowedRawRumEvent } from '@openobserve/browser-rum-core'
 import { ActionType, RumEventType } from '@openobserve/browser-rum-core'
 import { clocksNow } from '@openobserve/js-core/time'
-import { generateUUID } from '@openobserve/browser-core'
+import { generateUUID } from '@openobserve/js-core/util'
 import { createTest } from '../../lib/framework'
 
 declare global {

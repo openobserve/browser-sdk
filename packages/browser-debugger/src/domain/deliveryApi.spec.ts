@@ -1,5 +1,5 @@
-import type { GlobalObject } from '@openobserve/browser-core'
-import { globalObject } from '@openobserve/browser-core'
+import { globalObject } from '@openobserve/js-core/util'
+import type { GlobalObject } from '@openobserve/js-core/util'
 import { registerCleanupTask, mockClock, replaceMockable } from '@openobserve/browser-core/test'
 import type { Clock } from '@openobserve/browser-core/test'
 import { display } from './display'
@@ -14,6 +14,7 @@ import type { DeliveryApiConfiguration } from './deliveryApi'
 import { createProbe } from './probe.specHelper'
 
 const DEFAULT_PROBE_FUNCTION_ID = 'test.js;testMethod'
+const DEBUG_ID = '01234567-89ab-cdef-0123-456789abcdef'
 
 describe('buildDeliveryApiUrl', () => {
   it('should default to datadoghq.com', () => {
@@ -156,6 +157,26 @@ describe('deliveryApi', () => {
         env: 'staging',
         serviceVersion: '1.0.0',
       })
+    })
+
+    it('should send the build debug ID in every request body when configured', async () => {
+      respondWith({ nextCursor: 'cursor-abc', updates: [], deletions: [] })
+
+      startDeliveryApiPolling(makeConfig({ debugId: DEBUG_ID }))
+      await flushPromises()
+      clock.tick(5000)
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2)
+      for (const [, options] of fetchSpy.calls.allArgs()) {
+        expect(JSON.parse(options.body).debugId).toBe(DEBUG_ID)
+      }
+    })
+
+    it('should omit debugId from the request body when not configured', () => {
+      startDeliveryApiPolling(makeConfig())
+
+      const [, options] = fetchSpy.calls.mostRecent().args
+      expect('debugId' in JSON.parse(options.body)).toBeFalse()
     })
 
     it('should not include nextCursor in the first request', () => {

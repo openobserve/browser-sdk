@@ -1,6 +1,6 @@
 import { timeStampNow } from '@openobserve/js-core/time'
 import type { TimeStamp } from '@openobserve/js-core/time'
-import type { Context } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import { ErrorSource } from '@openobserve/browser-core'
 import { originalConsoleMethods, globalConsole, ConsoleApiName, combine } from '@openobserve/js-core/util'
 import type { CommonContext, RawLogsEvent } from '../../rawLogsEvent.types'
@@ -26,15 +26,18 @@ export function startLoggerCollection(lifeCycle: LifeCycle) {
 
     if (isAuthorized(logsMessage.status, HandlerType.http, logger)) {
       const rawLogEventData: RawLogsEventCollectedData<RawLogsEvent> = {
-        rawLogsEvent: {
-          date: savedDate || timeStampNow(),
-          message: logsMessage.message,
-          status: logsMessage.status,
-          origin: ErrorSource.LOGGER,
-        },
-        messageContext,
+        rawLogsEvent: combine(
+          {
+            date: savedDate || timeStampNow(),
+            message: logsMessage.message,
+            status: logsMessage.status,
+            origin: ErrorSource.LOGGER,
+            _o2: { debug_ids: logsMessage.debugIds },
+          },
+          messageContext
+        ),
         savedCommonContext,
-        o2tags: logger.getTags(),
+        loggerTags: logger.getTags(),
       }
 
       if (handlingStack) {

@@ -1,11 +1,6 @@
 import type { DeflateEncoder, DeflateWorker, Telemetry, SessionManager } from '@openobserve/browser-core'
-import {
-  canUseEventBridge,
-  noop,
-  BridgeCapability,
-  bridgeSupports,
-  DeflateEncoderStreamId,
-} from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
+import { canUseEventBridge, BridgeCapability, bridgeSupports, DeflateEncoderStreamId } from '@openobserve/browser-core'
 import type {
   LifeCycle,
   ViewHistory,

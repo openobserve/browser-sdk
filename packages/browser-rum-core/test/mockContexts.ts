@@ -1,4 +1,4 @@
-import { noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
 import type { UrlContexts } from '../src/domain/contexts/urlContexts'
 import type { ViewHistory, ViewHistoryEntry } from '../src/domain/contexts/viewHistory'
 

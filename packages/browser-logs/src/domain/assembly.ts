@@ -1,4 +1,5 @@
-import type { Context, EventRateLimiter, RawError } from '@openobserve/browser-core'
+import type { EventRateLimiter } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import { ErrorSource, buildTags, createEventRateLimiter } from '@openobserve/browser-core'
 import { toRelativeTime } from '@openobserve/js-core/time'
 import { DISCARDED } from '@openobserve/js-core/assembly'
@@ -9,14 +10,14 @@ import type { LogsConfiguration } from './configuration'
 import type { LifeCycle } from './lifeCycle'
 import { LifeCycleEventType } from './lifeCycle'
 import { STATUSES } from './logger'
-import type { AssembleHook } from './hooks'
+import type { Hooks, AssembleHookParams } from './hooks'
 
 export function startLogsAssembly(
   configuration: LogsConfiguration,
   lifeCycle: LifeCycle,
-  hook: AssembleHook,
+  hooks: Hooks,
   getCommonContext: () => CommonContext,
-  reportError: (error: RawError) => void,
+  reportError: (message: string) => void,
   eventRateLimit?: number
 ) {
   const statusWithCustom = (STATUSES as string[]).concat(['custom'])
@@ -27,18 +28,23 @@ export function startLogsAssembly(
 
   lifeCycle.subscribe(
     LifeCycleEventType.RAW_LOG_COLLECTED,
-    ({ rawLogsEvent, messageContext = undefined, savedCommonContext = undefined, domainContext, o2tags = [] }) => {
+    ({ rawLogsEvent, savedCommonContext = undefined, domainContext, loggerTags = [] }) => {
       const startTime = toRelativeTime(rawLogsEvent.date)
       const commonContext = savedCommonContext || getCommonContext()
-      const defaultLogsEventAttributes = hook.trigger({
+      const assemblyParams: AssembleHookParams = {
         startTime,
-      })
-
+        rawLogsEvent: rawLogsEvent as AssembleHookParams['rawLogsEvent'],
+        domainContext,
+      }
+      const defaultLogsEventAttributes = hooks.assembleEventDefaults.trigger(assemblyParams)
       if (defaultLogsEventAttributes === DISCARDED) {
         return
       }
 
-      const defaultDdtags = buildTags(configuration)
+      const logsEventAttributes = hooks.assembleEvent.trigger(assemblyParams)!
+      if (logsEventAttributes === DISCARDED) {
+        return
+      }
 
       const log = combine(
         {
@@ -46,11 +52,11 @@ export function startLogsAssembly(
         },
         defaultLogsEventAttributes,
         rawLogsEvent,
-        messageContext,
-        {
-          o2tags: defaultDdtags.concat(o2tags).join(','),
-        }
+        logsEventAttributes
       ) as LogsEvent & Context
+
+      const defaultDdtags = buildTags({ ...configuration, service: log.service, version: log.version })
+      log.o2tags = defaultDdtags.concat(loggerTags).join(',')
 
       if (
         configuration.beforeSend?.(log, domainContext) === false ||

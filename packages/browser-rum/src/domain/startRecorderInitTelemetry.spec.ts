@@ -1,5 +1,5 @@
 import type { Telemetry, RawTelemetryEvent } from '@openobserve/browser-core'
-import { Observable } from '@openobserve/browser-core'
+import { Observable } from '@openobserve/js-core/util'
 import type { MockTelemetry } from '@openobserve/browser-core/test'
 import { registerCleanupTask, startMockTelemetry } from '@openobserve/browser-core/test'
 import type { RecorderInitEvent } from '../boot/postStartStrategy'

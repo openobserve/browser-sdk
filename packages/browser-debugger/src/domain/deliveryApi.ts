@@ -1,15 +1,10 @@
-import type { TimeoutId, Site } from '@openobserve/browser-core'
+import { globalObject, mockable, setInterval, clearInterval } from '@openobserve/js-core/util'
+import type { TimeoutId } from '@openobserve/js-core/util'
+import { fetch } from '@openobserve/js-core/dom'
 import { dateNow } from '@openobserve/js-core/time'
-import {
-  addTelemetryDebug,
-  fetch,
-  globalObject,
-  isServerError,
-  mockable,
-  setInterval,
-  clearInterval,
-  INTAKE_SITE_US1,
-} from '@openobserve/browser-core'
+import { addTelemetryDebug, isServerError } from '@openobserve/browser-core'
+import { INTAKE_SITE_US1 } from '@openobserve/js-core/transport'
+import type { Site } from '@openobserve/js-core/transport'
 import { display } from './display'
 import { addProbe, clearProbes, removeProbe } from './probes'
 import type { Probe } from './probes'
@@ -33,6 +28,7 @@ export interface DeliveryApiConfiguration {
   proxy?: string
   env?: string
   version?: string
+  debugId?: string
   pollInterval?: number
   maxUnreachableDuration?: number
 }
@@ -95,6 +91,7 @@ export function startDeliveryApiPolling(config: DeliveryApiConfiguration): void 
     clientVersion: __BUILD_ENV__SDK_VERSION__,
     env: config.env,
     serviceVersion: config.version,
+    debugId: config.debugId,
   }
 
   sessionAbortController = new AbortController()

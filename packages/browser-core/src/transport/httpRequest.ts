@@ -1,10 +1,8 @@
-import type { EndpointBuilder } from '../domain/configuration'
-import type { Context } from '../tools/serialisation/context'
-import { fetch } from '../browser/fetch'
-import { monitor, monitorError } from '../tools/monitor'
-import type { RawError } from '../domain/error/error.types'
-import { Observable } from '../tools/observable'
-import { ONE_KIBI_BYTE } from '../tools/utils/byteUtils'
+import type { EndpointBuilder, TransportRetryInfo } from '@openobserve/js-core/transport'
+import { monitor, monitorError } from '@openobserve/js-core/monitor'
+import { buildUrl, globalObject, ONE_KIBI_BYTE, Observable } from '@openobserve/js-core/util'
+import { fetch } from '@openobserve/js-core/dom'
+import type { Context } from '@openobserve/js-core/util'
 import { newRetryState, sendWithRetryStrategy } from './sendWithRetryStrategy'
 
 /**
@@ -61,18 +59,13 @@ export type HttpRequestEvent<Body extends Payload = Payload> =
 export interface Payload {
   data: string | FormData | Blob
   bytesCount: number
-  retry?: RetryInfo
+  retry?: TransportRetryInfo
   encoding?: 'deflate'
-}
-
-export interface RetryInfo {
-  count: number
-  lastFailureStatus: number
 }
 
 export function createHttpRequest<Body extends Payload = Payload>(
   endpointBuilders: EndpointBuilder[],
-  reportError: (error: RawError) => void,
+  reportError: (message: string) => void,
   bytesLimit: number = RECOMMENDED_REQUEST_BYTES_LIMIT
 ): HttpRequest<Body> {
   const observable = new Observable<HttpRequestEvent<Body>>()
@@ -107,14 +100,21 @@ export function createHttpRequest<Body extends Payload = Payload>(
 }
 
 function sendBeaconStrategy(endpointBuilder: EndpointBuilder, bytesLimit: number, payload: Payload) {
-  const canUseBeacon = payload.bytesCount < bytesLimit
-  if (canUseBeacon) {
+  if (payload.bytesCount < bytesLimit) {
     try {
+      // Check the final endpoint because a relative proxy can resolve to a non-HTTP(S) URL.
       const beaconUrl = endpointBuilder.build('beacon', payload)
-      const isQueued = navigator.sendBeacon(beaconUrl, payload.data)
+      const beaconUrlProtocol = buildUrl(
+        beaconUrl,
+        globalObject.document?.baseURI ?? globalObject.location?.href
+      ).protocol
 
-      if (isQueued) {
-        return
+      // sendBeacon only accepts HTTP(S) endpoints; other protocols fall back to fetch.
+      if (beaconUrlProtocol === 'http:' || beaconUrlProtocol === 'https:') {
+        const isQueued = navigator.sendBeacon(beaconUrl, payload.data)
+        if (isQueued) {
+          return
+        }
       }
     } catch (e) {
       reportBeaconError(e)

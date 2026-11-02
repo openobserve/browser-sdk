@@ -1,4 +1,5 @@
-import { Observable, throttle, addEventListener, DOM_EVENT } from '@openobserve/browser-core'
+import { Observable, throttle } from '@openobserve/js-core/util'
+import { addEventListener, DOM_EVENT } from '@openobserve/js-core/dom'
 
 export interface ViewportDimension {
   height: number

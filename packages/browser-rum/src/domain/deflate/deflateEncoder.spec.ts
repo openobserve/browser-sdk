@@ -1,5 +1,7 @@
-import type { EncoderResult, Uint8ArrayBuffer } from '@openobserve/browser-core'
-import { noop, DeflateEncoderStreamId } from '@openobserve/browser-core'
+import type { EncoderResult } from '@openobserve/browser-core'
+import type { Uint8ArrayBuffer } from '@openobserve/js-core/util'
+import { noop } from '@openobserve/js-core/util'
+import { DeflateEncoderStreamId } from '@openobserve/browser-core'
 import { MockWorker } from '../../../test'
 import { createDeflateEncoder } from './deflateEncoder'
 

@@ -1,4 +1,5 @@
-import { throttle, DOM_EVENT, addEventListeners, noop } from '@openobserve/browser-core'
+import { noop, throttle } from '@openobserve/js-core/util'
+import { DOM_EVENT, addEventListeners } from '@openobserve/js-core/dom'
 import { timeStampNow } from '@openobserve/js-core/time'
 import type { ViewportDimension } from '@openobserve/browser-rum-core'
 import { initViewportObservable } from '@openobserve/browser-rum-core'

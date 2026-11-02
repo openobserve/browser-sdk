@@ -1,10 +1,8 @@
 import { clocksNow } from '@openobserve/js-core/time'
-import { ConsoleApiName, globalConsole } from '@openobserve/js-core/util'
+import { ConsoleApiName, globalConsole, jsonStringify, Observable, mergeObservables } from '@openobserve/js-core/util'
+import { callMonitored } from '@openobserve/js-core/monitor'
 import { isError, computeRawError } from '../error/error'
-import { Observable, mergeObservables } from '../../tools/observable'
-import { callMonitored } from '../../tools/monitor'
 import { sanitize } from '../../tools/serialisation/sanitize'
-import { jsonStringify } from '../../tools/serialisation/jsonStringify'
 import type { RawError } from '../error/error.types'
 import { ErrorHandling, ErrorSource, NonErrorPrefix } from '../error/error.types'
 import { computeStackTrace } from '../../tools/stackTrace/computeStackTrace'
@@ -51,6 +49,7 @@ export function resetConsoleObservable() {
 
 function createConsoleObservable(api: ConsoleApiName) {
   return new Observable<ConsoleLog>((observable) => {
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalConsoleApi = globalConsole[api]
 
     globalConsole[api] = (...params: unknown[]) => {

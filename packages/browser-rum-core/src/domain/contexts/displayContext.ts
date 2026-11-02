@@ -1,4 +1,4 @@
-import { monitor } from '@openobserve/browser-core'
+import { monitor } from '@openobserve/js-core/monitor'
 import type { ViewportDimension } from '../../browser/viewportObservable'
 import { getViewportDimension, initViewportObservable } from '../../browser/viewportObservable'
 import type { AssembleHook, DefaultRumEventAttributes } from '../hooks'
@@ -18,12 +18,10 @@ export function startDisplayContext(assembleHook: AssembleHook) {
     viewport = viewportDimension
   }).unsubscribe
 
-  assembleHook.register(
-    ({ eventType }): DefaultRumEventAttributes => ({
-      type: eventType,
-      display: viewport ? { viewport } : undefined,
-    })
-  )
+  assembleHook.register(({ eventType }): DefaultRumEventAttributes => ({
+    type: eventType,
+    display: viewport ? { viewport } : undefined,
+  }))
 
   return {
     stop: () => {

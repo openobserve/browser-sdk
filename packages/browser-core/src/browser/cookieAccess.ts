@@ -1,18 +1,14 @@
 import { ONE_MINUTE, ONE_SECOND, dateNow } from '@openobserve/js-core/time'
-import { setInterval, clearInterval } from '../tools/timer'
-import { Observable } from '../tools/observable'
-import { mockable } from '../tools/mockable'
+import { globalObject, mockable, setInterval, clearInterval, Observable, generateUUID } from '@openobserve/js-core/util'
+import { addEventListener, DOM_EVENT, isEventSupported } from '@openobserve/js-core/dom'
 import { display } from '../tools/display'
-import { generateUUID } from '../tools/utils/stringUtils'
-import { addTelemetryDebug } from '../domain/telemetry'
-import { globalObject } from '../tools/globalObject'
-import { addEventListener, DOM_EVENT, isEventSupported } from './addEventListener'
-import { getCookies, setCookie } from './cookie'
+import { deleteCookie, getCookies, setCookie } from './cookie'
 import type { CookieOptions } from './cookie'
 
 export interface CookieAccess {
   getAll(): Promise<string[]>
   getAllAndSet(cb: (value: string[]) => { value: string; expireDelay: number }): Promise<void>
+  delete(): Promise<void>
   observable: Observable<void>
 }
 
@@ -36,7 +32,7 @@ export async function areCookiesAuthorized(
     return false
   } finally {
     try {
-      await access.getAllAndSet(() => ({ value: '', expireDelay: 0 }))
+      await access.delete()
     } catch {
       // Best-effort cleanup
     }
@@ -65,6 +61,15 @@ export function createCookieStoreAccess(cookieName: string, cookieOptions: Cooki
       return items.map((item) => item.value)
     },
 
+    delete() {
+      return cookieStore.delete({
+        name: cookieName,
+        domain: cookieOptions.domain,
+        path: '/',
+        partitioned: cookieOptions.partitioned,
+      })
+    },
+
     async getAllAndSet(cb: (value: string[]) => { value: string; expireDelay: number }) {
       const items = await cookieStore.getAll(cookieName)
 
@@ -82,21 +87,8 @@ export function createCookieStoreAccess(cookieName: string, cookieOptions: Cooki
           secure: cookieOptions.secure,
           partitioned: cookieOptions.partitioned,
         })
-      } catch (error) {
-        const documentCookies = getCookies(cookieName)
-        // monitor-until: 2026-07-01
-        addTelemetryDebug('Failed to set cookie using Cookie Store API', {
-          'error.message': (error as Error).message,
-          newValue: value,
-          cookieOptions: {
-            ...cookieOptions,
-          },
-          cookies: items.map((item) => ({
-            ...item,
-          })),
-          cookieCount: items.length,
-          documentCookies,
-        })
+      } catch {
+        // Ignore cookie store errors
       }
     },
 
@@ -137,6 +129,12 @@ export function createDocumentCookieAccess(cookieName: string, cookieOptions: Co
       setCookie(cookieName, value, expireDelay, cookieOptions)
       await Promise.resolve()
       notifyCookieValueIfChanged([value])
+    },
+
+    async delete() {
+      deleteCookie(cookieName, cookieOptions)
+      await Promise.resolve()
+      notifyCookieValueIfChanged([])
     },
 
     observable,

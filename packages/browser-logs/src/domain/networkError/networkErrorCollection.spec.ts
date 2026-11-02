@@ -1,18 +1,18 @@
 import type { BufferedData, FetchResolveContext } from '@openobserve/browser-core'
 import { clocksNow } from '@openobserve/js-core/time'
-import { BufferedDataType, ErrorSource, Observable } from '@openobserve/browser-core'
-import { registerCleanupTask } from '@openobserve/browser-core/test'
+import { BufferedDataType, ErrorSource } from '@openobserve/browser-core'
+import { Observable } from '@openobserve/js-core/util'
+import { mockSourceCodeContext, registerCleanupTask } from '@openobserve/browser-core/test'
 import type { RawNetworkLogsEvent } from '../../rawLogsEvent.types'
 import type { LogsConfiguration } from '../configuration'
+
 import type { RawLogsEventCollectedData } from '../lifeCycle'
 import { LifeCycle, LifeCycleEventType } from '../lifeCycle'
 import { StatusType } from '../logger/isAuthorized'
 
-import { startNetworkErrorCollection } from './networkErrorCollection'
+import { DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT, startNetworkErrorCollection } from './networkErrorCollection'
 
-const CONFIGURATION = {
-  requestErrorResponseLengthLimit: 64,
-} as LogsConfiguration
+const CONFIGURATION = {} as LogsConfiguration
 
 const FAKE_URL = 'http://fake.com/'
 
@@ -79,6 +79,7 @@ describe('network error collection', () => {
         status_code: 503,
         url: 'http://fake.com/',
       },
+      _o2: { debug_ids: undefined },
     })
   })
 
@@ -156,12 +157,12 @@ describe('network error collection', () => {
     })
 
     it('should truncate responseBody according to limit', () => {
-      const longResponse = 'a'.repeat(100)
+      const longResponse = 'a'.repeat(DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT + 1)
       notifyFetch({ url: 'http://fake-url/', status: 500, responseBody: longResponse })
 
       const log = rawLogsEvents[0].rawLogsEvent
-      expect(log.error.stack?.length).toBe(67) // 64 chars + '...'
-      expect(log.error.stack).toMatch(/^a{64}\.\.\.$/)
+      expect(log.error.stack?.length).toBe(DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT + 3) // limit + '...'
+      expect(log.error.stack).toMatch(new RegExp(`^a{${DEFAULT_REQUEST_ERROR_RESPONSE_LENGTH_LIMIT}}\\.\\.\\.`))
     })
 
     it('should use fallback message when no responseBody available', () => {
@@ -169,6 +170,23 @@ describe('network error collection', () => {
 
       const log = rawLogsEvents[0].rawLogsEvent
       expect(log.error.stack).toBe('Failed to load')
+    })
+
+    it('should attach debug_ids from the fetch rejection stack trace', () => {
+      const debugIdUrl = 'http://path/to/debug-id.js'
+      mockSourceCodeContext({
+        [`Error: Network failure\n    at foo (${debugIdUrl}:1:1)`]: {
+          ddDebugId: '01234567-89ab-cdef-0123-456789abcdef',
+        },
+      })
+
+      const error = new Error('Network failure')
+      error.stack = `Error: Network failure\n    at foo (${debugIdUrl}:1:1)`
+      notifyFetch({ url: 'http://fake-url/', status: 0, error, responseBody: undefined })
+
+      expect(rawLogsEvents[0].rawLogsEvent._o2).toEqual({
+        debug_ids: [{ url: debugIdUrl, id: '01234567-89ab-cdef-0123-456789abcdef' }],
+      })
     })
   })
 })

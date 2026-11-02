@@ -1,7 +1,9 @@
 import type { RelativeTime, TimeStamp } from '@openobserve/js-core/time'
-import type { Context } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
+import { noop } from '@openobserve/js-core/util'
 import { ONE_MINUTE, toTimeStamp } from '@openobserve/js-core/time'
-import { ErrorSource, noop } from '@openobserve/browser-core'
+import { DISCARDED, SKIPPED } from '@openobserve/js-core/assembly'
+import { ErrorSource, ErrorHandling } from '@openobserve/browser-core'
 import type { Clock } from '@openobserve/browser-core/test'
 import { mockClock } from '@openobserve/browser-core/test'
 import type { LogsEvent } from '../logsEvent.types'
@@ -11,6 +13,7 @@ import type { LogsConfiguration } from './configuration'
 import { validateAndBuildLogsConfiguration } from './configuration'
 import { Logger } from './logger'
 import { StatusType } from './logger/isAuthorized'
+import { startLoggerCollection } from './logger/loggerCollection'
 import { LifeCycle, LifeCycleEventType } from './lifeCycle'
 import type { Hooks } from './hooks'
 import { createHooks } from './hooks'
@@ -48,8 +51,9 @@ describe('startLogsAssembly', () => {
     beforeSend = noop
     mainLogger = new Logger(() => noop)
     hooks = createHooks()
+    hooks.assembleEventDefaults.register(() => ({ service: configuration.service, version: configuration.version }))
     startRUMInternalContext(hooks)
-    startLogsAssembly(configuration, lifeCycle, hooks.assemble, () => COMMON_CONTEXT, noop)
+    startLogsAssembly(configuration, lifeCycle, hooks, () => COMMON_CONTEXT, noop)
     window.O2_RUM = {
       getInternalContext: noop,
     }
@@ -85,19 +89,6 @@ describe('startLogsAssembly', () => {
   })
 
   describe('contexts inclusion', () => {
-    it('should include message context', () => {
-      spyOn(window.O2_RUM!, 'getInternalContext').and.returnValue({
-        view: { url: 'http://from-rum-context.com', id: 'view-id' },
-      })
-
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: DEFAULT_MESSAGE,
-        messageContext: { foo: 'from-message-context' },
-      })
-
-      expect(serverLogs[0].foo).toEqual('from-message-context')
-    })
-
     it('should include common context', () => {
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, { rawLogsEvent: DEFAULT_MESSAGE })
 
@@ -173,7 +164,7 @@ describe('startLogsAssembly', () => {
 
   describe('assembly precedence', () => {
     it('defaultLogsEventAttributes should take precedence over service, session_id', () => {
-      hooks.assemble.register(() => ({
+      hooks.assembleEventDefaults.register(() => ({
         service: 'foo',
         session_id: 'bar',
       }))
@@ -185,7 +176,7 @@ describe('startLogsAssembly', () => {
     })
 
     it('defaultLogsEventAttributes should take precedence over common context', () => {
-      hooks.assemble.register(() => ({
+      hooks.assembleEventDefaults.register(() => ({
         view: {
           referrer: 'referrer_from_defaultLogsEventAttributes',
           url: 'url_from_defaultLogsEventAttributes',
@@ -215,7 +206,7 @@ describe('startLogsAssembly', () => {
     })
 
     it('raw log should take precedence over defaultLogsEventAttributes', () => {
-      hooks.assemble.register(() => ({
+      hooks.assembleEventDefaults.register(() => ({
         message: 'from-defaultLogsEventAttributes',
       }))
 
@@ -223,18 +214,67 @@ describe('startLogsAssembly', () => {
 
       expect(serverLogs[0].message).toEqual('message')
     })
+  })
 
-    it('message context should take precedence over raw log', () => {
-      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-        rawLogsEvent: DEFAULT_MESSAGE,
-        messageContext: { message: 'from-message-context' },
-      })
+  describe('assembleEvent override hook', () => {
+    it('lets an assembleEvent hook override fields set on the raw event', () => {
+      hooks.assembleEvent.register(() => ({ message: 'overridden-message' }))
 
-      expect(serverLogs[0].message).toEqual('from-message-context')
+      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, { rawLogsEvent: DEFAULT_MESSAGE })
+
+      expect(serverLogs[0].message).toBe('overridden-message')
     })
   })
 
   describe('o2tags', () => {
+    it('does not send logs discarded by the assembly hook', () => {
+      hooks.assembleEvent.register(() => DISCARDED)
+
+      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, { rawLogsEvent: DEFAULT_MESSAGE })
+
+      expect(serverLogs).toEqual([])
+    })
+
+    it('uses source code tags without changing configured tags for subsequent events', () => {
+      configuration.sdkVersion = 'custom-sdk'
+      configuration.variant = 'custom-variant'
+      configuration.datacenter = 'us1.prod.dog'
+      const { unregister } = hooks.assembleEventDefaults.register(() => ({ version: '2.0.0' }))
+
+      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, { rawLogsEvent: DEFAULT_MESSAGE })
+      unregister()
+      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, { rawLogsEvent: DEFAULT_MESSAGE })
+
+      expect(serverLogs[0].o2tags).toEqual(
+        'sdk_version:custom-sdk,env:test,service:service,version:2.0.0,datacenter:us1.prod.dog,variant:custom-variant'
+      )
+      expect(serverLogs[1].o2tags).toEqual(
+        'sdk_version:custom-sdk,env:test,service:service,version:1.0.0,datacenter:us1.prod.dog,variant:custom-variant'
+      )
+    })
+
+    it('replaces the configured service with the source code service while preserving other tags', () => {
+      hooks.assembleEventDefaults.register(() => ({ service: 'checkout' }))
+      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+        rawLogsEvent: DEFAULT_MESSAGE,
+        loggerTags: ['foo:bar'],
+      })
+
+      expect(serverLogs[0].o2tags).toEqual('sdk_version:test,env:test,service:checkout,version:1.0.0,foo:bar')
+    })
+
+    it('replaces the configured version with the source code version while preserving other tags', () => {
+      hooks.assembleEventDefaults.register(() => ({ version: '2.0.0' }))
+      lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+        rawLogsEvent: DEFAULT_MESSAGE,
+        loggerTags: ['foo:bar'],
+      })
+
+      expect(serverLogs[0].o2tags).toEqual('sdk_version:test,env:test,service:service,version:2.0.0,foo:bar')
+      expect(serverLogs[0].version).toBe('2.0.0')
+      expect(serverLogs[0]).not.toEqual(jasmine.objectContaining({ tags: jasmine.anything() }))
+    })
+
     it('should contain and format the default tags', () => {
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, { rawLogsEvent: DEFAULT_MESSAGE })
       expect(serverLogs[0].o2tags).toEqual('sdk_version:test,env:test,service:service,version:1.0.0')
@@ -243,7 +283,7 @@ describe('startLogsAssembly', () => {
     it('should append custom tags', () => {
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: DEFAULT_MESSAGE,
-        o2tags: ['foo:bar'],
+        loggerTags: ['foo:bar'],
       })
       expect(serverLogs[0].o2tags).toEqual('sdk_version:test,env:test,service:service,version:1.0.0,foo:bar')
     })
@@ -298,7 +338,7 @@ describe('logs limitation', () => {
 
     beforeSend = noop
     reportErrorSpy = jasmine.createSpy('reportError')
-    startLogsAssembly(configuration, lifeCycle, hooks.assemble, () => COMMON_CONTEXT, reportErrorSpy, 1)
+    startLogsAssembly(configuration, lifeCycle, hooks, () => COMMON_CONTEXT, reportErrorSpy, 1)
     clock = mockClock()
   })
 
@@ -320,35 +360,22 @@ describe('logs limitation', () => {
     expect(serverLogs[1].message).toBe('bar')
   })
   ;[
-    { status: StatusType.error, messageContext: {}, message: 'Reached max number of errors by minute: 1' },
-    { status: StatusType.warn, messageContext: {}, message: 'Reached max number of warns by minute: 1' },
-    { status: StatusType.info, messageContext: {}, message: 'Reached max number of infos by minute: 1' },
-    { status: StatusType.debug, messageContext: {}, message: 'Reached max number of debugs by minute: 1' },
-    {
-      status: StatusType.debug,
-      messageContext: { status: 'unknown' }, // overrides the rawLogsEvent status
-      message: 'Reached max number of customs by minute: 1',
-    },
-  ].forEach(({ status, message, messageContext }) => {
+    { status: StatusType.error, message: 'Reached max number of errors by minute: 1' },
+    { status: StatusType.warn, message: 'Reached max number of warns by minute: 1' },
+    { status: StatusType.info, message: 'Reached max number of infos by minute: 1' },
+    { status: StatusType.debug, message: 'Reached max number of debugs by minute: 1' },
+  ].forEach(({ status, message }) => {
     it(`stops sending ${status} logs when reaching the limit (message: "${message}")`, () => {
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
-        messageContext,
       })
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'bar', status },
-        messageContext,
       })
 
       expect(serverLogs.length).toEqual(1)
       expect(serverLogs[0].message).toBe('foo')
-      expect(reportErrorSpy).toHaveBeenCalledTimes(1)
-      expect(reportErrorSpy.calls.argsFor(0)[0]).toEqual(
-        jasmine.objectContaining({
-          message,
-          source: ErrorSource.AGENT,
-        })
-      )
+      expect(reportErrorSpy).toHaveBeenCalledWith(message)
     })
 
     it(`does not take discarded ${status} logs into account (message: "${message}")`, () => {
@@ -360,19 +387,15 @@ describe('logs limitation', () => {
 
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'discard me', status },
-        messageContext,
       })
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'discard me', status },
-        messageContext,
       })
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'discard me', status },
-        messageContext,
       })
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
-        messageContext,
       })
 
       expect(serverLogs.length).toEqual(1)
@@ -382,74 +405,97 @@ describe('logs limitation', () => {
     it(`allows to send new ${status}s after a minute (message: "${message}")`, () => {
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
-        messageContext,
       })
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'bar', status },
-        messageContext,
       })
       clock.tick(ONE_MINUTE)
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'baz', status },
-        messageContext,
       })
 
       expect(serverLogs.length).toEqual(2)
       expect(serverLogs[0].message).toEqual('foo')
       expect(serverLogs[1].message).toEqual('baz')
-      expect(reportErrorSpy).toHaveBeenCalledTimes(1)
-      expect(reportErrorSpy.calls.argsFor(0)[0]).toEqual(
-        jasmine.objectContaining({
-          source: ErrorSource.AGENT,
-        })
-      )
+      expect(reportErrorSpy).toHaveBeenCalledWith(message)
     })
 
     it(`allows to send logs with a different status when reaching the limit (message: "${message}")`, () => {
       const otherLogStatus = status === StatusType.error ? StatusType.info : StatusType.error
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status },
-        messageContext,
       })
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'bar', status },
-        messageContext,
       })
       lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
         rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'baz', status: otherLogStatus },
-        ...{ ...messageContext, status: otherLogStatus },
       })
 
       expect(serverLogs.length).toEqual(2)
       expect(serverLogs[0].message).toEqual('foo')
       expect(serverLogs[1].message).toEqual('baz')
-      expect(reportErrorSpy).toHaveBeenCalledTimes(1)
-      expect(reportErrorSpy.calls.argsFor(0)[0]).toEqual(
-        jasmine.objectContaining({
-          source: ErrorSource.AGENT,
-        })
-      )
+      expect(reportErrorSpy).toHaveBeenCalledWith(message)
     })
   })
 
   it('two different custom statuses are accounted by the same limit', () => {
     lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-      rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status: StatusType.info },
-      messageContext: { status: 'foo' },
+      rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'foo', status: 'foo' as StatusType },
     })
 
     lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
-      rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'bar', status: StatusType.info },
-      messageContext: { status: 'bar' },
+      rawLogsEvent: { ...DEFAULT_MESSAGE, message: 'bar', status: 'bar' as StatusType },
     })
 
     expect(serverLogs.length).toEqual(1)
     expect(serverLogs[0].message).toEqual('foo')
-    expect(reportErrorSpy).toHaveBeenCalledTimes(1)
-    expect(reportErrorSpy.calls.argsFor(0)[0]).toEqual(
-      jasmine.objectContaining({
-        source: ErrorSource.AGENT,
-      })
+    expect(reportErrorSpy).toHaveBeenCalledWith('Reached max number of customs by minute: 1')
+  })
+
+  it('lets an assemble hook enrich error logs with wasm metadata', () => {
+    hooks.assembleEvent.register(({ rawLogsEvent }) =>
+      rawLogsEvent?.error && /wasm-function\[/.test(rawLogsEvent.error.stack ?? '')
+        ? { error: { source_type: 'browser+wasm', wasm_modules: [{ url: 'app.wasm', build_id: 'abcd' }] } }
+        : SKIPPED
     )
+
+    lifeCycle.notify(LifeCycleEventType.RAW_LOG_COLLECTED, {
+      rawLogsEvent: {
+        ...DEFAULT_MESSAGE,
+        status: StatusType.error,
+        origin: ErrorSource.SOURCE,
+        error: {
+          stack: 'RuntimeError: unreachable\n  at foo @ https://example.com/app.wasm:wasm-function[42]:0x10',
+          kind: 'Error',
+          handling: ErrorHandling.UNHANDLED,
+        },
+      },
+    })
+
+    expect(serverLogs.length).toEqual(1)
+    expect(serverLogs[0].error?.source_type).toBe('browser+wasm')
+    expect(serverLogs[0].error?.wasm_modules).toEqual([{ url: 'app.wasm', build_id: 'abcd' }])
+    expect(serverLogs[0].error?.stack).toContain('wasm-function[42]')
+  })
+
+  it('lets an assemble hook enrich errors provided to a logger', () => {
+    hooks.assembleEvent.register(({ rawLogsEvent }) =>
+      rawLogsEvent?.error && /wasm-function\[/.test(rawLogsEvent.error.stack ?? '')
+        ? { error: { source_type: 'browser+wasm', wasm_modules: [{ url: 'app.wasm', build_id: 'abcd' }] } }
+        : SKIPPED
+    )
+    const { handleLog } = startLoggerCollection(lifeCycle)
+    const logger = new Logger((...params) => handleLog(...params))
+    const error = new WebAssembly.RuntimeError('unreachable')
+    error.stack = 'RuntimeError: unreachable\n  at foo @ https://example.com/app.wasm:wasm-function[42]:0x10'
+
+    logger.error('WASM failure', { crash_type: 'wasm' }, error)
+
+    expect(serverLogs.length).toEqual(1)
+    expect(serverLogs[0].error?.source_type).toBe('browser+wasm')
+    expect(serverLogs[0].error?.wasm_modules).toEqual([{ url: 'app.wasm', build_id: 'abcd' }])
+    expect(serverLogs[0].error?.stack).toContain('wasm-function[42]')
+    expect(serverLogs[0].crash_type).toBe('wasm')
   })
 })

@@ -1,5 +1,6 @@
 import type { RelativeTime } from '@openobserve/js-core/time'
-import { display, Observable } from '@openobserve/browser-core'
+import { display } from '@openobserve/browser-core'
+import { Observable } from '@openobserve/js-core/util'
 import { createHook } from '@openobserve/js-core/assembly'
 import { mockCiVisibilityValues } from '../../../test'
 import type { CookieObservable } from '../../browser/cookieObservable'

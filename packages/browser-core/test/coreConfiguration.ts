@@ -11,14 +11,11 @@ import type { CamelToSnakeCase, RemoveIndex } from './typeUtils'
  */
 export const EXHAUSTIVE_INIT_CONFIGURATION: Required<InitConfiguration> = {
   clientToken: 'yes',
-  apiVersion: 'v1',
-  organizationIdentifier: 'my-org',
-  insecureHTTP: false,
   beforeSend: () => true,
   sessionSampleRate: 50,
   telemetrySampleRate: 60,
   silentMultipleInit: true,
-  sessionPersistence: 'cookie',
+  sessionPersistence: ['cookie'],
   allowUntrustedEvents: true,
   storeContextsAcrossPages: true,
   trackingConsent: 'not-granted',
@@ -83,10 +80,6 @@ export type MapInitConfigurationKey<Key extends string> =
           | 'datacenter'
           | 'replica'
           | 'enableExperimentalFeatures'
-          // OpenObserve-specific options are not reported through telemetry
-          | 'apiVersion'
-          | 'organizationIdentifier'
-          | 'insecureHTTP'
       ? never
       : // Other keys are simply snake cased
         CamelToSnakeCase<Key>

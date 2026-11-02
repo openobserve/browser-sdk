@@ -104,7 +104,7 @@ export type RumActionEvent = CommonProperties &
     /**
      * View properties
      */
-    readonly view?: {
+    readonly view: {
       /**
        * Is the action starting in the foreground (focus in browser)
        */
@@ -163,12 +163,7 @@ export type RumActionEvent = CommonProperties &
          * The strategy of how the auto click action name is computed
          */
         name_source?:
-          | 'custom_attribute'
-          | 'mask_placeholder'
-          | 'standard_attribute'
-          | 'text_content'
-          | 'mask_disallowed'
-          | 'blank'
+          'custom_attribute' | 'mask_placeholder' | 'standard_attribute' | 'text_content' | 'mask_disallowed' | 'blank'
         [k: string]: unknown
       }
       [k: string]: unknown
@@ -183,6 +178,9 @@ export type RumTransitionEvent = CommonProperties & {
    * RUM event type
    */
   readonly type: 'transition'
+  readonly view: {
+    [k: string]: unknown
+  }
   /**
    * Stream properties
    */
@@ -311,6 +309,7 @@ export type RumErrorEvent = CommonProperties &
       readonly source_type?:
         | 'android'
         | 'browser'
+        | 'browser+wasm'
         | 'ios'
         | 'react-native'
         | 'flutter'
@@ -322,6 +321,7 @@ export type RumErrorEvent = CommonProperties &
         | 'macos'
         | 'linux'
         | 'maui'
+        | 'nodejs'
       /**
        * Resource properties of the error
        */
@@ -426,6 +426,24 @@ export type RumErrorEvent = CommonProperties &
         [k: string]: unknown
       }[]
       /**
+       * WebAssembly modules available for stack trace symbolication.
+       */
+      readonly wasm_modules?: {
+        /**
+         * URL identifying the WebAssembly module.
+         */
+        readonly url: string
+        /**
+         * Build ID used to identify the WebAssembly debug symbols.
+         */
+        readonly build_id: string
+        /**
+         * Debug information format used to symbolicate the WebAssembly module.
+         */
+        readonly debug_info_type?: 'dwarf' | 'sourcemap' | 'unknown'
+        [k: string]: unknown
+      }[]
+      /**
        * A boolean value saying if any of the stack traces was truncated due to minification.
        */
       readonly was_truncated?: boolean
@@ -492,7 +510,7 @@ export type RumErrorEvent = CommonProperties &
     /**
      * View properties
      */
-    readonly view?: {
+    readonly view: {
       /**
        * Is the error starting in the foreground (focus in browser)
        */
@@ -513,6 +531,20 @@ export type RumErrorEvent = CommonProperties &
        * Profiling context
        */
       profiling?: ProfilingInternalContextSchema
+      /**
+       * Mapping of source file URLs to their debug IDs for source map deobfuscation
+       */
+      debug_ids?: {
+        /**
+         * URL of the source file
+         */
+        url: string
+        /**
+         * Debug ID (UUID) for the source file
+         */
+        id: string
+        [k: string]: unknown
+      }[]
       [k: string]: unknown
     }
     [k: string]: unknown
@@ -527,6 +559,9 @@ export type RumLongTaskEvent = CommonProperties &
      * RUM event type
      */
     readonly type: 'long_task'
+    readonly view: {
+      [k: string]: unknown
+    }
     /**
      * Long Task properties
      */
@@ -611,12 +646,7 @@ export type RumLongTaskEvent = CommonProperties &
          * Type of the invoker of the script
          */
         readonly invoker_type?:
-          | 'user-callback'
-          | 'event-listener'
-          | 'resolve-promise'
-          | 'reject-promise'
-          | 'classic-script'
-          | 'module-script'
+          'user-callback' | 'event-listener' | 'resolve-promise' | 'reject-promise' | 'classic-script' | 'module-script'
         /**
          * The container (the top-level document, or an <iframe>) the long animation frame occurred in
          */
@@ -637,6 +667,20 @@ export type RumLongTaskEvent = CommonProperties &
        * Profiling context
        */
       profiling?: ProfilingInternalContextSchema
+      /**
+       * Mapping of source file URLs to their debug IDs for source map deobfuscation
+       */
+      debug_ids?: {
+        /**
+         * URL of the source file
+         */
+        url: string
+        /**
+         * Debug ID (UUID) for the source file
+         */
+        id: string
+        [k: string]: unknown
+      }[]
       [k: string]: unknown
     }
     [k: string]: unknown
@@ -651,6 +695,9 @@ export type RumResourceEvent = CommonProperties &
      * RUM event type
      */
     readonly type: 'resource'
+    readonly view: {
+      [k: string]: unknown
+    }
     /**
      * Resource properties
      */
@@ -663,17 +710,7 @@ export type RumResourceEvent = CommonProperties &
        * Resource type
        */
       readonly type:
-        | 'document'
-        | 'xhr'
-        | 'beacon'
-        | 'fetch'
-        | 'css'
-        | 'js'
-        | 'image'
-        | 'font'
-        | 'media'
-        | 'other'
-        | 'native'
+        'document' | 'xhr' | 'beacon' | 'fetch' | 'css' | 'js' | 'image' | 'font' | 'media' | 'other' | 'native'
       /**
        * HTTP method of the resource
        */
@@ -817,6 +854,11 @@ export type RumResourceEvent = CommonProperties &
        */
       readonly delivery_type?: 'cache' | 'navigational-prefetch' | 'other'
       /**
+       * @deprecated
+       * Whether the resource was served from the device's local cache (deprecated in favor of `delivery_type`/`transfer_size`)
+       */
+      readonly local_cache_hit?: boolean
+      /**
        * The provider for this resource
        */
       readonly provider?: {
@@ -919,70 +961,7 @@ export type RumViewEvent = CommonProperties &
       }
       [k: string]: unknown
     }
-    /**
-     * Internal properties
-     */
     readonly _o2: {
-      /**
-       * Version of the update of the view event
-       */
-      readonly document_version: number
-      /**
-       * List of the page states during the view
-       */
-      readonly page_states?: {
-        /**
-         * Page state name
-         */
-        readonly state: 'active' | 'passive' | 'hidden' | 'frozen' | 'terminated'
-        /**
-         * Duration in ns between start of the view and start of the page state
-         */
-        readonly start: number
-        [k: string]: unknown
-      }[]
-      /**
-       * Debug metadata for Replay Sessions
-       */
-      replay_stats?: {
-        /**
-         * The number of records produced during this view lifetime
-         */
-        records_count?: number
-        /**
-         * The number of segments sent during this view lifetime
-         */
-        segments_count?: number
-        /**
-         * The total size in bytes of the segments sent during this view lifetime
-         */
-        segments_total_raw_size?: number
-        [k: string]: unknown
-      }
-      /**
-       * Additional information of the reported Cumulative Layout Shift
-       */
-      readonly cls?: {
-        /**
-         * Pixel ratio of the device where the layout shift was reported
-         */
-        readonly device_pixel_ratio?: number
-        [k: string]: unknown
-      }
-      /**
-       * Subset of the SDK configuration options in use during its execution
-       */
-      readonly configuration?: {
-        /**
-         * Whether session replay recording configured to start manually
-         */
-        readonly start_session_replay_recording_manually?: boolean
-        [k: string]: unknown
-      }
-      /**
-       * Profiling context
-       */
-      profiling?: ProfilingInternalContextSchema
       [k: string]: unknown
     }
     [k: string]: unknown
@@ -998,19 +977,18 @@ export type RumViewUpdateEvent = ViewContainerSchema &
      * RUM event type
      */
     readonly type: 'view_update'
-    /**
-     * Internal properties
-     */
-    readonly _o2?: {
-      /**
-       * Version of the update of the view event
-       */
-      readonly document_version: number
+    readonly view: {
       [k: string]: unknown
     }
     [k: string]: unknown
   }
-export type RumVitalEvent = RumVitalDurationEvent | RumVitalOperationStepEvent
+export type RumVitalEvent =
+  | RumVitalDurationEvent
+  | RumVitalOperationStepEvent
+  | RumVitalWebsocketConnectingEvent
+  | RumVitalWebsocketOpenEvent
+  | RumVitalWebsocketClosingEvent
+  | RumVitalWebsocketClosedEvent
 /**
  * Schema for a duration vital event.
  */
@@ -1040,6 +1018,9 @@ export type RumVitalEventCommonProperties = CommonProperties &
      * RUM event type
      */
     readonly type: 'vital'
+    readonly view: {
+      [k: string]: unknown
+    }
     /**
      * Vital properties
      */
@@ -1094,6 +1075,188 @@ export type RumVitalOperationStepEvent = RumVitalEventCommonProperties & {
      * Reason for the failure of the step, if applicable
      */
     readonly failure_reason?: 'error' | 'abandoned' | 'other'
+    [k: string]: unknown
+  }
+  [k: string]: unknown
+}
+/**
+ * Schema for the vital reported when a WebSocket connection is created. Reported exactly once per connection, when the WebSocket is constructed. Reported with vital.name websocket_connecting
+ */
+export type RumVitalWebsocketConnectingEvent = RumVitalWebsocketCommonProperties & {
+  /**
+   * Vital properties
+   */
+  readonly vital: {
+    /**
+     * WebSocket properties. The identity of the connection is reported on this vital.
+     */
+    readonly websocket: {
+      /**
+       * URL the connection was opened on, without its query string
+       */
+      url: string
+      /**
+       * Subprotocols the connection was requested with. Omitted when none was requested
+       */
+      requested_protocols?: string[]
+      /**
+       * Date the WebSocket was constructed, in ms from epoch. It is the date the dates of the later phases of the connection are computed from
+       */
+      readonly connecting_date: number
+      [k: string]: unknown
+    }
+    [k: string]: unknown
+  }
+  [k: string]: unknown
+}
+/**
+ * Schema of common properties for a WebSocket vital event. One connection reports a stream of vitals over its lifetime, one per phase, all sharing the same vital.websocket.id
+ */
+export type RumVitalWebsocketCommonProperties = RumVitalEventCommonProperties & {
+  /**
+   * Vital properties
+   */
+  readonly vital: {
+    /**
+     * Type of the vital.
+     */
+    readonly type: 'websocket'
+    /**
+     * Name of the vital, identifying the phase of the connection it reports: websocket_connecting, websocket_open, websocket_closing or websocket_closed
+     */
+    readonly name: string
+    /**
+     * WebSocket properties
+     */
+    readonly websocket: {
+      /**
+       * UUID of the WebSocket connection, stable across every vital reported for that connection. It is not vital.id, which identifies a single vital
+       */
+      readonly id: string
+      [k: string]: unknown
+    }
+    [k: string]: unknown
+  }
+  [k: string]: unknown
+}
+/**
+ * Schema for the vital reported when a WebSocket connection opens, then repeatedly as a heartbeat while it stays open. Reported with vital.name websocket_open
+ */
+export type RumVitalWebsocketOpenEvent = RumVitalWebsocketCommonProperties & {
+  /**
+   * Vital properties
+   */
+  readonly vital: {
+    /**
+     * WebSocket properties
+     */
+    readonly websocket: {
+      /**
+       * Interval between the connecting date and the open date of the connection, in nanoseconds
+       */
+      readonly connecting_duration: number
+      /**
+       * Date the connection opened, in ms from epoch. Computed from the connecting date and the time elapsed since, measured on a monotonic clock
+       */
+      readonly open_date: number
+      /**
+       * Subprotocol the server selected. Omitted when the server selected none
+       */
+      selected_protocol?: string
+      /**
+       * Extensions the server negotiated, as the single string the connection exposes them as. Omitted when none was negotiated
+       */
+      readonly selected_extensions?: string
+      /**
+       * Version of the snapshot within its connection, starting at 1 and incremented on every websocket_open vital and on the websocket_closed vital, so that they can be ordered when they are received out of sequence
+       */
+      readonly snapshot_version: number
+      /**
+       * Values of the connection at the time the vital was reported
+       */
+      readonly snapshot: RumVitalWebsocketSnapshot
+      [k: string]: unknown
+    }
+    [k: string]: unknown
+  }
+  [k: string]: unknown
+}
+/**
+ * Schema for the vital reported when a WebSocket connection starts closing. Reported at most once per connection. Reported with vital.name websocket_closing
+ */
+export type RumVitalWebsocketClosingEvent = RumVitalWebsocketCommonProperties & {
+  /**
+   * Vital properties
+   */
+  readonly vital: {
+    /**
+     * WebSocket properties
+     */
+    readonly websocket: {
+      /**
+       * Date the connection was asked to close, in ms from epoch. Computed from the connecting date and the time elapsed since, measured on a monotonic clock
+       */
+      readonly closing_date: number
+      /**
+       * Side that initiated the close. Only reported on this vital, and only as client, since a close observed from the application is always initiated by it. The other values are reported by the connection-level data derived from these vitals
+       */
+      readonly close_initiator: 'client' | 'server' | 'unknown'
+      [k: string]: unknown
+    }
+    [k: string]: unknown
+  }
+  [k: string]: unknown
+}
+/**
+ * Schema for the vital reported when a WebSocket connection stops being tracked, whether because it closed or because tracking ended first. Reported at most once per connection. Reported with vital.name websocket_closed
+ */
+export type RumVitalWebsocketClosedEvent = RumVitalWebsocketCommonProperties & {
+  /**
+   * Vital properties
+   */
+  readonly vital: {
+    /**
+     * WebSocket properties
+     */
+    readonly websocket: {
+      /**
+       * URL the connection was opened on, without its query string
+       */
+      url: string
+      /**
+       * Date tracking of the connection ended, in ms from epoch. It is the date the connection closed when the tracking end reason is close_event, and the date tracking stopped otherwise. Computed from the connecting date and the time elapsed since, measured on a monotonic clock
+       */
+      readonly closed_date: number
+      /**
+       * Interval between the connecting date and the closed date of the connection, in nanoseconds. It is not vital.duration, which is reported by duration vitals
+       */
+      readonly duration: number
+      /**
+       * Why tracking of the connection ended
+       */
+      readonly tracking_end_reason: 'close_event' | 'session_end' | 'page_terminated'
+      /**
+       * Code the connection was closed with. Reported when, and only when, the tracking end reason is close_event
+       */
+      readonly close_code?: number
+      /**
+       * Reason the connection was closed with, as an empty string when the other side supplied none. Reported when, and only when, the tracking end reason is close_event
+       */
+      close_reason?: string
+      /**
+       * Whether the connection closed cleanly. Reported when, and only when, the tracking end reason is close_event
+       */
+      readonly was_clean?: boolean
+      /**
+       * Version of the snapshot within its connection, starting at 1 and incremented on every websocket_open vital and on the websocket_closed vital, so that they can be ordered when they are received out of sequence
+       */
+      readonly snapshot_version: number
+      /**
+       * Values of the connection when tracking ended. Omitted when the connection never opened
+       */
+      readonly snapshot?: RumVitalWebsocketSnapshot
+      [k: string]: unknown
+    }
     [k: string]: unknown
   }
   [k: string]: unknown
@@ -1157,6 +1320,14 @@ export interface CommonProperties {
      * Whether this session has a replay
      */
     readonly has_replay?: boolean
+    /**
+     * Whether the SDK is initialised on the application's main or a secondary process
+     */
+    readonly is_main_process?: boolean
+    /**
+     * Whether this session has performance timeseries data
+     */
+    readonly has_timeseries?: boolean
     [k: string]: unknown
   }
   /**
@@ -1172,12 +1343,12 @@ export interface CommonProperties {
     | 'unity'
     | 'kotlin-multiplatform'
     | 'electron'
-    | 'rum-cpp'
+    | 'cpp'
     | 'maui'
   /**
    * View properties
    */
-  readonly view: {
+  readonly view?: {
     /**
      * UUID of the view
      */
@@ -1194,6 +1365,10 @@ export interface CommonProperties {
      * User defined name of the view
      */
     name?: string
+    /**
+     * Whether this view was synthetically created to carry view-less events
+     */
+    readonly is_fake?: boolean
     [k: string]: unknown
   }
   /**
@@ -1254,15 +1429,7 @@ export interface CommonProperties {
      * The list of available network interfaces
      */
     readonly interfaces?: (
-      | 'bluetooth'
-      | 'cellular'
-      | 'ethernet'
-      | 'wifi'
-      | 'wimax'
-      | 'mixed'
-      | 'other'
-      | 'unknown'
-      | 'none'
+      'bluetooth' | 'cellular' | 'ethernet' | 'wifi' | 'wimax' | 'mixed' | 'other' | 'unknown' | 'none'
     )[]
     /**
      * Cellular connection type reflecting the measured network performance
@@ -1465,6 +1632,10 @@ export interface CommonProperties {
        * The percentage of sessions with traced resources
        */
       readonly trace_sample_rate?: number
+      /**
+       * Session Replay experimental features enabled in the SDK configuration
+       */
+      readonly session_replay_experimental_features?: string[]
       [k: string]: unknown
     }
     /**
@@ -1491,6 +1662,24 @@ export interface CommonProperties {
      * UUID of the stream
      */
     readonly id: string
+    [k: string]: unknown
+  }
+  /**
+   * Execution context properties
+   */
+  readonly execution_context?: {
+    /**
+     * UUID of the execution context
+     */
+    readonly id: string
+    /**
+     * Type of the execution context
+     */
+    readonly type: 'main-process' | 'renderer-process' | 'utility-process'
+    /**
+     * Execution context name
+     */
+    name?: string
     [k: string]: unknown
   }
   [k: string]: unknown
@@ -1526,7 +1715,7 @@ export interface ViewContainerSchema {
       | 'unity'
       | 'kotlin-multiplatform'
       | 'electron'
-      | 'rum-cpp'
+      | 'cpp'
       | 'maui'
     [k: string]: unknown
   }
@@ -1653,10 +1842,21 @@ export interface ProfilingInternalContextSchema {
    * - `unexpected-exception`: An exception occurred when starting the Profiler.
    */
   readonly error_reason?:
-    | 'not-supported-by-browser'
-    | 'failed-to-lazy-load'
-    | 'missing-document-policy-header'
-    | 'unexpected-exception'
+    'not-supported-by-browser' | 'failed-to-lazy-load' | 'missing-document-policy-header' | 'unexpected-exception'
+  /**
+   * The reason provided by the profiling quota admission API. This attribute is only present if the status is `stopped` due to quota.
+   *
+   * Possible values:
+   * - `quota_ok`: Quota check passed.
+   * - `quota_exceeded`: The organization has exceeded its profiling quota.
+   * - `org_disabled`: The organization has profiling disabled.
+   * - `backend_unavailable`: The quota admission API is unavailable or not initialized.
+   * - `undefined`: The quota reason is undefined.
+   * - `timeout`: The quota check timed out on the client side.
+   * - `api-error`: An API error occurred on the client side.
+   */
+  readonly quota_reason?:
+    'quota_ok' | 'quota_exceeded' | 'org_disabled' | 'backend_unavailable' | 'undefined' | 'timeout' | 'api-error'
   [k: string]: unknown
 }
 /**
@@ -2045,6 +2245,76 @@ export interface ViewProperties {
     }
     [k: string]: unknown
   }
+  /**
+   * Internal properties
+   */
+  readonly _o2?: {
+    /**
+     * Version of the update of the view event
+     */
+    readonly document_version: number
+    /**
+     * List of the page states during the view
+     */
+    readonly page_states?: {
+      /**
+       * Page state name
+       */
+      readonly state: 'active' | 'passive' | 'hidden' | 'frozen' | 'terminated'
+      /**
+       * Duration in ns between start of the view and start of the page state
+       */
+      readonly start: number
+      [k: string]: unknown
+    }[]
+    /**
+     * Debug metadata for Replay Sessions
+     */
+    replay_stats?: {
+      /**
+       * The number of records produced during this view lifetime
+       */
+      records_count?: number
+      /**
+       * The number of segments sent during this view lifetime
+       */
+      segments_count?: number
+      /**
+       * The total size in bytes of the segments sent during this view lifetime
+       */
+      segments_total_raw_size?: number
+      [k: string]: unknown
+    }
+    /**
+     * Additional information of the reported Cumulative Layout Shift
+     */
+    readonly cls?: {
+      /**
+       * Pixel ratio of the device where the layout shift was reported
+       */
+      readonly device_pixel_ratio?: number
+      [k: string]: unknown
+    }
+    /**
+     * Subset of the SDK configuration options in use during its execution
+     */
+    readonly configuration?: {
+      /**
+       * Whether session replay recording configured to start manually
+       */
+      readonly start_session_replay_recording_manually?: boolean
+      /**
+       * The id of the remote configuration applied to the SDK, if any
+       */
+      readonly remote_configuration_id?: string
+      [k: string]: unknown
+    }
+    /**
+     * Profiling context
+     */
+    profiling?: ProfilingInternalContextSchema
+    [k: string]: unknown
+  }
   [k: string]: unknown
 }
 /**
@@ -2325,5 +2595,59 @@ export interface ViewAccessibilityProperties {
    * Indicates whether the right-to-left support is enabled.
    */
   readonly rtl_enabled?: boolean
+  [k: string]: unknown
+}
+/**
+ * Schema of the WebSocket connection values that change from one vital of a connection to the next. Both directions are present whenever the snapshot is, and are zero-filled while no message has been observed
+ */
+export interface RumVitalWebsocketSnapshot {
+  /**
+   * Messages received from the server
+   */
+  readonly inbound: RumVitalWebsocketMessageDirection
+  /**
+   * Messages sent to the server
+   */
+  readonly outbound: RumVitalWebsocketMessageDirection & {
+    /**
+     * Largest amount of bytes ever observed queued in the send buffer, sampled after each send is enqueued
+     */
+    readonly buffered_amount_max: number
+    /**
+     * Amount of bytes still queued in the send buffer when tracking ended, in bytes. Set on the websocket_closed vital only
+     */
+    readonly buffered_amount_at_close?: number
+    [k: string]: unknown
+  }
+  [k: string]: unknown
+}
+/**
+ * Schema of the messages observed in one direction of a WebSocket connection
+ */
+export interface RumVitalWebsocketMessageDirection {
+  /**
+   * Number of messages observed in this direction since the connection opened
+   */
+  readonly message_count: number
+  /**
+   * Sum of the payload sizes of the messages observed in this direction, in bytes
+   */
+  readonly message_size_total: number
+  /**
+   * Size of the largest single payload observed in this direction, in bytes. 0 while no message has been observed
+   */
+  readonly message_size_max: number
+  /**
+   * Longest interval between two consecutive messages observed in this direction, in nanoseconds, including the still-open interval since the last message.
+   */
+  readonly longest_silence: number
+  /**
+   * Interval between the open date of the connection and the first message observed in this direction, in nanoseconds. Omitted until a first message has been observed
+   */
+  readonly time_to_first_message?: number
+  /**
+   * Interval between the last message observed in this direction and the closed date of the connection, in nanoseconds. Set on the websocket_closed vital only, and only when at least one message has been observed in this direction
+   */
+  readonly silence_before_close?: number
   [k: string]: unknown
 }

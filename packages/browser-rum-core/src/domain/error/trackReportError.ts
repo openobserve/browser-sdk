@@ -1,4 +1,5 @@
-import type { Observable, RawError } from '@openobserve/browser-core'
+import type { RawError } from '@openobserve/browser-core'
+import type { Observable } from '@openobserve/js-core/util'
 import { initReportObservable, RawReportType } from '@openobserve/browser-core'
 export function trackReportError(errorObservable: Observable<RawError>) {
   const subscription = initReportObservable([RawReportType.cspViolation, RawReportType.intervention]).subscribe(

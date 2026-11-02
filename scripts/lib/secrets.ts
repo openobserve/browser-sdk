@@ -34,6 +34,13 @@ export function getGithubReadToken() {
   return new OctoStsToken('read')
 }
 
+/**
+ * This token is scoped to main branch only.
+ */
+export function getGithubCommitToken() {
+  return new OctoStsToken('commit')
+}
+
 export function getOrg2ApiKey(): string {
   return getSecretKey('ci.browser-sdk.datadog_ci_api_key')
 }
@@ -44,20 +51,12 @@ export function getOrg2AppKey(): string {
 
 export function getTelemetryOrgApiKey(site: string): string | undefined {
   const normalizedSite = site.replaceAll('.', '-')
-  try {
-    return getSecretKey(`ci.browser-sdk.source-maps.${normalizedSite}.ci_api_key`)
-  } catch {
-    return
-  }
+  return getOptionalSecretKey(`ci.browser-sdk.source-maps.${normalizedSite}.ci_api_key`)
 }
 
 export function getTelemetryOrgApplicationKey(site: string): string | undefined {
   const normalizedSite = site.replaceAll('.', '-')
-  try {
-    return getSecretKey(`ci.browser-sdk.telemetry.${normalizedSite}.ci_app_key`)
-  } catch {
-    return
-  }
+  return getOptionalSecretKey(`ci.browser-sdk.telemetry.${normalizedSite}.ci_app_key`)
 }
 
 export function getNpmToken(): string {
@@ -76,6 +75,10 @@ export function getChromeWebStoreRefreshToken(): string {
   return getSecretKey('ci.browser-sdk.chrome_web_store.refresh_token')
 }
 
+export function getChromeWebStorePublisherId(): string {
+  return getSecretKey('ci.browser-sdk.chrome_web_store.publisher_id')
+}
+
 export function getBrowserStackUsername(): string {
   return getSecretKey('ci.browser-sdk.bs_username')
 }
@@ -84,10 +87,47 @@ export function getBrowserStackAccessKey(): string {
   return getSecretKey('ci.browser-sdk.bs_access_key')
 }
 
+export function getSfLwcClientId(): string {
+  return process.env.SF_LWC_CLIENT_ID ?? getSecretKey('ci.browser-sdk.sf_lwc_client_id')
+}
+
+export function getSfLwcUsername(): string {
+  return process.env.SF_LWC_USERNAME ?? getSecretKey('ci.browser-sdk.sf_lwc_username')
+}
+
+export function getSfLwcInstanceUrl(): string {
+  return process.env.SF_LWC_INSTANCE_URL ?? getSecretKey('ci.browser-sdk.sf_lwc_instance_url')
+}
+
+export function getSfLwcJwtPrivateKey(): string {
+  return process.env.SF_LWC_JWT_PRIVATE_KEY_B64 ?? getSecretKey('ci.browser-sdk.sf_lwc_jwt_private_key_b64')
+}
+
+export function getShopifyStorePassword(): string {
+  return process.env.SHOPIFY_STORE_PASSWORD ?? getSecretKey('ci.browser-sdk.shopify_store_password')
+}
+
 function getSecretKey(name: string): string {
   return command`
     aws ssm get-parameter --region=us-east-1 --with-decryption --query=Parameter.Value --out=text --name=${name}
   `
     .run()
     .trim()
+}
+
+/**
+ * Like getSecretKey, but returns undefined when the parameter does not exist instead of throwing.
+ *
+ * Other errors (e.g. AWS permission issues or temporary network failures) are rethrown so they are
+ * not silently mistaken for a missing parameter, which could otherwise disable safety checks.
+ */
+function getOptionalSecretKey(name: string): string | undefined {
+  try {
+    return getSecretKey(name)
+  } catch (error) {
+    if (error instanceof Error && /ParameterNotFound/.test(error.message)) {
+      return
+    }
+    throw error
+  }
 }

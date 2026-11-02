@@ -1,6 +1,7 @@
 import type { ComponentInternalInstance, ComponentPublicInstance } from 'vue'
 import { clocksNow } from '@openobserve/js-core/time'
-import { callMonitored, createHandlingStack } from '@openobserve/browser-core'
+import { callMonitored } from '@openobserve/js-core/monitor'
+import { createHandlingStack } from '@openobserve/browser-core'
 import { onRumStart } from '../vuePlugin'
 
 /**

@@ -1,4 +1,5 @@
-import { startMonitorErrorCollection } from '../../src/tools/monitor'
+import { noop } from '@openobserve/js-core/util'
+import { startMonitorErrorCollection } from '@openobserve/js-core/monitor'
 import {
   addTelemetryError,
   getTelemetryObservable,
@@ -7,7 +8,6 @@ import {
   type Telemetry,
 } from '../../src/domain/telemetry'
 import { registerCleanupTask } from '../registerCleanupTask'
-import { noop } from '../../src/tools/utils/functionUtils'
 
 export interface MockTelemetry {
   getEvents: () => Promise<RawTelemetryEvent[]>

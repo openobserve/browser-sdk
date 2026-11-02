@@ -9,7 +9,8 @@
   "peerDependencies": {
     "@openobserve/browser-logs": "*",
     "@openobserve/browser-rum": "*",
-    "@openobserve/browser-debugger": "*"
+    "@openobserve/browser-debugger": "*",
+    "@openobserve/browser-plugin-wasm": "*"
   },
   "peerDependenciesMeta": {
     "@openobserve/browser-logs": {
@@ -19,6 +20,9 @@
       "optional": true
     },
     "@openobserve/browser-debugger": {
+      "optional": true
+    },
+    "@openobserve/browser-plugin-wasm": {
       "optional": true
     }
   },
@@ -31,12 +35,13 @@
     "@openobserve/browser-rum-react": "file:../../../packages/browser-rum-react/package.tgz",
     "@openobserve/browser-rum-slim": "file:../../../packages/browser-rum-slim/package.tgz",
     "@openobserve/browser-worker": "file:../../../packages/browser-worker/package.tgz",
-    "@openobserve/browser-debugger": "file:../../../packages/browser-debugger/package.tgz"
+    "@openobserve/browser-debugger": "file:../../../packages/browser-debugger/package.tgz",
+    "@openobserve/browser-plugin-wasm": "file:../../../packages/browser-plugin-wasm/package.tgz"
   },
   "devDependencies": {
-    "ts-loader": "9.6.0",
+    "ts-loader": "9.6.2",
     "typescript": "6.0.2",
-    "webpack": "5.107.2"
+    "webpack": "5.111.1"
   },
   "volta": {
     "extends": "../../../package.json"

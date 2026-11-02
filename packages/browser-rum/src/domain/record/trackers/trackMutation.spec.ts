@@ -1,3 +1,4 @@
+import { noop } from '@openobserve/js-core/util'
 import { DefaultPrivacyLevel } from '@openobserve/browser-core'
 import { registerCleanupTask } from '@openobserve/browser-core/test'
 import type { RumConfiguration } from '@openobserve/browser-rum-core'
@@ -10,8 +11,10 @@ import {
 import type { BrowserChangeRecord, BrowserFullSnapshotChangeRecord, BrowserRecord } from '../../../types'
 import { ChangeType } from '../../../types'
 import type { RecordingScope } from '../recordingScope'
+import { createCanvasManager } from '../canvas/canvasManager'
 import type { AddShadowRootCallBack, RemoveShadowRootCallBack } from '../shadowRootsController'
-import type { ChangeDecoder, SerializationStats } from '../serialization'
+import type { ChangeDecoder } from '../encoding'
+import type { SerializationStats } from '../serialization'
 import { aggregateSerializationStats, createSerializationStats } from '../serialization'
 import { serializeHtml } from '../test/serializeHtml.specHelper'
 import { createRecordingScopeForTesting } from '../test/recordingScope.specHelper'
@@ -55,7 +58,7 @@ describe('trackMutation', () => {
         }
         emitStats(stats)
 
-        const mutationTracker = trackMutation(sandbox.ownerDocument, emitRecord, emitStats, scope)
+        const mutationTracker = trackMutation(sandbox.ownerDocument, emitRecord, noop, emitStats, scope)
         registerCleanupTask(() => {
           mutationTracker.stop()
         })
@@ -439,6 +442,27 @@ describe('trackMutation', () => {
         expect(removeShadowRootSpy.calls.argsFor(1)[0]).toBe(childShadowRoot)
       })
     })
+
+    it('removes a canvas from dirty canvases when it is removed', async () => {
+      const canvasManager = createCanvasManager()
+      const forgetCanvasSpy = spyOn(canvasManager, 'forgetCanvas').and.callThrough()
+      const scope = createRecordingScopeForTesting({ canvasManager })
+      let canvas!: HTMLCanvasElement
+
+      await recordMutationOf(
+        '<canvas></canvas>',
+        (sandbox) => {
+          canvas = sandbox as HTMLCanvasElement
+          expect(canvasManager.takeCapturableCanvases()).toEqual([canvas])
+
+          canvas.remove()
+        },
+        { scope }
+      )
+
+      expect(forgetCanvasSpy).toHaveBeenCalledOnceWith(canvas)
+      expect(canvasManager.takeCapturableCanvases()).toEqual([])
+    })
   })
 
   describe('characterData mutations', () => {
@@ -474,11 +498,10 @@ describe('trackMutation', () => {
     })
 
     it('respects the default privacy level setting', async () => {
-      const scope = createRecordingScopeForTesting()
+      const scope = createRecordingScopeForTesting({ configuration: { defaultPrivacyLevel: DefaultPrivacyLevel.MASK } })
       const { mutation } = await recordMutationOf(
         '<div>foo</div>',
         (sandbox: HTMLElement): void => {
-          scope.configuration.defaultPrivacyLevel = DefaultPrivacyLevel.MASK
           ;(sandbox.firstChild as Text).data = 'foo bar'
         },
         { scope }

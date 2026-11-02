@@ -17,8 +17,8 @@
     "prepack": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.3",
-    "@openobserve/js-core": "0.4.3"
+    "@openobserve/browser-core": "workspace:*",
+    "@openobserve/js-core": "workspace:*"
   },
   "devDependencies": {
     "ajv": "8.20.0"

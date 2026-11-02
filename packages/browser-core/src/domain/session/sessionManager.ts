@@ -9,21 +9,26 @@ import {
   relativeNow,
 } from '@openobserve/js-core/time'
 import type { TimeStamp, RelativeTime } from '@openobserve/js-core/time'
-import { Observable } from '../../tools/observable'
+import {
+  isWorkerEnvironment,
+  mockable,
+  clearInterval,
+  clearTimeout,
+  setInterval,
+  setTimeout,
+  Observable,
+  noop,
+  throttle,
+  generateUUID,
+} from '@openobserve/js-core/util'
+import { addEventListener, addEventListeners, DOM_EVENT } from '@openobserve/js-core/dom'
+import { monitorError } from '@openobserve/js-core/monitor'
 import { createValueHistory } from '../../tools/valueHistory'
-import { addEventListener, addEventListeners, DOM_EVENT } from '../../browser/addEventListener'
-import { clearInterval, clearTimeout, setInterval, setTimeout } from '../../tools/timer'
-import { mockable } from '../../tools/mockable'
-import { noop, throttle } from '../../tools/utils/functionUtils'
-import { generateUUID } from '../../tools/utils/stringUtils'
 import type { Configuration } from '../configuration'
 import type { TrackingConsentState } from '../trackingConsent'
-import { isWorkerEnvironment } from '../../tools/globalObject'
 import { display } from '../../tools/display'
 import { isSampled } from '../sampler'
 import { TelemetryMetrics, addTelemetryMetrics } from '../telemetry'
-import { monitorError } from '../../tools/monitor'
-import { SESSION_TIME_OUT_DELAY } from './sessionConstants'
 import type { SessionState } from './sessionState'
 import {
   expandOnly,
@@ -38,10 +43,14 @@ import { getSessionStoreStrategy, selectSessionStoreStrategyType } from './sessi
 
 export interface SessionManager {
   findSession: (startTime?: RelativeTime, options?: { returnInactive: boolean }) => SessionContext | undefined
-  findTrackedSession: (startTime?: RelativeTime, options?: { returnInactive: boolean }) => SessionContext | undefined
+  findTrackedSession: (
+    startTime?: RelativeTime,
+    options?: { returnInactive?: boolean; maxAge?: number }
+  ) => SessionContext | undefined
   renewObservable: Observable<void>
   expireObservable: Observable<void>
   expire: () => void
+  expandOrRenew: () => void
   updateSessionState: (state: Partial<SessionState>) => void
 }
 
@@ -53,7 +62,12 @@ export interface SessionContext {
 }
 
 export const VISIBILITY_CHECK_DELAY = ONE_MINUTE
-const SESSION_CONTEXT_TIMEOUT_DELAY = SESSION_TIME_OUT_DELAY
+
+// Arbitrary value to cap memory consumption for very long-lived pages with many session
+// renewals. Entries are *not* evicted based on elapsed time: an idle session's sole (closed)
+// entry must survive indefinitely so browser-logs can keep sending logs after it expires, with
+// or without a session attached (see browser-logs/src/domain/contexts/sessionContext.ts).
+export const MAX_SESSION_CONTEXT_HISTORY_ENTRIES = 1000
 
 // Maximum duration for which we can send data related to a session.
 //
@@ -84,7 +98,7 @@ export async function startSessionManager(
   const strategy = mockable(getSessionStoreStrategy)(sessionStoreStrategyType, configuration)
 
   const sessionContextHistory = createValueHistory<SessionContext>({
-    expireDelay: SESSION_CONTEXT_TIMEOUT_DELAY,
+    maxEntries: MAX_SESSION_CONTEXT_HISTORY_ENTRIES,
   })
   stopCallbacks.push(() => sessionContextHistory.stop())
 
@@ -195,11 +209,7 @@ export async function startSessionManager(
     })
 
     if (!isWorkerEnvironment) {
-      trackActivity(() => {
-        if (trackingConsentState.isGranted()) {
-          throttledExpandOrRenew()
-        }
-      })
+      trackActivity(expandOrRenewOnActivity)
       trackVisibility(() => {
         if (!sessionExpired) {
           strategy.setSessionState((state) => expandOnly(state), 'expandOnVisibility').catch(monitorError)
@@ -216,14 +226,14 @@ export async function startSessionManager(
   function buildSessionManager(): SessionManager {
     return {
       findSession: (startTime, options) => sessionContextHistory.find(startTime, options),
-      findTrackedSession: (startTime, options) => {
-        const session = sessionContextHistory.find(startTime, options)
+      findTrackedSession: (startTime, { returnInactive = false, maxAge = TRACKED_SESSION_MAX_AGE } = {}) => {
+        const session = sessionContextHistory.find(startTime, { returnInactive })
 
         if (!session || session.id === 'invalid' || !isSampled(session.id, configuration.sessionSampleRate)) {
           return
         }
 
-        if (dateNow() - session.createdAt > TRACKED_SESSION_MAX_AGE) {
+        if (dateNow() - session.createdAt > maxAge) {
           return
         }
 
@@ -232,6 +242,7 @@ export async function startSessionManager(
       renewObservable,
       expireObservable,
       expire,
+      expandOrRenew: expandOrRenewOnActivity,
       updateSessionState: (partialState) => {
         strategy.setSessionState((state) => ({ ...state, ...partialState }), 'updateState').catch(monitorError)
       },
@@ -264,6 +275,12 @@ export async function startSessionManager(
       // Mutate the session context in the history for replay forced changes
 
       previousSession.isReplayForced = !!newState.forcedReplay
+    }
+  }
+
+  function expandOrRenewOnActivity() {
+    if (trackingConsentState.isGranted()) {
+      throttledExpandOrRenew()
     }
   }
 
@@ -307,7 +324,7 @@ export async function startSessionManager(
   }
 }
 
-export function startSessionManagerStub(): Promise<SessionManager> {
+export function startSessionManagerStub(): SessionManager {
   const stubSessionId = generateUUID()
   let sessionContext: SessionContext = {
     id: stubSessionId,
@@ -315,19 +332,20 @@ export function startSessionManagerStub(): Promise<SessionManager> {
     anonymousId: undefined,
     createdAt: timeStampNow(),
   }
-  return Promise.resolve({
+  return {
     findSession: () => sessionContext,
     findTrackedSession: () => sessionContext,
     renewObservable: new Observable(),
     expireObservable: new Observable(),
     expire: noop,
+    expandOrRenew: noop,
     updateSessionState: (state) => {
       sessionContext = {
         ...sessionContext,
         ...state,
       }
     },
-  })
+  }
 }
 
 export function stopSessionManager() {

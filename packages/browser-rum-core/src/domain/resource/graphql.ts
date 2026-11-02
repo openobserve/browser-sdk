@@ -1,4 +1,5 @@
-import { buildUrl, isNonEmptyArray, matchList, ONE_KIBI_BYTE, safeTruncate, tryJsonParse } from '@openobserve/browser-core'
+import { isNonEmptyArray, matchList, safeTruncate, tryJsonParse } from '@openobserve/browser-core'
+import { ONE_KIBI_BYTE, buildUrl } from '@openobserve/js-core/util'
 import type { RumConfiguration, GraphQlUrlOption } from '../configuration'
 import type { RequestCompleteEvent } from '../requestCollection'
 

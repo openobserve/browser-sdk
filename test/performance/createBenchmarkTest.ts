@@ -259,7 +259,7 @@ async function flushEvents(page: Page) {
   await page.evaluate(() => {
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' })
     const hiddenEvent = new Event('visibilitychange', { bubbles: true })
-    ;(hiddenEvent as unknown as { __ooIsTrusted: boolean }).__ooIsTrusted = true
+    ;(hiddenEvent as unknown as { __o2IsTrusted: boolean }).__o2IsTrusted = true
     document.dispatchEvent(hiddenEvent)
   })
 }

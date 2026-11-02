@@ -1,11 +1,12 @@
 import { clocksNow } from '@openobserve/js-core/time'
+import { monitor } from '@openobserve/js-core/monitor'
+import { mergeObservables, Observable } from '@openobserve/js-core/util'
+import { addEventListener, DOM_EVENT, isEventSupported } from '@openobserve/js-core/dom'
 import { toStackTraceString } from '../../tools/stackTrace/handlingStack'
-import { monitor } from '../../tools/monitor'
-import { mergeObservables, Observable } from '../../tools/observable'
-import { addEventListener, DOM_EVENT, isEventSupported } from '../../browser/addEventListener'
 import { safeTruncate } from '../../tools/utils/stringUtils'
 import type { RawError } from '../error/error.types'
 import { ErrorHandling, ErrorSource } from '../error/error.types'
+import { buildDebugIdByUrl } from '../sourceCodeContext'
 import type { ReportType, InterventionReport, DeprecationReport } from './browser.types'
 
 export const RawReportType = {
@@ -80,6 +81,7 @@ function buildRawReportErrorFromReport(report: DeprecationReport | InterventionR
     message: `${type}: ${body.message}`,
     originalError: report,
     stack: buildStack(body.id, body.message, body.sourceFile, body.lineNumber, body.columnNumber),
+    debugIds: body.sourceFile ? buildDebugIdByUrl([body.sourceFile]) : undefined,
   })
 }
 
@@ -101,6 +103,7 @@ function buildRawReportErrorFromCspViolation(event: SecurityPolicyViolationEvent
       event.lineNumber,
       event.columnNumber
     ),
+    debugIds: event.sourceFile ? buildDebugIdByUrl([event.sourceFile]) : undefined,
   })
 }
 

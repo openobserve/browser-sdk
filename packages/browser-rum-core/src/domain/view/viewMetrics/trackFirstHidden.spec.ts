@@ -1,6 +1,6 @@
 import type { RelativeTime, TimeStamp } from '@openobserve/js-core/time'
 import { clocksOrigin } from '@openobserve/js-core/time'
-import { DOM_EVENT } from '@openobserve/browser-core'
+import { DOM_EVENT } from '@openobserve/js-core/dom'
 import { createNewEvent, restorePageVisibility, setPageVisibility } from '@openobserve/browser-core/test'
 import { mockGlobalPerformanceBuffer } from '../../../../test'
 import type { GlobalPerformanceBufferMock } from '../../../../test'

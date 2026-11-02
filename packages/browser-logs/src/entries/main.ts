@@ -7,7 +7,8 @@
  * @see [Browser Log Collection](https://docs.datadoghq.com/logs/log_collection/javascript/)
  */
 
-import { defineGlobal, globalObject } from '@openobserve/browser-core'
+import { globalObject } from '@openobserve/js-core/util'
+import { defineGlobal } from '@openobserve/browser-core'
 import type { LogsPublicApi } from '../boot/logsPublicApi'
 import { makeLogsPublicApi } from '../boot/logsPublicApi'
 
@@ -18,11 +19,13 @@ export { StatusType } from '../domain/logger/isAuthorized'
 export type { LoggerConfiguration, LogsPublicApi as DatadogLogs } from '../boot/logsPublicApi'
 export type { LogsInitConfiguration, LogsBeforeSend } from '../domain/configuration'
 export type { LogsEvent } from '../logsEvent.types'
+export type { LogsPlugin, OnLogsStartOptions, OnInitOptions } from '../domain/plugins'
 export type {
   LogsEventDomainContext,
   NetworkLogsEventDomainContext,
   ConsoleLogsEventDomainContext,
   LoggerLogsEventDomainContext,
+  ReportLogsEventDomainContext,
 } from '../domainContext.types'
 
 /**
@@ -33,20 +36,17 @@ export type LogsGlobal = LogsPublicApi
 export type {
   InitConfiguration,
   PublicApi,
-  Context,
-  ContextValue,
-  ContextArray,
   User,
   Account,
   TraceContextInjection,
   SessionPersistence,
   TrackingConsent,
   MatchOption,
-  ProxyFn,
-  Site,
   RawReportType,
   ErrorSource,
 } from '@openobserve/browser-core'
+export type { Context, ContextValue, ContextArray } from '@openobserve/js-core/util'
+export type { ProxyFn, Site } from '@openobserve/js-core/transport'
 export type { ConsoleApiName } from '@openobserve/js-core/util'
 
 /**
@@ -56,7 +56,7 @@ export type { ConsoleApiName } from '@openobserve/js-core/util'
  * @see {@link DatadogLogs}
  * @see [Browser Log Collection](https://docs.datadoghq.com/logs/log_collection/javascript/)
  */
-export const openobserveLogs = makeLogsPublicApi()
+export const openobserveLogs = makeLogsPublicApi({ sdkName: 'logs' })
 
 interface BrowserWindow {
   O2_LOGS?: LogsPublicApi

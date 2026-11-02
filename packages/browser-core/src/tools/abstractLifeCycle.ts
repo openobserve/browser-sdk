@@ -1,4 +1,4 @@
-import type { Subscription } from './observable'
+import type { Subscription } from '@openobserve/js-core/util'
 
 /**
  * Type helper to extract event types that have "void" data. This allows to call `notify` without a

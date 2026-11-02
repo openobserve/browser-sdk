@@ -1,4 +1,9 @@
+declare module 'lib/lib' {
+  export function boom(id: string): never
+}
+
 interface Window {
+  nativeXhrOpen: XMLHttpRequest['open']
   O2_RUM: {
     addError: (error: Error) => void
     addAction: (name: string, context?: any) => void

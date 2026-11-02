@@ -1,24 +1,24 @@
-import type { TrackingConsent, PublicApi, ContextManager, Account, Context, User } from '@openobserve/browser-core'
+import type { TrackingConsent, PublicApi, ContextManager, Account, User } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
 import {
   ContextManagerMethod,
   CustomerContextKey,
   addTelemetryUsage,
   makePublicApi,
-  monitor,
   sanitize,
   displayAlreadyInitializedError,
   createTrackingConsentState,
   defineContextMethod,
   startBufferingData,
-  callMonitored,
-  mockable,
 } from '@openobserve/browser-core'
-import { deepClone } from '@openobserve/js-core/util'
+import { mockable, deepClone } from '@openobserve/js-core/util'
+import { monitor, callMonitored } from '@openobserve/js-core/monitor'
 import type { LogsInitConfiguration } from '../domain/configuration'
 import type { HandlerType } from '../domain/logger'
 import type { StatusType } from '../domain/logger/isAuthorized'
 import { Logger } from '../domain/logger'
 import { buildCommonContext } from '../domain/contexts/commonContext'
+import { callPluginsMethod } from '../domain/plugins'
 import type { InternalContext } from '../domain/contexts/internalContext'
 import type { StartLogsResult } from './startLogs'
 import { startLogs } from './startLogs'
@@ -258,7 +258,7 @@ export interface LogsPublicApi extends PublicApi {
 }
 
 export interface Strategy {
-  init: (initConfiguration: LogsInitConfiguration, errorStack?: string) => void
+  init: (initConfiguration: LogsInitConfiguration, publicApi: LogsPublicApi, errorStack?: string) => void
   initConfiguration: LogsInitConfiguration | undefined
   globalContext: ContextManager
   accountContext: ContextManager
@@ -267,7 +267,11 @@ export interface Strategy {
   handleLog: StartLogsResult['handleLog']
 }
 
-export function makeLogsPublicApi(): LogsPublicApi {
+export interface LogsPublicApiOptions {
+  sdkName?: string
+}
+
+export function makeLogsPublicApi(options: LogsPublicApiOptions = {}): LogsPublicApi {
   const trackingConsentState = createTrackingConsentState()
   const bufferedDataObservable = startBufferingData().observable
 
@@ -284,8 +288,12 @@ export function makeLogsPublicApi(): LogsPublicApi {
       )
 
       strategy = createPostStartStrategy(strategy, startLogsResult)
+      callPluginsMethod(configuration.plugins, 'onLogsStart', {
+        handleLog: startLogsResult.handleLog,
+      })
       return startLogsResult
-    }
+    },
+    options.sdkName
   )
 
   const getStrategy = () => strategy
@@ -294,12 +302,12 @@ export function makeLogsPublicApi(): LogsPublicApi {
 
   const mainLogger = new Logger((...params) => strategy.handleLog(...params))
 
-  return makePublicApi<LogsPublicApi>({
+  const logsPublicApi: LogsPublicApi = makePublicApi<LogsPublicApi>({
     logger: mainLogger,
 
     init: (initConfiguration) => {
       const errorStack = new Error().stack
-      callMonitored(() => strategy.init(initConfiguration, errorStack))
+      callMonitored(() => strategy.init(initConfiguration, logsPublicApi, errorStack))
     },
 
     setTrackingConsent: monitor((trackingConsent) => {
@@ -394,6 +402,8 @@ export function makeLogsPublicApi(): LogsPublicApi {
       ContextManagerMethod.clearContext
     ),
   })
+
+  return logsPublicApi
 }
 
 function createPostStartStrategy(preStartStrategy: Strategy, startLogsResult: StartLogsResult): Strategy {

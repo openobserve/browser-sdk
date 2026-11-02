@@ -17,9 +17,9 @@
     "prepack": "yarn build"
   },
   "dependencies": {
-    "@openobserve/browser-core": "0.4.3",
-    "@openobserve/browser-rum-core": "0.4.3",
-    "@openobserve/js-core": "0.4.3"
+    "@openobserve/browser-core": "workspace:*",
+    "@openobserve/browser-rum-core": "workspace:*",
+    "@openobserve/js-core": "workspace:*"
   },
   "peerDependencies": {
     "nuxt": "3 || 4",
@@ -44,8 +44,8 @@
     }
   },
   "devDependencies": {
-    "vue": "3.5.38",
-    "vue-router": "5.1.0"
+    "vue": "3.5.43",
+    "vue-router": "5.3.1"
   },
   "repository": {
     "type": "git",

@@ -1,4 +1,4 @@
-import { globalObject } from '@openobserve/browser-core'
+import { globalObject } from '@openobserve/js-core/util'
 import { buildLocation, registerCleanupTask, replaceMockable } from '@openobserve/browser-core/test'
 import { createLocationChangeObservable } from './locationChangeObservable'
 

@@ -6,8 +6,10 @@
  * @see [Live Debugger Documentation](https://docs.datadoghq.com/tracing/live_debugger/)
  */
 
-import { defineGlobal, globalObject, makePublicApi, mockable } from '@openobserve/browser-core'
-import type { PublicApi, Site } from '@openobserve/browser-core'
+import { globalObject, mockable } from '@openobserve/js-core/util'
+import { defineGlobal, makePublicApi } from '@openobserve/browser-core'
+import type { PublicApi } from '@openobserve/browser-core'
+import type { Site } from '@openobserve/js-core/transport'
 import { initDebuggerTransport, onEntry, onReturn, onThrow } from '../domain/api'
 import { startDeliveryApiPolling } from '../domain/deliveryApi'
 import { display } from '../domain/display'
@@ -16,6 +18,10 @@ import { startDebuggerBatch } from '../transport/startDebuggerBatch'
 
 export interface DebuggerBuildMetadata {
   version?: string
+  /**
+   * Sourcemap debug ID of the instrumented build
+   */
+  debugId?: string
 }
 
 /**
@@ -121,6 +127,17 @@ export interface DebuggerInitConfiguration {
   maxUnreachableDuration?: number
 
   /**
+   * Whether to create a RUM custom action on the first hit of each probe, if the RUM Browser SDK is
+   * loaded on the page. For probes evaluated at function entry, the action lasts until the
+   * instrumented function returns or throws. For probes evaluated at function exit, the action is a
+   * point in time at the function exit.
+   *
+   * @category Data Collection
+   * @defaultValue true
+   */
+  trackProbeHitsAsRumActions?: boolean
+
+  /**
    * A proxy URL for routing SDK requests. When set, delivery API requests are
    * sent to `{proxy}/api/unstable/debugger/frontend/probes` instead of the
    * default Datadog API host derived from `site`.
@@ -180,6 +197,12 @@ function resolveDebuggerVersion(initConfiguration: DebuggerInitConfiguration): s
   return initConfiguration.version ?? buildVersion
 }
 
+function resolveBuildDebugId(): string | undefined {
+  // The build metadata is injected in the bundle by the build plugin, so don't trust its shape
+  const debugId: unknown = (globalObject as BrowserWindow).__DD_LIVE_DEBUGGER_BUILD__?.debugId
+  return typeof debugId === 'string' && debugId ? debugId : undefined
+}
+
 /**
  * Create the public API for the Live Debugger
  */
@@ -209,6 +232,7 @@ function makeDebuggerPublicApi(): DatadogDebugger {
         proxy: resolvedConfiguration.proxy,
         env: resolvedConfiguration.env,
         version: resolvedConfiguration.version,
+        debugId: resolveBuildDebugId(),
         pollInterval: resolvedConfiguration.pollInterval,
         maxUnreachableDuration: resolvedConfiguration.maxUnreachableDuration,
       })

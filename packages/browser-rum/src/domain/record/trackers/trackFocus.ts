@@ -1,4 +1,4 @@
-import { DOM_EVENT, addEventListeners } from '@openobserve/browser-core'
+import { DOM_EVENT, addEventListeners } from '@openobserve/js-core/dom'
 import { timeStampNow } from '@openobserve/js-core/time'
 import type { FocusRecord } from '../../../types'
 import { RecordType } from '../../../types'

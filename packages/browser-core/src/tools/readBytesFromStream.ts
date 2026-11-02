@@ -1,6 +1,5 @@
-import type { Uint8ArrayBuffer } from './utils/byteUtils'
-import { concatBuffers } from './utils/byteUtils'
-import { noop } from './utils/functionUtils'
+import type { Uint8ArrayBuffer } from '@openobserve/js-core/util'
+import { concatBuffers, noop } from '@openobserve/js-core/util'
 
 /**
  * Read bytes from a ReadableStream until the end of the stream.

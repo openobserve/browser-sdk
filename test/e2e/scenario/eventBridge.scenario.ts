@@ -2,6 +2,12 @@ import { test, expect } from '@playwright/test'
 import { createTest, html } from '../lib/framework'
 import { generateLongTask } from '../lib/helpers/browser.ts'
 
+declare global {
+  interface Window {
+    syncXhrHeaders: string
+  }
+}
+
 test.describe('bridge present', () => {
   createTest('send action')
     .withRum({ trackUserInteractions: true })
@@ -127,6 +133,37 @@ test.describe('bridge present', () => {
       const xhrResources = intakeRegistry.rumResourceEvents.filter((event) => event.resource.type === 'xhr')
       expect(xhrResources).toHaveLength(1)
       expect(xhrResources[0]._o2?.trace_id).toBeUndefined()
+    })
+
+  createTest('trace requests sent synchronously after init')
+    .withRum({ service: 'service', allowedTracingUrls: ['LOCATION_ORIGIN'] })
+    .withEventBridge()
+    .withRumInit((configuration) => {
+      window.O2_RUM!.init(configuration)
+
+      // Send the request in the same tick as `init()`: with the bridge, RUM starts synchronously,
+      // so the tracer already knows the session and its sampling decision here.
+      const xhr = new XMLHttpRequest()
+      xhr.open('GET', '/headers')
+      xhr.addEventListener('load', () => {
+        window.syncXhrHeaders = xhr.responseText
+      })
+      xhr.send()
+    })
+    .run(async ({ flushEvents, intakeRegistry, page }) => {
+      const rawHeaders = await page.waitForFunction(() => window.syncXhrHeaders).then((handle) => handle.jsonValue())
+      const headers = JSON.parse(rawHeaders) as Record<string, string>
+
+      expect(headers['x-openobserve-trace-id']).toMatch(/\d+/)
+      expect(headers['x-openobserve-origin']).toBe('rum')
+      expect(headers['x-openobserve-sampling-priority']).toBe('1')
+
+      await flushEvents()
+
+      const xhrResources = intakeRegistry.rumResourceEvents.filter((event) => event.resource.type === 'xhr')
+      expect(xhrResources).toHaveLength(1)
+      expect(xhrResources[0]._o2?.trace_id).toMatch(/\d+/)
+      expect(intakeRegistry.hasOnlyBridgeRequests).toBe(true)
     })
 
   createTest('do not send records when the recording is stopped')

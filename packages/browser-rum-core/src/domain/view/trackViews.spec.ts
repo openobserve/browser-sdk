@@ -1,6 +1,6 @@
-import type { RelativeTime, Duration } from '@openobserve/js-core/time'
+import type { RelativeTime, Duration, ClocksState } from '@openobserve/js-core/time'
 import { timeStampNow, relativeToClocks, relativeNow } from '@openobserve/js-core/time'
-import { PageExitReason, display } from '@openobserve/browser-core'
+import { PageExitReason, display, ExperimentalFeature, addExperimentalFeatures } from '@openobserve/browser-core'
 
 import type { Clock } from '@openobserve/browser-core/test'
 import { mockClock, registerCleanupTask, createNewEvent } from '@openobserve/browser-core/test'
@@ -16,6 +16,10 @@ import { SESSION_KEEP_ALIVE_INTERVAL, THROTTLE_VIEW_UPDATE_PERIOD, KEEP_TRACKING
 import type { ViewTest } from './setupViewTest.specHelper'
 import { setupViewTest } from './setupViewTest.specHelper'
 import { isLayoutShiftSupported } from './viewMetrics/trackCumulativeLayoutShift'
+
+function expireSession(lifeCycle: LifeCycle, endClocks: ClocksState = relativeToClocks(relativeNow())) {
+  lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED, { endClocks })
+}
 
 describe('track views automatically', () => {
   const lifeCycle = new LifeCycle()
@@ -167,9 +171,17 @@ describe('view lifecycle', () => {
 
       expect(getViewEndCount()).toBe(0)
 
-      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      expireSession(lifeCycle)
 
       expect(getViewEndCount()).toBe(1)
+    })
+
+    it('should end the view at the session expiration clocks', () => {
+      const endClocks = relativeToClocks(clock.relative(123))
+
+      expireSession(lifeCycle, endClocks)
+
+      expect(viewTest.getViewEnd(0).endClocks).toEqual(endClocks)
     })
 
     it('should send a final view update', () => {
@@ -177,7 +189,7 @@ describe('view lifecycle', () => {
 
       expect(getViewUpdateCount()).toBe(1)
 
-      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      expireSession(lifeCycle)
 
       expect(getViewUpdateCount()).toBe(2)
       expect(getViewUpdate(0).sessionIsActive).toBe(true)
@@ -189,7 +201,7 @@ describe('view lifecycle', () => {
 
       expect(getViewCreateCount()).toBe(1)
 
-      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      expireSession(lifeCycle)
 
       expect(getViewCreateCount()).toBe(1)
     })
@@ -199,12 +211,12 @@ describe('view lifecycle', () => {
 
       expect(getViewEndCount()).toBe(0)
 
-      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      expireSession(lifeCycle)
 
       expect(getViewEndCount()).toBe(1)
       expect(getViewUpdateCount()).toBe(2)
 
-      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      expireSession(lifeCycle)
 
       expect(getViewEndCount()).toBe(1)
       expect(getViewUpdateCount()).toBe(2)
@@ -217,7 +229,7 @@ describe('view lifecycle', () => {
 
       expect(getViewCreateCount()).toBe(1)
 
-      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      expireSession(lifeCycle)
       lifeCycle.notify(LifeCycleEventType.SESSION_RENEWED)
 
       expect(getViewCreateCount()).toBe(2)
@@ -226,7 +238,7 @@ describe('view lifecycle', () => {
     it('should use session_renewal loading type for the new view', () => {
       const { getViewUpdate, getViewUpdateCount } = viewTest
 
-      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      expireSession(lifeCycle)
       lifeCycle.notify(LifeCycleEventType.SESSION_RENEWED)
 
       expect(getViewUpdate(getViewUpdateCount() - 1).loadingType).toBe(ViewLoadingType.SESSION_RENEWAL)
@@ -234,17 +246,17 @@ describe('view lifecycle', () => {
 
     it('should use the current view name, service and version for the new view', () => {
       const { getViewCreateCount, getViewCreate, startView } = viewTest
-      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      expireSession(lifeCycle)
       lifeCycle.notify(LifeCycleEventType.SESSION_RENEWED)
 
       startView({ name: 'view 1', service: 'service 1', version: 'version 1' })
       startView({ name: 'view 2', service: 'service 2', version: 'version 2' })
-      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      expireSession(lifeCycle)
       lifeCycle.notify(LifeCycleEventType.SESSION_RENEWED)
 
       startView({ name: 'view 3', service: 'service 3', version: 'version 3' })
       changeLocation('/bar')
-      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      expireSession(lifeCycle)
       lifeCycle.notify(LifeCycleEventType.SESSION_RENEWED)
 
       expect(getViewCreateCount()).toBe(8)
@@ -294,14 +306,14 @@ describe('view lifecycle', () => {
       expect(getViewCreate(6)).toEqual(
         jasmine.objectContaining({
           name: undefined,
-          service: undefined,
+          service: 'app-id',
           version: undefined,
         })
       )
       expect(getViewCreate(7)).toEqual(
         jasmine.objectContaining({
           name: undefined,
-          service: undefined,
+          service: 'app-id',
           version: undefined,
         })
       )
@@ -324,7 +336,7 @@ describe('view lifecycle', () => {
       const { getViewUpdateCount } = viewTest
       clock.tick(THROTTLE_VIEW_UPDATE_PERIOD) // make sure we don't have pending update
 
-      lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+      expireSession(lifeCycle)
 
       const previousViewUpdateCount = getViewUpdateCount()
 
@@ -345,7 +357,7 @@ describe('view lifecycle', () => {
 
         expect(getViewEndCount()).toEqual(0)
 
-        lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, { reason: exitReason })
+        lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, exitReason)
 
         expect(getViewEndCount()).toEqual(0)
       })
@@ -356,7 +368,7 @@ describe('view lifecycle', () => {
 
       expect(getViewUpdateCount()).toEqual(1)
 
-      lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, { reason: PageExitReason.UNLOADING })
+      lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, PageExitReason.UNLOADING)
 
       expect(getViewUpdateCount()).toEqual(2)
     })
@@ -366,7 +378,7 @@ describe('view lifecycle', () => {
 
       expect(getViewCreateCount()).toEqual(1)
 
-      lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, { reason: PageExitReason.UNLOADING })
+      lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, PageExitReason.UNLOADING)
 
       expect(getViewCreateCount()).toEqual(1)
     })
@@ -374,7 +386,7 @@ describe('view lifecycle', () => {
     it('should not set the view as inactive on unloading', () => {
       const { getViewUpdate, getViewUpdateCount } = viewTest
 
-      lifeCycle.notify(LifeCycleEventType.PAGE_MAY_EXIT, { reason: PageExitReason.UNLOADING })
+      lifeCycle.notify(LifeCycleEventType.PREPARE_URGENT_FLUSH, PageExitReason.UNLOADING)
 
       expect(getViewUpdate(getViewUpdateCount() - 1).isActive).toBe(true)
     })
@@ -615,6 +627,116 @@ describe('view metrics', () => {
       })
     })
   })
+
+  describe('route change view metrics (soft navigation)', () => {
+    function getLatestUpdateForView(
+      viewId: string,
+      getViewUpdate: (index: number) => ViewEvent,
+      getViewUpdateCount: () => number
+    ) {
+      for (let i = getViewUpdateCount() - 1; i >= 0; i--) {
+        if (getViewUpdate(i).id === viewId) {
+          return getViewUpdate(i)
+        }
+      }
+      return undefined
+    }
+
+    it('does not track LCP for route_change views when the experimental feature is disabled', () => {
+      const { getViewUpdate, getViewUpdateCount, getViewCreate, getViewCreateCount, startView } = viewTest
+      startView()
+      clock.tick(0)
+
+      notifyPerformanceEntries([
+        createPerformanceEntry(RumPerformanceEntryType.SOFT_NAVIGATION, {
+          interactionId: 7,
+          getLargestInteractionContentfulPaint: () =>
+            createPerformanceEntry(RumPerformanceEntryType.INTERACTION_CONTENTFUL_PAINT, {
+              interactionId: 7,
+              largestContentfulPaint: createPerformanceEntry(RumPerformanceEntryType.LARGEST_CONTENTFUL_PAINT),
+            }),
+        }),
+      ])
+      clock.tick(THROTTLE_VIEW_UPDATE_PERIOD)
+
+      const routeChangeViewId = getViewCreate(getViewCreateCount() - 1).id
+      const routeChangeUpdate = getLatestUpdateForView(routeChangeViewId, getViewUpdate, getViewUpdateCount)!
+      expect(routeChangeUpdate.loadingType).toBe(ViewLoadingType.ROUTE_CHANGE)
+      expect(routeChangeUpdate.initialViewMetrics).toEqual({})
+    })
+
+    it('tracks LCP for route_change views when the experimental feature is enabled and the browser supports it', () => {
+      addExperimentalFeatures([ExperimentalFeature.SOFT_NAVIGATION])
+      const { getViewUpdate, getViewUpdateCount, getViewCreate, getViewCreateCount, startView } = viewTest
+      startView()
+      clock.tick(0)
+
+      notifyPerformanceEntries([
+        createPerformanceEntry(RumPerformanceEntryType.SOFT_NAVIGATION, {
+          startTime: clock.relative(0),
+          interactionId: 7,
+          getLargestInteractionContentfulPaint: () =>
+            createPerformanceEntry(RumPerformanceEntryType.INTERACTION_CONTENTFUL_PAINT, {
+              interactionId: 7,
+              largestContentfulPaint: createPerformanceEntry(RumPerformanceEntryType.LARGEST_CONTENTFUL_PAINT, {
+                startTime: clock.relative(200),
+                size: 100,
+              }),
+            }),
+        }),
+      ])
+      clock.tick(THROTTLE_VIEW_UPDATE_PERIOD)
+
+      const routeChangeViewId = getViewCreate(getViewCreateCount() - 1).id
+      const routeChangeUpdate = getLatestUpdateForView(routeChangeViewId, getViewUpdate, getViewUpdateCount)!
+      expect(routeChangeUpdate.loadingType).toBe(ViewLoadingType.ROUTE_CHANGE)
+      expect(routeChangeUpdate.initialViewMetrics.largestContentfulPaint?.value).toBe(200 as RelativeTime)
+    })
+
+    it('does not track LCP for route_change views when the browser does not support the soft navigation API', () => {
+      addExperimentalFeatures([ExperimentalFeature.SOFT_NAVIGATION])
+      // Remove soft_navigation from the mocked supported entry types to simulate unsupported browser
+      ;(window.PerformanceObserver as any).supportedEntryTypes = [RumPerformanceEntryType.RESOURCE]
+      const { getViewUpdate, getViewUpdateCount, getViewCreate, getViewCreateCount, startView } = viewTest
+      startView()
+      clock.tick(THROTTLE_VIEW_UPDATE_PERIOD)
+
+      const routeChangeViewId = getViewCreate(getViewCreateCount() - 1).id
+      const routeChangeUpdate = getLatestUpdateForView(routeChangeViewId, getViewUpdate, getViewUpdateCount)!
+      expect(routeChangeUpdate.loadingType).toBe(ViewLoadingType.ROUTE_CHANGE)
+      expect(routeChangeUpdate.initialViewMetrics).toEqual({})
+    })
+
+    it("does not let a later route_change view steal an earlier, already-ended view's soft-navigation entry", () => {
+      addExperimentalFeatures([ExperimentalFeature.SOFT_NAVIGATION])
+      const { getViewUpdate, getViewUpdateCount, getViewCreate, startView } = viewTest
+
+      // First route change: no soft-navigation entry ever fires for it (e.g. a programmatic pushState).
+      startView()
+      clock.tick(0)
+      const firstRouteChangeViewId = getViewCreate(1).id
+
+      // Second route change starts (ending the first view) and its interaction produces a soft nav.
+      startView()
+      clock.tick(0)
+      notifyPerformanceEntries([
+        createPerformanceEntry(RumPerformanceEntryType.SOFT_NAVIGATION, {
+          interactionId: 42,
+          getLargestInteractionContentfulPaint: () =>
+            createPerformanceEntry(RumPerformanceEntryType.INTERACTION_CONTENTFUL_PAINT, {
+              interactionId: 42,
+              largestContentfulPaint: createPerformanceEntry(RumPerformanceEntryType.LARGEST_CONTENTFUL_PAINT, {
+                size: 100,
+              }),
+            }),
+        }),
+      ])
+      clock.tick(THROTTLE_VIEW_UPDATE_PERIOD)
+
+      const latestUpdateForFirstView = getLatestUpdateForView(firstRouteChangeViewId, getViewUpdate, getViewUpdateCount)
+      expect(latestUpdateForFirstView!.initialViewMetrics).toEqual({})
+    })
+  })
 })
 
 describe('view is active', () => {
@@ -769,7 +891,7 @@ describe('view custom timings', () => {
     clock.tick(0) // run immediate timeouts (mostly for `trackNavigationTimings`)
     const { getViewUpdateCount, addTiming } = viewTest
 
-    lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+    expireSession(lifeCycle)
 
     expect(getViewUpdateCount()).toBe(2)
 
@@ -829,7 +951,7 @@ describe('manual loading time', () => {
     clock.tick(0) // run immediate timeouts (mostly for `trackNavigationTimings`)
     const { getViewUpdateCount, setLoadingTime } = viewTest
 
-    lifeCycle.notify(LifeCycleEventType.SESSION_EXPIRED)
+    expireSession(lifeCycle)
 
     const previousCount = getViewUpdateCount()
 
@@ -1037,7 +1159,7 @@ describe('start view', () => {
 
     expect(getViewUpdate(2)).toEqual(
       jasmine.objectContaining({
-        service: undefined,
+        service: 'app-id',
         version: undefined,
       })
     )
@@ -1055,13 +1177,13 @@ describe('start view', () => {
     )
   })
 
-  it('should ignore null service/version', () => {
+  it('should fall back to the configured service/version when they are null', () => {
     const { getViewUpdate, startView } = viewTest
 
     startView({ service: null, version: null })
     expect(getViewUpdate(2)).toEqual(
       jasmine.objectContaining({
-        service: undefined,
+        service: 'app-id',
         version: undefined,
       })
     )

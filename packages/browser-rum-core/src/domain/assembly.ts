@@ -1,16 +1,16 @@
-import type { RawError, EventRateLimiter } from '@openobserve/browser-core'
+import type { EventRateLimiter } from '@openobserve/browser-core'
 import { isEmptyObject, display, createEventRateLimiter, buildTags } from '@openobserve/browser-core'
 import { DISCARDED } from '@openobserve/js-core/assembly'
 import { combine } from '@openobserve/js-core/util'
 import type { RumEventDomainContext } from '../domainContext.types'
 import type { AssembledRumEvent } from '../rawRumEvent.types'
-import { RumEventType } from '../rawRumEvent.types'
+import { RumEventType, VitalType } from '../rawRumEvent.types'
 import type { LifeCycle } from './lifeCycle'
 import { LifeCycleEventType } from './lifeCycle'
 import type { RumConfiguration } from './configuration'
 import type { ModifiableFieldPaths } from './limitModification'
 import { limitModification } from './limitModification'
-import type { AssembleHook, AssembleHookParams } from './hooks'
+import type { AssembleHookParams, Hooks } from './hooks'
 
 const COMMON_MODIFIABLE_FIELD_PATHS: ModifiableFieldPaths = {
   'view.name': 'string',
@@ -33,6 +33,7 @@ const MODIFIABLE_FIELD_PATHS_BY_EVENT: Record<AssembledRumEvent['type'], Modifia
     'error.handling_stack': 'string',
     'error.resource.url': 'string',
     'error.fingerprint': 'string',
+    '_o2.debug_ids': 'array',
   },
   [RumEventType.RESOURCE]: {
     ...COMMON_MODIFIABLE_FIELD_PATHS,
@@ -49,15 +50,22 @@ const MODIFIABLE_FIELD_PATHS_BY_EVENT: Record<AssembledRumEvent['type'], Modifia
     ...COMMON_MODIFIABLE_FIELD_PATHS,
     'long_task.scripts[].source_url': 'string',
     'long_task.scripts[].invoker': 'string',
+    '_o2.debug_ids': 'array',
   },
-  [RumEventType.VITAL]: COMMON_MODIFIABLE_FIELD_PATHS,
+  [RumEventType.VITAL]: {
+    ...COMMON_MODIFIABLE_FIELD_PATHS,
+    'vital.websocket.url': 'string',
+    'vital.websocket.requested_protocols': 'array',
+    'vital.websocket.selected_protocol': 'string',
+    'vital.websocket.close_reason': 'string',
+  },
 }
 
 export function startRumAssembly(
   configuration: RumConfiguration,
   lifeCycle: LifeCycle,
-  assembleHook: AssembleHook,
-  reportError: (error: RawError) => void,
+  hooks: Hooks,
+  reportError: (message: string) => void,
   eventRateLimit?: number
 ) {
   const eventRateLimiters = {
@@ -69,19 +77,24 @@ export function startRumAssembly(
   lifeCycle.subscribe(
     LifeCycleEventType.RAW_RUM_EVENT_COLLECTED,
     ({ startClocks, duration, rawRumEvent, domainContext }) => {
-      const defaultRumEventAttributes = assembleHook.trigger({
+      const assemblyParams = {
         eventType: rawRumEvent.type,
         rawRumEvent,
         domainContext,
         startTime: startClocks.relative,
         duration,
-      } as AssembleHookParams)!
-
+      } as AssembleHookParams
+      const defaultRumEventAttributes = hooks.assembleEventDefaults.trigger(assemblyParams)!
       if (defaultRumEventAttributes === DISCARDED) {
         return
       }
 
-      const serverRumEvent = combine(defaultRumEventAttributes, rawRumEvent, {
+      const rumEventAttributes = hooks.assembleEvent.trigger(assemblyParams)!
+      if (rumEventAttributes === DISCARDED) {
+        return
+      }
+
+      const serverRumEvent = combine(defaultRumEventAttributes, rawRumEvent, rumEventAttributes, {
         o2tags: buildTags(configuration).join(','),
       }) as AssembledRumEvent
 
@@ -105,11 +118,18 @@ function shouldSend(
     const result = limitModification(event, MODIFIABLE_FIELD_PATHS_BY_EVENT[event.type], (event) =>
       beforeSend(event, domainContext)
     )
-    if (result === false && event.type !== RumEventType.VIEW) {
-      return false
-    }
     if (result === false) {
-      display.warn("Can't dismiss view events using beforeSend!")
+      const nonDismissibleEventLabel =
+        event.type === RumEventType.VIEW
+          ? 'view'
+          : event.type === RumEventType.VITAL && event.vital?.type === VitalType.WEBSOCKET
+            ? 'WebSocket vital'
+            : undefined
+
+      if (!nonDismissibleEventLabel) {
+        return false
+      }
+      display.warn(`Can't dismiss ${nonDismissibleEventLabel} events using beforeSend!`)
     }
   }
 

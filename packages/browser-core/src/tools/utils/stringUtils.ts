@@ -1,14 +1,3 @@
-/**
- * UUID v4
- * from https://gist.github.com/jed/982883
- */
-export function generateUUID(placeholder?: string): string {
-  return placeholder
-    ? // eslint-disable-next-line  no-bitwise
-      (parseInt(placeholder, 10) ^ ((Math.random() * 16) >> (parseInt(placeholder, 10) / 4))).toString(16)
-    : `${1e7}-${1e3}-${4e3}-${8e3}-${1e11}`.replace(/[018]/g, generateUUID)
-}
-
 // Assuming input string is following the HTTP Cookie format defined in
 // https://www.ietf.org/rfc/rfc2616.txt and https://www.ietf.org/rfc/rfc6265.txt, we don't need to
 // be too strict with this regex.
@@ -86,4 +75,23 @@ export function safeTruncate(candidate: string, length: number, suffix = '') {
   }
 
   return `${candidate.slice(0, correctedLength)}${suffix}`
+}
+
+/**
+ * Builds a telemetry integration identifier from a library name and its version, e.g. `react-v18`
+ */
+export function toMajorVersionIntegration(name: string, version: string | null | undefined): string {
+  if (!version) {
+    return name
+  }
+  return `${name}-v${version.split('.')[0]}`
+}
+
+/**
+ * Filters out falsy values and returns `undefined` if no integration is left, so plugins report a
+ * consistent "nothing to report" telemetry shape instead of an empty array.
+ */
+export function toIntegrations(...maybeIntegrations: Array<string | false | undefined>): string[] | undefined {
+  const integrations = maybeIntegrations.filter((integration): integration is string => !!integration)
+  return integrations.length > 0 ? integrations : undefined
 }

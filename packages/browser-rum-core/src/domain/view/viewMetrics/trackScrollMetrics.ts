@@ -1,6 +1,8 @@
 import { ONE_SECOND, elapsed, relativeNow } from '@openobserve/js-core/time'
 import type { Duration, ClocksState } from '@openobserve/js-core/time'
-import { Observable, throttle, addEventListener, DOM_EVENT, monitor } from '@openobserve/browser-core'
+import { monitor } from '@openobserve/js-core/monitor'
+import { Observable, throttle } from '@openobserve/js-core/util'
+import { addEventListener, DOM_EVENT } from '@openobserve/js-core/dom'
 import { getScrollY } from '../../../browser/scroll'
 import { getViewportDimension } from '../../../browser/viewportObservable'
 

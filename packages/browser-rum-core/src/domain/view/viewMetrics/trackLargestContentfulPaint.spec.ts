@@ -1,6 +1,6 @@
 import type { RelativeTime } from '@openobserve/js-core/time'
 import { clocksOrigin } from '@openobserve/js-core/time'
-import { DOM_EVENT } from '@openobserve/browser-core'
+import { DOM_EVENT } from '@openobserve/js-core/dom'
 import type { Clock } from '@openobserve/browser-core/test'
 import {
   setPageVisibility,

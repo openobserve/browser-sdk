@@ -1,4 +1,5 @@
-import { instrumentMethod, Observable } from '@openobserve/browser-core'
+import { instrumentMethod } from '@openobserve/browser-core'
+import { Observable } from '@openobserve/js-core/util'
 
 export function createWindowOpenObservable() {
   const observable = new Observable<void>()

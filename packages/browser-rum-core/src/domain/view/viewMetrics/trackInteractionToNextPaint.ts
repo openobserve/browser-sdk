@@ -1,6 +1,6 @@
 import type { RelativeTime, Duration } from '@openobserve/js-core/time'
+import { noop } from '@openobserve/js-core/util'
 import { ONE_MINUTE, elapsed } from '@openobserve/js-core/time'
-import { noop } from '@openobserve/browser-core'
 import type { RumFirstInputTiming, RumPerformanceEventTiming } from '../../../browser/performanceObservable'
 import {
   createPerformanceObservable,

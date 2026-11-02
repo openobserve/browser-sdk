@@ -1,4 +1,5 @@
-import type { ContextManager, ContextValue } from '@openobserve/browser-core'
+import type { ContextManager } from '@openobserve/browser-core'
+import type { ContextValue } from '@openobserve/js-core/util'
 import { display, objectEntries, TraceContextInjection } from '@openobserve/browser-core'
 import type { SessionManagerMock } from '@openobserve/browser-core/test'
 import { MID_HASH_UUID, MOCK_SESSION_ID, createSessionManagerMock } from '@openobserve/browser-core/test'
@@ -7,12 +8,7 @@ import type { RumInitConfiguration } from '../configuration'
 import { validateAndBuildRumConfiguration } from '../configuration'
 import { startTracer } from './tracer'
 import type { SpanIdentifier, TraceIdentifier } from './identifier'
-import {
-  createSpanIdentifier,
-  createTraceIdentifier,
-  toPaddedSpanIdHex,
-  toPaddedTraceIdHex,
-} from './identifier'
+import { createSpanIdentifier, createTraceIdentifier } from './identifier'
 
 describe('tracer', () => {
   const ALLOWED_DOMAIN_CONTEXT: Partial<RumXhrStartContext | RumFetchStartContext> = {
@@ -195,7 +191,7 @@ describe('tracer', () => {
       )
 
       expect(xhr.headers['x-openobserve-origin']).toBeUndefined()
-      expect(xhr.headers['x-openobserve-span-id']).toBeUndefined()
+      expect(xhr.headers['x-openobserve-parent-id']).toBeUndefined()
       expect(xhr.headers['x-openobserve-trace-id']).toBeUndefined()
       expect(xhr.headers['x-openobserve-sampling-priority']).toBeUndefined()
     })
@@ -345,7 +341,8 @@ describe('tracer', () => {
       })
     })
 
-    it('should ignore wrong propagator types', () => {
+    it('should fall back to default propagator types when all provided values are invalid', () => {
+      spyOn(display, 'error')
       const tracer = startTracerWithDefaults({
         initConfiguration: {
           allowedTracingUrls: [{ match: window.location.origin, propagatorTypes: ['foo', 32, () => true] as any }],
@@ -354,10 +351,10 @@ describe('tracer', () => {
       const context = { ...ALLOWED_DOMAIN_CONTEXT }
       tracer.traceXhr(context, xhr as unknown as XMLHttpRequest)
 
+      // All-invalid propagatorTypes fall back to DEFAULT_PROPAGATOR_TYPES (['tracecontext', 'datadog'])
+      expect(xhr.headers['traceparent']).toBeDefined()
+      expect(xhr.headers['x-openobserve-trace-id']).toBeDefined()
       expect(xhr.headers['b3']).toBeUndefined()
-      expect(xhr.headers['traceparent']).toBeUndefined()
-      expect(xhr.headers['tracestate']).toBeUndefined()
-      expect(xhr.headers['x-openobserve-trace-id']).toBeUndefined()
       expect(xhr.headers['X-B3-TraceId']).toBeUndefined()
     })
 
@@ -616,7 +613,7 @@ describe('tracer', () => {
       )
 
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-origin']))
-      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-span-id']))
+      expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-parent-id']))
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
       expect(context.init!.headers).not.toContain(jasmine.arrayContaining(['x-openobserve-sampling-priority']))
     })
@@ -682,7 +679,7 @@ describe('tracer', () => {
       tracer.traceFetch(context)
 
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-origin']))
-      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-span-id']))
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-parent-id']))
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-sampling-priority']))
     })
@@ -699,7 +696,7 @@ describe('tracer', () => {
       tracer.traceFetch(context)
 
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-origin']))
-      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-span-id']))
+      expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-parent-id']))
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-trace-id']))
       expect(context.init!.headers).toContain(jasmine.arrayContaining(['x-openobserve-sampling-priority']))
     })
@@ -747,9 +744,9 @@ function toPlainObject(headers: Headers) {
 function tracingHeadersFor(traceId: TraceIdentifier, spanId: SpanIdentifier, samplingPriority: '1' | '0') {
   return {
     'x-openobserve-origin': 'rum',
-    'x-openobserve-span-id': toPaddedSpanIdHex(spanId),
+    'x-openobserve-parent-id': spanId.toString(),
     'x-openobserve-sampling-priority': samplingPriority,
-    'x-openobserve-trace-id': toPaddedTraceIdHex(traceId),
+    'x-openobserve-trace-id': traceId.toString(),
     baggage: `session.id=${MOCK_SESSION_ID},user.id=1234,account.id=5678`,
   }
 }

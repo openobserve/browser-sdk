@@ -1,6 +1,6 @@
 import { combine } from '@openobserve/js-core/util'
-import { addEventListener, DOM_EVENT } from '../../browser/addEventListener'
-import type { Context } from '../../tools/serialisation/context'
+import { addEventListener, DOM_EVENT } from '@openobserve/js-core/dom'
+import type { Context } from '@openobserve/js-core/util'
 import { isEmptyObject, tryJsonParse } from '../../tools/utils/objectUtils'
 import type { ContextManager } from './contextManager'
 import type { CustomerDataType } from './contextConstants'

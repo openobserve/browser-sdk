@@ -1,4 +1,4 @@
-import { Observable } from '../tools/observable'
+import { Observable } from '@openobserve/js-core/util'
 
 export const TrackingConsent = {
   GRANTED: 'granted',

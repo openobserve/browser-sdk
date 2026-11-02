@@ -1,5 +1,6 @@
-import { noop, throttle, requestIdleCallback } from '@openobserve/browser-core'
-import type { RumMutationRecord } from '@openobserve/browser-rum-core'
+import { noop, throttle } from '@openobserve/js-core/util'
+import { requestIdleCallback } from '@openobserve/browser-core'
+import type { MutationRecord } from '@openobserve/js-core/dom'
 
 /**
  * Maximum duration to wait before processing mutations. If the browser is idle, mutations will be
@@ -15,12 +16,21 @@ const MUTATION_PROCESS_MAX_DELAY = 100
  */
 export const MUTATION_PROCESS_MIN_DELAY = 16
 
-export function createMutationBatch(processMutationBatch: (mutations: RumMutationRecord[]) => void) {
+export function createMutationBatch(processMutationBatch: (mutations: MutationRecord[]) => void) {
   let cancelScheduledFlush = noop
-  let pendingMutations: RumMutationRecord[] = []
+  let pendingMutations: MutationRecord[] = []
+  let flushScheduled = false
+
+  function scheduleFlush() {
+    if (!flushScheduled) {
+      flushScheduled = true
+      cancelScheduledFlush = requestIdleCallback(throttledFlush, { timeout: MUTATION_PROCESS_MAX_DELAY })
+    }
+  }
 
   function flush() {
     cancelScheduledFlush()
+    flushScheduled = false
     processMutationBatch(pendingMutations)
     pendingMutations = []
   }
@@ -30,14 +40,14 @@ export function createMutationBatch(processMutationBatch: (mutations: RumMutatio
   })
 
   return {
-    addMutations: (mutations: RumMutationRecord[]) => {
-      if (pendingMutations.length === 0) {
-        cancelScheduledFlush = requestIdleCallback(throttledFlush, { timeout: MUTATION_PROCESS_MAX_DELAY })
-      }
+    addMutations: (mutations: MutationRecord[]) => {
+      scheduleFlush()
       for (const mutation of mutations) {
         pendingMutations.push(mutation)
       }
     },
+
+    notifyContentMutated: scheduleFlush,
 
     flush,
 

@@ -1,5 +1,6 @@
-import type { FlushEvent, Context, Telemetry } from '@openobserve/browser-core'
-import { Observable } from '@openobserve/browser-core'
+import type { FlushEvent, Telemetry } from '@openobserve/browser-core'
+import type { Context } from '@openobserve/js-core/util'
+import { Observable } from '@openobserve/js-core/util'
 import type { Clock, MockTelemetry } from '@openobserve/browser-core/test'
 import { mockClock, startMockTelemetry } from '@openobserve/browser-core/test'
 import type { AssembledRumEvent } from '../rawRumEvent.types'

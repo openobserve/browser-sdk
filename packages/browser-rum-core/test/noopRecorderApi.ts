@@ -1,4 +1,4 @@
-import { noop } from '@openobserve/browser-core'
+import { noop } from '@openobserve/js-core/util'
 import type { RecorderApi } from '@openobserve/browser-rum-core'
 
 export const noopRecorderApi: RecorderApi = {

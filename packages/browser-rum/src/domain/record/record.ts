@@ -15,16 +15,20 @@ import {
   trackViewEnd,
   trackViewportResize,
   trackVisualViewportResize,
+  trackCanvasContent,
+  trackCanvasCapture,
 } from './trackers'
 import { createElementsScrollPositions } from './elementsScrollPositions'
 import type { ShadowRootsController } from './shadowRootsController'
 import { initShadowRootsController } from './shadowRootsController'
 import { startFullSnapshots } from './startFullSnapshots'
-import type { EmitRecordCallback, EmitStatsCallback } from './record.types'
+import type { EmitRecordCallback, EmitStatsCallback, EmitResourceCallback } from './record.types'
 import { createRecordingScope } from './recordingScope'
+import { createCanvasManager } from './canvas/canvasManager'
 
 export interface RecordOptions {
   emitRecord: EmitRecordCallback
+  emitResource: EmitResourceCallback
   emitStats: EmitStatsCallback
   configuration: RumConfiguration
   lifeCycle: LifeCycle
@@ -38,9 +42,9 @@ export interface RecordAPI {
 }
 
 export function record(options: RecordOptions): RecordAPI {
-  const { emitRecord, emitStats, configuration, lifeCycle } = options
+  const { emitRecord, emitResource, emitStats, configuration, lifeCycle } = options
   // runtime checks for user options
-  if (!emitRecord || !emitStats) {
+  if (!emitRecord || !emitResource || !emitStats) {
     throw new Error('emit functions are required')
   }
 
@@ -51,8 +55,20 @@ export function record(options: RecordOptions): RecordAPI {
     replayStats.addRecord(view.id)
   }
 
-  const shadowRootsController = initShadowRootsController(processRecord, emitStats)
-  const scope = createRecordingScope(configuration, createElementsScrollPositions(), shadowRootsController)
+  const processResource: EmitResourceCallback = (hash, content, onDiscard) => {
+    emitResource(hash, content, onDiscard)
+    const view = options.viewHistory.findView()!
+    replayStats.addResource(view.id)
+  }
+
+  const canvasManager = createCanvasManager()
+  const shadowRootsController = initShadowRootsController(processRecord, processResource, emitStats)
+  const scope = createRecordingScope(
+    canvasManager,
+    configuration,
+    createElementsScrollPositions(),
+    shadowRootsController
+  )
 
   const { stop: stopFullSnapshots } = startFullSnapshots(lifeCycle, processRecord, emitStats, flushMutations, scope)
 
@@ -61,19 +77,21 @@ export function record(options: RecordOptions): RecordAPI {
     mutationTracker.flush()
   }
 
-  const mutationTracker = trackMutation(document, processRecord, emitStats, scope)
+  const mutationTracker = trackMutation(document, processRecord, processResource, emitStats, scope)
   const trackers: Tracker[] = [
     mutationTracker,
     trackMove(processRecord, scope),
     trackMouseInteraction(processRecord, scope),
     trackScroll(document, processRecord, scope),
     trackViewportResize(processRecord),
-    trackInput(document, processRecord, scope),
+    trackInput(document, processRecord, emitStats, scope),
     trackMediaInteraction(processRecord, scope),
     trackStyleSheet(processRecord, scope),
     trackFocus(processRecord),
     trackVisualViewportResize(processRecord),
     trackViewEnd(lifeCycle, processRecord, flushMutations),
+    trackCanvasContent(scope),
+    trackCanvasCapture(scope, mutationTracker.notifyContentMutated),
   ]
 
   return {
@@ -81,6 +99,7 @@ export function record(options: RecordOptions): RecordAPI {
       shadowRootsController.stop()
       trackers.forEach((tracker) => tracker.stop())
       stopFullSnapshots()
+      canvasManager.reset()
     },
     flushMutations,
     shadowRootsController,

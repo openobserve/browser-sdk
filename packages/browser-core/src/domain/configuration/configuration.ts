@@ -1,16 +1,9 @@
-import { catchUserErrors } from '../../tools/catchUserErrors'
-import { DOCS_ORIGIN, MORE_DETAILS, display } from '../../tools/display'
+import type { ProxyFn, Site } from '@openobserve/js-core/transport'
+import { INTAKE_SITE_US1 } from '@openobserve/js-core/transport'
+import type { InferredConfig, MatchOption } from '@openobserve/js-core/configuration'
 import type { RawTelemetryConfiguration } from '../telemetry'
-import { isPercentage } from '../../tools/utils/numberUtils'
-import { objectHasValue } from '../../tools/utils/objectUtils'
-import type { CookieOptions } from '../../browser/cookie'
-import { getCurrentSite } from '../../browser/cookie'
 import { TrackingConsent } from '../trackingConsent'
 import type { SessionPersistence } from '../session/sessionConstants'
-import type { MatchOption } from '../../tools/matchOption'
-import { isAllowedTrackingOrigins } from '../allowedTrackingOrigins'
-import { INTAKE_SITE_US1 } from '../intakeSites'
-import type { Site } from '../intakeSites'
 
 /**
  * Default privacy level for the browser SDK.
@@ -142,30 +135,6 @@ export interface InitConfiguration {
    */
   site?: Site | undefined
 
-  /**
-   * The OpenObserve ingestion API version used to build intake URLs.
-   *
-   * @category Transport
-   * @defaultValue v1
-   */
-  apiVersion?: string | undefined
-
-  /**
-   * The OpenObserve organization identifier, used as a path segment of intake URLs.
-   *
-   * @category Transport
-   * @defaultValue default
-   */
-  organizationIdentifier?: string | undefined
-
-  /**
-   * Send data to the intake over plain HTTP instead of HTTPS. Only intended for local
-   * development against a non-TLS OpenObserve instance.
-   *
-   * @category Transport
-   */
-  insecureHTTP?: boolean | undefined
-
   // tag and context options
   /**
    * The service name for your application. Follows the [tag syntax requirements](https://docs.datadoghq.com/getting_started/tagging/#define-tags).
@@ -292,12 +261,6 @@ export interface InitConfiguration {
 type GenericBeforeSendCallback = (event: any, context?: any) => unknown
 
 /**
- * path: /api/vX/product
- * parameters: xxx=yyy&zzz=aaa
- */
-export type ProxyFn = (options: { path: string; parameters: string; subdomain?: string }) => string
-
-/**
  * @internal
  */
 export interface ReplicaInitConfiguration {
@@ -307,142 +270,67 @@ export interface ReplicaInitConfiguration {
 
 export type SdkSource = 'browser' | 'flutter' | 'unity'
 
-export interface Configuration {
-  clientToken: string
-  datacenter: string | undefined
-  proxy: string | ProxyFn | undefined
-  site: Site
-  apiVersion: string
-  organizationIdentifier: string
-  insecureHTTP: boolean | undefined
-  source: SdkSource
-  beforeSend: GenericBeforeSendCallback | undefined
-  cookieOptions: CookieOptions | undefined
-  sessionPersistence: SessionPersistence | SessionPersistence[] | undefined
-  sessionSampleRate: number
-  telemetrySampleRate: number
-  telemetryConfigurationSampleRate: number
-  telemetryUsageSampleRate: number
-  service?: string | undefined
-  version?: string | undefined
-  env?: string | undefined
-  silentMultipleInit: boolean
-  trackingConsent: TrackingConsent
-  storeContextsAcrossPages: boolean
-  trackAnonymousUser?: boolean
+export const BROWSER_CORE_SCHEMA = {
+  clientToken: { type: 'string', required: true },
 
-  // internal
-  sdkVersion: string | undefined
-  variant: string | undefined
-  replica: ReplicaInitConfiguration | undefined
-}
+  // Optional tag fields
+  service: { type: 'string' },
+  env: { type: 'string' },
+  version: { type: 'string' },
 
-function isString(tag: unknown, tagName: string): tag is string | undefined | null {
-  if (tag !== undefined && tag !== null && typeof tag !== 'string') {
-    display.error(`${tagName} must be defined as a string`)
-    return false
-  }
-  return true
-}
+  // Transport
+  site: { type: 'site', default: INTAKE_SITE_US1 },
+  proxy: {
+    type: 'union',
+    variants: [{ type: 'string' }, { type: 'function', signature: undefined as ProxyFn | undefined }],
+  },
 
-export function isSampleRate(sampleRate: unknown, name: string) {
-  if (sampleRate !== undefined && !isPercentage(sampleRate)) {
-    display.error(`${name} Sample Rate should be a number between 0 and 100`)
-    return false
-  }
-  return true
-}
+  // Sample rates
+  sessionSampleRate: { type: 'percentage', default: 100 },
+  telemetrySampleRate: { type: 'percentage', default: 20 },
+  telemetryConfigurationSampleRate: { type: 'percentage', default: 5 },
+  telemetryUsageSampleRate: { type: 'percentage', default: 5 },
 
-export function validateAndBuildConfiguration(
-  initConfiguration: InitConfiguration,
-  errorStack?: string
-): Configuration | undefined {
-  if (!initConfiguration?.clientToken) {
-    display.error('Client Token is not configured, we will not send any data.')
-    return
-  }
+  // Booleans
+  silentMultipleInit: { type: 'boolean', default: false, strict: false },
+  storeContextsAcrossPages: { type: 'boolean', default: false, strict: false },
+  trackAnonymousUser: { type: 'boolean', default: true, strict: false },
+  useSecureSessionCookie: { type: 'boolean', default: false, strict: false },
+  usePartitionedCrossSiteSessionCookie: { type: 'boolean', default: false, strict: false },
+  trackSessionAcrossSubdomains: { type: 'boolean', default: false, strict: false },
 
-  if (
-    initConfiguration.allowedTrackingOrigins !== undefined &&
-    !Array.isArray(initConfiguration.allowedTrackingOrigins)
-  ) {
-    display.error('Allowed Tracking Origins must be an array')
-    return
-  }
+  // Cookie/extension origin validation
+  allowedTrackingOrigins: { type: 'match-option', multiple: true, strict: false },
 
-  if (
-    !isSampleRate(initConfiguration.sessionSampleRate, 'Session') ||
-    !isSampleRate(initConfiguration.telemetrySampleRate, 'Telemetry') ||
-    !isSampleRate(initConfiguration.telemetryConfigurationSampleRate, 'Telemetry Configuration') ||
-    !isSampleRate(initConfiguration.telemetryUsageSampleRate, 'Telemetry Usage') ||
-    !isString(initConfiguration.version, 'Version') ||
-    !isString(initConfiguration.env, 'Env') ||
-    !isString(initConfiguration.service, 'Service') ||
-    !isAllowedTrackingOrigins(initConfiguration, errorStack ?? '')
-  ) {
-    return
-  }
+  // Privacy
+  trackingConsent: { type: 'enum', values: TrackingConsent, default: TrackingConsent.GRANTED },
 
-  if (
-    initConfiguration.trackingConsent !== undefined &&
-    !objectHasValue(TrackingConsent, initConfiguration.trackingConsent)
-  ) {
-    display.error('Tracking Consent should be either "granted" or "not-granted"')
-    return
-  }
+  // Callbacks
+  beforeSend: { type: 'function', signature: undefined as GenericBeforeSendCallback | undefined },
 
-  return {
-    clientToken: initConfiguration.clientToken,
-    proxy: initConfiguration.proxy,
-    site: initConfiguration.site || INTAKE_SITE_US1,
-    apiVersion: initConfiguration.apiVersion ?? 'v1',
-    organizationIdentifier: initConfiguration.organizationIdentifier ?? 'default',
-    insecureHTTP: initConfiguration.insecureHTTP,
-    source: validateSource(initConfiguration.source),
-    beforeSend:
-      initConfiguration.beforeSend && catchUserErrors(initConfiguration.beforeSend, 'beforeSend threw an error:'),
-    cookieOptions: buildCookieOptions(initConfiguration),
-    sessionPersistence: initConfiguration.sessionPersistence,
-    sessionSampleRate: initConfiguration.sessionSampleRate ?? 100,
-    telemetrySampleRate: initConfiguration.telemetrySampleRate ?? 20,
-    telemetryConfigurationSampleRate: initConfiguration.telemetryConfigurationSampleRate ?? 5,
-    telemetryUsageSampleRate: initConfiguration.telemetryUsageSampleRate ?? 5,
-    service: initConfiguration.service ?? undefined,
-    env: initConfiguration.env ?? undefined,
-    version: initConfiguration.version ?? undefined,
-    datacenter: initConfiguration.datacenter ?? undefined,
-    silentMultipleInit: !!initConfiguration.silentMultipleInit,
-    trackingConsent: initConfiguration.trackingConsent ?? TrackingConsent.GRANTED,
-    trackAnonymousUser: initConfiguration.trackAnonymousUser ?? true,
-    storeContextsAcrossPages: !!initConfiguration.storeContextsAcrossPages,
+  // Passthroughs
+  source: { type: 'enum', values: ['browser', 'flutter', 'unity'] as const, default: 'browser', strict: false },
+  sessionPersistence: {
+    type: 'enum',
+    values: ['cookie', 'local-storage', 'memory'] as const,
+    multiple: true,
+    strict: false,
+  },
+  replica: {
+    type: 'schema',
+    schema: {
+      clientToken: { type: 'string', required: true },
+      applicationId: { type: 'string' },
+    },
+  },
 
-    /**
-     * The source of the SDK, used for support plugins purposes.
-     */
-    variant: initConfiguration.variant,
-    sdkVersion: initConfiguration.sdkVersion,
-    replica: initConfiguration.replica,
-  }
-}
+  // Internal
+  datacenter: { type: 'string' },
+  sdkVersion: { type: 'string' },
+  variant: { type: 'string' },
+} as const
 
-export function buildCookieOptions(initConfiguration: InitConfiguration): CookieOptions | undefined {
-  const cookieOptions: CookieOptions = {}
-
-  cookieOptions.secure =
-    !!initConfiguration.useSecureSessionCookie || !!initConfiguration.usePartitionedCrossSiteSessionCookie
-  cookieOptions.crossSite = !!initConfiguration.usePartitionedCrossSiteSessionCookie
-  cookieOptions.partitioned = !!initConfiguration.usePartitionedCrossSiteSessionCookie
-
-  if (initConfiguration.trackSessionAcrossSubdomains) {
-    const currentSite = getCurrentSite()
-    if (!currentSite) {
-      return
-    }
-    cookieOptions.domain = currentSite
-  }
-
-  return cookieOptions
-}
+export type Configuration = InferredConfig<typeof BROWSER_CORE_SCHEMA>
 
 export function serializeConfiguration(initConfiguration: InitConfiguration) {
   return {
@@ -468,11 +356,4 @@ export function serializeConfiguration(initConfiguration: InitConfiguration) {
     sdk_version: initConfiguration.sdkVersion,
     variant: initConfiguration.variant,
   } satisfies RawTelemetryConfiguration
-}
-
-function validateSource(source: string | undefined): SdkSource {
-  if (source === 'flutter' || source === 'unity') {
-    return source
-  }
-  return 'browser'
 }

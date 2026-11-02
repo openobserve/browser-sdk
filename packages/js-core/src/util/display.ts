@@ -1,3 +1,9 @@
+/** Base origin for Datadog documentation links referenced in display messages. */
+export const DOCS_ORIGIN = 'https://openobserve.ai'
+
+/** Prefix used before a documentation link in a display message (e.g. `"${MORE_DETAILS} ${DOCS_ORIGIN}/..."`). */
+export const MORE_DETAILS = 'More details:'
+
 /** Names of the console methods wrapped by {@link Display}. */
 export const ConsoleApiName = {
   log: 'log',
@@ -12,10 +18,15 @@ export type ConsoleApiName = (typeof ConsoleApiName)[keyof typeof ConsoleApiName
 
 /** Console methods pre-bound to the original (unpatched) console implementation. */
 export interface Display {
+  /** Original `console.debug`. */
   debug: typeof console.debug
+  /** Original `console.log`. */
   log: typeof console.log
+  /** Original `console.info`. */
   info: typeof console.info
+  /** Original `console.warn`. */
   warn: typeof console.warn
+  /** Original `console.error`. */
   error: typeof console.error
 }
 

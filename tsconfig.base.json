@@ -29,13 +29,18 @@
 
       "@openobserve/browser-rum-slim": ["./packages/browser-rum-slim/src/entries/main"],
 
+      "@openobserve/browser-rum-shopify": ["./packages/browser-rum-shopify/src/entries/main"],
+
       "@openobserve/browser-rum-react": ["./packages/browser-rum-react/src/entries/main"],
       "@openobserve/browser-rum-react/internal": ["./packages/browser-rum-react/src/entries/internal"],
+      "@openobserve/browser-rum-react/react-router": ["./packages/browser-rum-react/src/entries/reactRouterV8"],
       "@openobserve/browser-rum-react/react-router-v6": ["./packages/browser-rum-react/src/entries/reactRouterV6"],
       "@openobserve/browser-rum-react/react-router-v7": ["./packages/browser-rum-react/src/entries/reactRouterV7"],
+      "@openobserve/browser-rum-react/react-router-v8": ["./packages/browser-rum-react/src/entries/reactRouterV8"],
       "@openobserve/browser-rum-react/tanstack-router": ["./packages/browser-rum-react/src/entries/tanstackRouter"],
 
       "@openobserve/browser-rum-vue": ["./packages/browser-rum-vue/src/entries/main"],
+      "@openobserve/browser-rum-vue/vue-router": ["./packages/browser-rum-vue/src/entries/vueRouter"],
       "@openobserve/browser-rum-vue/vue-router-v4": ["./packages/browser-rum-vue/src/entries/vueRouter"],
 
       "@openobserve/browser-rum-nuxt": ["./packages/browser-rum-nuxt/src/entries/main"],
@@ -46,10 +51,16 @@
 
       "@openobserve/browser-debugger": ["./packages/browser-debugger/src/entries/main"],
 
+      "@openobserve/browser-plugin-wasm": ["./packages/browser-plugin-wasm/src"],
+
       "@openobserve/js-core/assembly": ["./packages/js-core/src/entries/assembly"],
       "@openobserve/js-core/time": ["./packages/js-core/src/entries/time"],
       "@openobserve/js-core/monitor": ["./packages/js-core/src/entries/monitor"],
-      "@openobserve/js-core/util": ["./packages/js-core/src/entries/util"]
+      "@openobserve/js-core/util": ["./packages/js-core/src/entries/util"],
+      "@openobserve/js-core/transport": ["./packages/js-core/src/entries/transport"],
+      "@openobserve/js-core/sample": ["./packages/js-core/src/entries/sample"],
+      "@openobserve/js-core/configuration": ["./packages/js-core/src/entries/configuration"],
+      "@openobserve/js-core/dom": ["./packages/js-core/src/entries/dom"]
     }
   }
 }

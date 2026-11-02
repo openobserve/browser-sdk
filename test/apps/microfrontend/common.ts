@@ -45,6 +45,24 @@ export function createApp(id: string, title: string, borderColor: string) {
     throw new Error(`${id}-runtime-error`)
   })
 
+  createButton(container, 'csp-violation', () => {
+    const script = document.createElement('script')
+    script.src = 'https://example.com/foo.js'
+    document.body.appendChild(script)
+  })
+
+  createButton(container, 'deprecation', () => {
+    // Attribute the report to this bundle rather than the SDK's XHR instrumentation.
+    window.nativeXhrOpen.call(new XMLHttpRequest(), 'GET', '/ok', false)
+  })
+
+  // The `boom` call lives in the shared `lib` remote chunk while this handler lives in the app chunk,
+  // so the error stack spans both chunks -> the event carries two debug IDs (app chunk + shared lib
+  // chunk). The button is created only once `lib` is loaded so `boom` is always available on click.
+  void import('lib/lib').then(({ boom }) => {
+    createButton(container, 'nested-error', () => boom(id))
+  })
+
   createButton(container, 'loaf', () => {
     const end = performance.now() + 55
     while (performance.now() < end) {

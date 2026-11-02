@@ -46,21 +46,33 @@ yarn lint
 yarn format
 ```
 
+Before running E2E or performance tests, or when a test passes locally but fails in CI, read the `running-tests` skill (`.claude/skills/running-tests/SKILL.md`). It also covers compatibility checks, BrowserStack, and pinned browsers.
+
 ## Monorepo Structure
 
 ```
 packages/
-├── core/           # Shared utilities (Observable, configuration, transport)
-├── rum-core/       # Core RUM functionality
-├── rum/            # Full RUM package
-├── rum-slim/       # Lightweight RUM
-├── rum-react/      # React integration
-├── logs/           # Browser logging
-└── worker/         # Web Worker support
+├── browser-core/           # Shared utilities (Observable, configuration, transport)
+├── browser-rum-core/       # Core RUM functionality
+├── browser-rum/            # Full RUM package
+├── browser-rum-slim/       # Lightweight RUM
+├── browser-rum-react/      # React integration
+├── browser-rum-angular/    # Angular integration
+├── browser-rum-vue/        # Vue integration
+├── browser-rum-nextjs/     # Next.js integration
+├── browser-rum-nuxt/       # Nuxt integration
+├── browser-logs/           # Browser logging
+├── browser-worker/         # Web Worker support
+├── browser-debugger/       # Live Debugger (capture function snapshots without code changes)
+└── js-core/                # Runtime-agnostic core utilities shared across Datadog JS SDKs
 
-developer-extension/ # Chrome DevTools extension
+developer-extension/  # Chrome DevTools extension
 
-docs/                # Repository documentation
+remote-configuration/ # Remote configuration schema (mirrors internal repo)
+
+sandbox/              # Local dev sandbox (served by `yarn dev` at localhost:8080)
+
+docs/                 # Repository documentation
 
 test/
 ├── apps/            # Test apps for E2E and performance testing
@@ -117,10 +129,6 @@ For deeper context, see:
 - Example: `telemetryEvent.types.ts` is generated from the `rum-events-format` schema repository
 - Any changes to these files require a **corresponding PR in the upstream source repo first**, then regeneration
 
-## Commit Messages
-
-Use gitmoji conventions — see `docs/DEVELOPMENT.md` for the full reference.
-
 ## Manual Testing with Chrome MCP
 
 `yarn dev` serves the sandbox at `http://localhost:8080` (increments port if busy). The sandbox page (`sandbox/index.html`) loads the SDK bundles and calls `O2_LOGS.init()` / `O2_RUM.init()`.
@@ -131,5 +139,4 @@ To test with specific config options (e.g. `forwardErrorsToLogs: true`), just ed
 
 - Branch naming: `<username>/<feature>` (e.g., `john.doe/fix-session-bug`)
 - Always branch from `main` unless explicitly decided otherwise
-- PR title **must** follow commit message convention (see `docs/DEVELOPMENT.md`)
-- PR template at `.github/PULL_REQUEST_TEMPLATE.md` - use it for all PRs
+- Commit messages and PR titles start with a gitmoji (CI checks PR titles). Before committing or opening a PR, read the `writing-commits-and-prs` skill (`.claude/skills/writing-commits-and-prs/SKILL.md`): gitmoji choice, signing, PR template.

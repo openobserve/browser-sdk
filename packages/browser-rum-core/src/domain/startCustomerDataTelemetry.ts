@@ -1,6 +1,8 @@
-import type { Context, FlushEvent, Observable, Telemetry } from '@openobserve/browser-core'
+import type { FlushEvent, Telemetry } from '@openobserve/browser-core'
+import { setInterval } from '@openobserve/js-core/util'
+import type { Context, Observable } from '@openobserve/js-core/util'
 import { ONE_SECOND } from '@openobserve/js-core/time'
-import { addTelemetryMetrics, setInterval, TelemetryMetrics } from '@openobserve/browser-core'
+import { addTelemetryMetrics, TelemetryMetrics } from '@openobserve/browser-core'
 import type { LifeCycle } from './lifeCycle'
 import { LifeCycleEventType } from './lifeCycle'
 
