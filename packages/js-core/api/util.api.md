@@ -151,7 +151,7 @@ export interface Display {
 }
 
 // @public
-export const DOCS_ORIGIN = "https://docs.datadoghq.com";
+export const DOCS_ORIGIN = "https://openobserve.ai";
 
 // @public
 export function generateUUID(): string;
