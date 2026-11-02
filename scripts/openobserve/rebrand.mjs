@@ -152,6 +152,12 @@ let schemaPinChanged = 0
 const SCHEMA_PIN_FILE = path.join(HERE, 'rum-events-format-pin.txt')
 if (fs.existsSync(SCHEMA_PIN_FILE)) {
   const pin = fs.readFileSync(SCHEMA_PIN_FILE, 'utf8').trim()
+  // A pin file that exists but is empty or malformed is a tooling error: fail loudly instead of
+  // writing `#commit=` into package.json. (A missing file just skips the pin step.)
+  if (!/^[0-9a-f]{7,40}$/i.test(pin)) {
+    console.error(`rebrand: ${SCHEMA_PIN_FILE} must contain a git commit SHA, found ${JSON.stringify(pin)}`)
+    process.exit(1)
+  }
   const rootPkgPath = path.join(ROOT, 'package.json')
   const rootRaw = fs.readFileSync(rootPkgPath, 'utf8')
   const canonical = `"@openobserve/rum-events-format": "openobserve/rum-events-format#commit=${pin}"`
