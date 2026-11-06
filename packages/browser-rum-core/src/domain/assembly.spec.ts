@@ -454,15 +454,68 @@ describe('rum assembly', () => {
         })
       })
 
-    it('should be added to the event as o2tags', () => {
+    Object.values(RumEventType)
+      .filter((eventType) => eventType !== RumEventType.VIEW_UPDATE)
+      .forEach((eventType) => {
+        it(`should default to configured identity for ${eventType} without view metadata`, () => {
+          const { lifeCycle, hooks, serverRumEvents } = setupAssemblyTestWithDefaults({
+            partialConfiguration: extraConfigurationOptions,
+          })
+          hooks.assemble.register(({ eventType }) => ({ type: eventType, service: undefined, version: undefined }))
+
+          notifyRawRumEvent(lifeCycle, { rawRumEvent: createRawRumEvent(eventType) })
+
+          expect(serverRumEvents[0].service).toBe('default-service')
+          expect(serverRumEvents[0].version).toBe('default-version')
+        })
+      })
+    ;[
+      [RumEventType.VIEW, RumEventType.ERROR],
+      [RumEventType.ERROR, RumEventType.VIEW],
+    ].forEach((eventTypes) => {
+      it(`should preserve per-event identity after batch tag expansion with ${eventTypes[0]} first`, () => {
+        const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
+          partialConfiguration: {
+            ...extraConfigurationOptions,
+            env: 'production',
+            beforeSend: (event) => {
+              if (event.type === RumEventType.ERROR) {
+                event.service = 'child-service'
+                event.version = '2.0.0'
+              }
+            },
+          },
+        })
+        eventTypes.forEach((eventType) => {
+          notifyRawRumEvent(lifeCycle, { rawRumEvent: createRawRumEvent(eventType) })
+        })
+
+        // RUM intake expands the first NDJSON event's tags onto every event in the batch.
+        const batchTags: Record<string, string> = {}
+        serverRumEvents[0].o2tags!.split(',').forEach((tag) => {
+          const separator = tag.indexOf(':')
+          batchTags[tag.slice(0, separator)] = tag.slice(separator + 1)
+        })
+        serverRumEvents.forEach((event) => {
+          const ingestedEvent = { ...event, ...batchTags }
+          expect(ingestedEvent.service).toBe(event.type === RumEventType.ERROR ? 'child-service' : 'default-service')
+          expect(ingestedEvent.version).toBe(event.type === RumEventType.ERROR ? '2.0.0' : 'default-version')
+          expect(ingestedEvent.env).toBe('production')
+        })
+      })
+    })
+
+    it('should keep non-identity tags in o2tags', () => {
       const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
-        partialConfiguration: extraConfigurationOptions,
+        partialConfiguration: { ...extraConfigurationOptions, env: 'production' },
       })
       notifyRawRumEvent(lifeCycle, {
         rawRumEvent: createRawRumEvent(RumEventType.VIEW),
       })
 
-      expect(serverRumEvents[0].o2tags).toEqual('sdk_version:test,service:default-service,version:default-version')
+      expect(serverRumEvents[0].o2tags).toEqual('sdk_version:test,env:production')
+      expect(serverRumEvents[0].service).toBe('default-service')
+      expect(serverRumEvents[0].version).toBe('default-version')
     })
   })
 
