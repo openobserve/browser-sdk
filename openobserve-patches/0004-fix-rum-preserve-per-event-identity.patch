@@ -1,0 +1,114 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: hzzcc <hzzcc@users.noreply.github.com>
+Date: Fri, 6 Nov 2026 11:47:22 +0800
+Subject: [PATCH] =?UTF-8?q?=F0=9F=90=9B=20Preserve=20per-event=20RUM=20ser?=
+ =?UTF-8?q?vice=20and=20version=20during=20batch=20ingestion?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../src/domain/assembly.spec.ts               | 59 ++++++++++++++++++-
+ .../browser-rum-core/src/domain/assembly.ts   | 10 +++-
+ 2 files changed, 63 insertions(+), 6 deletions(-)
+
+diff --git a/packages/browser-rum-core/src/domain/assembly.spec.ts b/packages/browser-rum-core/src/domain/assembly.spec.ts
+index cf03903..dc15ac1 100644
+--- a/packages/browser-rum-core/src/domain/assembly.spec.ts
++++ b/packages/browser-rum-core/src/domain/assembly.spec.ts
+@@ -454,15 +454,68 @@ describe('rum assembly', () => {
+         })
+       })
+ 
+-    it('should be added to the event as o2tags', () => {
++    Object.values(RumEventType)
++      .filter((eventType) => eventType !== RumEventType.VIEW_UPDATE)
++      .forEach((eventType) => {
++        it(`should default to configured identity for ${eventType} without view metadata`, () => {
++          const { lifeCycle, hooks, serverRumEvents } = setupAssemblyTestWithDefaults({
++            partialConfiguration: extraConfigurationOptions,
++          })
++          hooks.assemble.register(({ eventType }) => ({ type: eventType, service: undefined, version: undefined }))
++
++          notifyRawRumEvent(lifeCycle, { rawRumEvent: createRawRumEvent(eventType) })
++
++          expect(serverRumEvents[0].service).toBe('default-service')
++          expect(serverRumEvents[0].version).toBe('default-version')
++        })
++      })
++    ;[
++      [RumEventType.VIEW, RumEventType.ERROR],
++      [RumEventType.ERROR, RumEventType.VIEW],
++    ].forEach((eventTypes) => {
++      it(`should preserve per-event identity after batch tag expansion with ${eventTypes[0]} first`, () => {
++        const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
++          partialConfiguration: {
++            ...extraConfigurationOptions,
++            env: 'production',
++            beforeSend: (event) => {
++              if (event.type === RumEventType.ERROR) {
++                event.service = 'child-service'
++                event.version = '2.0.0'
++              }
++            },
++          },
++        })
++        eventTypes.forEach((eventType) => {
++          notifyRawRumEvent(lifeCycle, { rawRumEvent: createRawRumEvent(eventType) })
++        })
++
++        // RUM intake expands the first NDJSON event's tags onto every event in the batch.
++        const batchTags: Record<string, string> = {}
++        serverRumEvents[0].o2tags!.split(',').forEach((tag) => {
++          const separator = tag.indexOf(':')
++          batchTags[tag.slice(0, separator)] = tag.slice(separator + 1)
++        })
++        serverRumEvents.forEach((event) => {
++          const ingestedEvent = { ...event, ...batchTags }
++          expect(ingestedEvent.service).toBe(event.type === RumEventType.ERROR ? 'child-service' : 'default-service')
++          expect(ingestedEvent.version).toBe(event.type === RumEventType.ERROR ? '2.0.0' : 'default-version')
++          expect(ingestedEvent.env).toBe('production')
++        })
++      })
++    })
++
++    it('should keep non-identity tags in o2tags', () => {
+       const { lifeCycle, serverRumEvents } = setupAssemblyTestWithDefaults({
+-        partialConfiguration: extraConfigurationOptions,
++        partialConfiguration: { ...extraConfigurationOptions, env: 'production' },
+       })
+       notifyRawRumEvent(lifeCycle, {
+         rawRumEvent: createRawRumEvent(RumEventType.VIEW),
+       })
+ 
+-      expect(serverRumEvents[0].o2tags).toEqual('sdk_version:test,service:default-service,version:default-version')
++      expect(serverRumEvents[0].o2tags).toEqual('sdk_version:test,env:production')
++      expect(serverRumEvents[0].service).toBe('default-service')
++      expect(serverRumEvents[0].version).toBe('default-version')
+     })
+   })
+ 
+diff --git a/packages/browser-rum-core/src/domain/assembly.ts b/packages/browser-rum-core/src/domain/assembly.ts
+index 73ca316..11387ff 100644
+--- a/packages/browser-rum-core/src/domain/assembly.ts
++++ b/packages/browser-rum-core/src/domain/assembly.ts
+@@ -81,9 +81,13 @@ export function startRumAssembly(
+         return
+       }
+ 
+-      const serverRumEvent = combine(defaultRumEventAttributes, rawRumEvent, {
+-        o2tags: buildTags(configuration).join(','),
+-      }) as AssembledRumEvent
++      // Intake expands o2tags to the whole batch, so identity must stay on each event.
++      const serverRumEvent = combine(
++        { service: configuration.service, version: configuration.version },
++        defaultRumEventAttributes,
++        rawRumEvent,
++        { o2tags: buildTags({ ...configuration, service: undefined, version: undefined }).join(',') }
++      ) as AssembledRumEvent
+ 
+       if (shouldSend(serverRumEvent, configuration.beforeSend, domainContext, eventRateLimiters)) {
+         if (isEmptyObject(serverRumEvent.context!)) {
+-- 
+2.54.0 (Apple Git-157)
+

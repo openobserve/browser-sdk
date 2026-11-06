@@ -81,9 +81,13 @@ export function startRumAssembly(
         return
       }
 
-      const serverRumEvent = combine(defaultRumEventAttributes, rawRumEvent, {
-        o2tags: buildTags(configuration).join(','),
-      }) as AssembledRumEvent
+      // Intake expands o2tags to the whole batch, so identity must stay on each event.
+      const serverRumEvent = combine(
+        { service: configuration.service, version: configuration.version },
+        defaultRumEventAttributes,
+        rawRumEvent,
+        { o2tags: buildTags({ ...configuration, service: undefined, version: undefined }).join(',') }
+      ) as AssembledRumEvent
 
       if (shouldSend(serverRumEvent, configuration.beforeSend, domainContext, eventRateLimiters)) {
         if (isEmptyObject(serverRumEvent.context!)) {
