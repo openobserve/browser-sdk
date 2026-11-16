@@ -7,7 +7,7 @@
     "start": "nuxt preview --host"
   },
   "dependencies": {
-    "nuxt": "^4.0.0"
+    "nuxt": "^4.6.4"
   },
   "peerDependencies": {
     "@openobserve/browser-rum": "*",
